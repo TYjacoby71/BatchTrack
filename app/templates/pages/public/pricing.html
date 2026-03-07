@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% set help_page_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
 
 {% block head %}
 <style>
@@ -105,6 +106,13 @@
     margin-bottom: var(--theme-ext-space-21b301a6b6);
     color: var(--color-muted);
     font-size: var(--theme-ext-size-ad1cdf8362);
+  }
+
+  .tier-summary {
+    margin-top: calc(var(--theme-ext-space-59ce73ca4e) * -1);
+    margin-bottom: var(--theme-ext-space-21b301a6b6);
+    color: var(--theme-ext-color-b6d5805367);
+    font-size: var(--theme-ext-size-e87070bfde);
   }
 
   .tier-price-row {
@@ -355,7 +363,7 @@
   <section class="mb-4 mb-lg-5 pricing-deferred-section" id="plans">
     <div class="section-heading">
       <div>
-        <h2>Monthly and yearly plans</h2>
+        <h2>Monthly plans</h2>
         <p>Pick a tier and go straight to secure checkout from this page.</p>
       </div>
       <span class="text-muted small">Plans shown are ordered from smaller to larger tiers</span>
@@ -363,8 +371,7 @@
     <div class="row g-3">
       {% for tier in pricing_tiers %}
       {% set has_monthly_option = tier.signup_monthly_url %}
-      {% set has_yearly_option = tier.signup_yearly_url %}
-      {% set has_billing_options = has_monthly_option or has_yearly_option %}
+      {% set has_billing_options = has_monthly_option %}
       <div class="{{ pricing_tier_column_class }}">
         <article class="tier-card">
           <span class="tier-chip">
@@ -372,6 +379,9 @@
           </span>
           <h3>{{ tier.name }}</h3>
           <p class="tier-tagline">{{ tier.tagline }}</p>
+          {% if tier.marketing_summary_html and tier.marketing_summary and (tier.marketing_summary|lower) != (tier.tagline|lower) %}
+          <p class="tier-summary">{{ tier.marketing_summary_html }}</p>
+          {% endif %}
           {% if has_billing_options %}
           <div class="tier-price-row">
             {% if has_monthly_option %}
@@ -385,42 +395,33 @@
           </div>
           {% endif %}
           <ul class="tier-feature-list">
+            {% if tier.marketing_bullets_html %}
+            {% for bullet in tier.marketing_bullets_html[:6] %}
+            <li><span class="tier-feature-marker" aria-hidden="true">✓</span><span>{{ bullet }}</span></li>
+            {% endfor %}
+            {% else %}
             {% for feature in tier.feature_highlights[:6] %}
             <li><span class="tier-feature-marker" aria-hidden="true">✓</span><span>{{ feature }}</span></li>
             {% endfor %}
+            {% endif %}
           </ul>
-          {% if tier.feature_total > (tier.feature_highlights|length) %}
+          {% if not tier.marketing_bullets_html and tier.feature_total > (tier.feature_highlights|length) %}
           <div class="small text-muted mb-3">+ {{ tier.feature_total - (tier.feature_highlights|length) }} more capabilities inside the app</div>
           {% endif %}
           <div class="mt-auto d-grid gap-2 align-items-start">
             {% if has_billing_options %}
             <div class="tier-billing-toggle" role="group" aria-label="{{ tier.name }} billing options">
-              {% if has_monthly_option %}
               <a
                 href="{{ tier.signup_monthly_url }}"
-                class="btn btn-sm {% if has_yearly_option %}btn-outline-primary{% else %}btn-primary{% endif %} pricing-checkout-link"
+                class="btn btn-sm btn-primary pricing-checkout-link"
                 data-tier-id="{{ tier.tier_id }}"
                 data-tier-key="{{ tier.key }}"
                 data-tier-name="{{ tier.name }}"
                 data-billing-mode="standard"
                 data-billing-cycle="monthly"
               >
-                Checkout {{ tier.name }} Monthly
+                Proceed to checkout
               </a>
-              {% endif %}
-              {% if has_yearly_option %}
-              <a
-                href="{{ tier.signup_yearly_url }}"
-                class="btn btn-sm btn-outline-primary pricing-checkout-link"
-                data-tier-id="{{ tier.tier_id }}"
-                data-tier-key="{{ tier.key }}"
-                data-tier-name="{{ tier.name }}"
-                data-billing-mode="standard"
-                data-billing-cycle="yearly"
-              >
-                Checkout {{ tier.name }} Yearly
-              </a>
-              {% endif %}
             </div>
             {% else %}
             <a
@@ -432,7 +433,7 @@
               data-billing-mode="standard"
               data-billing-cycle="monthly"
             >
-              Explore {{ tier.name }}
+              Proceed to checkout
             </a>
             {% endif %}
           </div>
@@ -494,11 +495,13 @@
     <p class="text-muted mb-3">
       Pick your tier and launch your first tracked batch in minutes.
     </p>
+    {% if help_page_visible %}
     <div class="d-flex flex-wrap gap-2">
       <a href="{{ url_for('help_routes.help_overview') }}" class="btn btn-outline-secondary btn-lg">
         View Help Center
       </a>
     </div>
+    {% endif %}
   </section>
 </div>
 {% if load_analytics %}

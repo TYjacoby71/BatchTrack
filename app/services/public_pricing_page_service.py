@@ -20,6 +20,7 @@ from ..models.subscription_tier import SubscriptionTier
 from ..utils.settings import is_feature_enabled
 from .lifetime_pricing_service import LifetimePricingService
 from .signup_plan_catalog_service import SignupPlanCatalogService
+from .tier_marketing_copy import build_marketing_copy
 from .tier_presentation import TierPresentationCore
 from .tier_presentation.helpers import (
     coerce_int,
@@ -68,6 +69,7 @@ class PublicPricingPageService:
             db_tiers,
             include_live_pricing=True,
             allow_live_pricing_network=True,
+            include_yearly_pricing=False,
         )
 
         pricing_tiers: list[dict[str, Any]] = []
@@ -166,6 +168,21 @@ class PublicPricingPageService:
 
         monthly_price_display = str(tier_data.get("monthly_price_display") or "").strip()
         yearly_price_display = str(tier_data.get("yearly_price_display") or "").strip()
+        marketing_copy = build_marketing_copy(
+            marketing_tagline=(
+                tier_data.get("marketing_tagline")
+                or tier_data.get("resolved_marketing_tagline")
+            ),
+            marketing_summary=(
+                tier_data.get("marketing_summary")
+                or tier_data.get("resolved_marketing_summary")
+            ),
+            marketing_bullets=(
+                tier_data.get("marketing_bullets")
+                or tier_data.get("resolved_marketing_bullets")
+            ),
+            legacy_description=tier_data.get("description"),
+        )
         has_monthly_subscription = bool(
             can_standard_checkout
             and monthly_price_display
@@ -211,7 +228,15 @@ class PublicPricingPageService:
         return {
             "key": tier_key,
             "name": str(tier_data.get("name") or tier_key.title()),
-            "tagline": str(resolved_offer.get("tagline") or "Built for makers"),
+            "tagline": str(
+                resolved_offer.get("tagline")
+                or marketing_copy.get("tagline")
+                or "Built for makers"
+            ),
+            "marketing_summary": marketing_copy.get("summary") or "",
+            "marketing_summary_html": marketing_copy.get("summary_html"),
+            "marketing_bullets": marketing_copy.get("bullets") or [],
+            "marketing_bullets_html": marketing_copy.get("bullets_html") or [],
             "future_scope": str(resolved_offer.get("future_scope") or ""),
             "tier_id": tier_id,
             "monthly_price_display": monthly_price_display or None,

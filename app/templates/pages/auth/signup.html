@@ -55,7 +55,20 @@
                             <div class="plan-chip mb-2{% if card.is_free %} plan-chip-free{% endif %}">{{ card.name }}</div>
                             <h3 class="h5 fw-bold mb-1">{{ card.name }}</h3>
                             <p class="plan-price mb-2{% if card.is_free %} plan-price-free{% endif %}">{{ card.monthly_price_display }}</p>
-                            <p class="plan-copy mb-2">{{ card.description or 'Monthly plan access.' }}</p>
+                            {% if card.summary_html %}
+                            <p class="plan-copy mb-2">{{ card.summary_html }}</p>
+                            {% elif card.description %}
+                            <p class="plan-copy mb-2">{{ card.description }}</p>
+                            {% else %}
+                            <p class="plan-copy mb-2">Monthly plan access.</p>
+                            {% endif %}
+                            {% if card.bullet_html_items %}
+                            <ul class="plan-feature-list mb-2">
+                                {% for bullet in card.bullet_html_items[:5] %}
+                                <li><span class="plan-feature-check" aria-hidden="true">✓</span><span>{{ bullet }}</span></li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
                             {% if signup_primary_tier_id and tier_id == (signup_primary_tier_id|string) and not card.is_free %}
                             <p class="plan-note mb-1">Includes a 14-day free trial.</p>
                             {% endif %}
@@ -68,11 +81,9 @@
                             <div class="plan-card-cta-wrap mt-auto pt-2">
                                 <button type="button" class="btn btn-success w-100 paid-card-cta" data-tier-id="{{ tier_id }}">
                                     {% if card.is_free %}
-                                    Get Started Free
-                                    {% elif tier_id == (signup_primary_tier_id|string) %}
-                                    Start 14-Day Free Trial
+                                    Start Tracking Now
                                     {% else %}
-                                    Choose {{ card.name }}
+                                    Start 14 day free trial
                                     {% endif %}
                                 </button>
                             </div>
@@ -150,6 +161,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.BTAnalytics.capture(eventName, properties || {});
     };
 
+    capture('signup_page_landed', {
+        signup_source: signupSource,
+        oauth_prefilled: Boolean({{ 'true' if oauth_user_info else 'false' }})
+    });
     capture('signup_page_viewed', {
         signup_source: signupSource,
         oauth_prefilled: Boolean({{ 'true' if oauth_user_info else 'false' }})
@@ -233,15 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 upsertHidden('client_first_landing_at', firstLandingAt);
             }
         }
-        capture('pay_clicked', {
-            checkout_surface: 'signup_plan_selection',
-            signup_source: signupSource,
-            tier_id: String(selectedTierInput.value || ''),
-            billing_mode: String((billingModeInput && billingModeInput.value) || 'standard'),
-            billing_cycle: String((billingCycleInput && billingCycleInput.value) || 'monthly'),
-            lifetime_tier: String((lifetimeTierInput && lifetimeTierInput.value) || ''),
-            promo_code: String((promoCodeInput && promoCodeInput.value) || '')
-        });
         checkoutForm.submit();
     };
 
@@ -423,6 +429,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 .plan-copy {
     color: #4f5f80;
+}
+
+.plan-feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+}
+
+.plan-feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    color: #4f5f80;
+    margin-bottom: 0.35rem;
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
+.plan-feature-check {
+    color: #1f6b39;
+    font-weight: 700;
+    margin-top: 0.05rem;
 }
 
 .plan-note {

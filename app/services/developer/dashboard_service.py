@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from flask import current_app
 
-from app.utils.json_store import write_json_file
+from app.services.marketing_content_service import MarketingContentService
 from app.utils.settings import get_settings, save_settings
 
 FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
@@ -156,6 +156,38 @@ FEATURE_FLAG_SECTIONS: List[Dict[str, Any]] = [
                 "status": "wired",
                 "default_enabled": True,
                 "description": "Show the Role Management tab on the organization dashboard.",
+            },
+        ],
+    },
+    {
+        "title": "Affiliate program",
+        "description": "Controls visibility of affiliate entry points in the UI.",
+        "flags": [
+            {
+                "key": "FEATURE_AFFILIATE_PROGRAM_UI",
+                "label": "Affiliate UI Entry Points",
+                "status": "wired",
+                "default_enabled": True,
+                "description": (
+                    "Show affiliate navigation and tabs on public, settings, and "
+                    "organization surfaces. Does not disable existing affiliate data."
+                ),
+            },
+        ],
+    },
+    {
+        "title": "Help center",
+        "description": "Controls whether Help Center entry points are visible in the UI.",
+        "flags": [
+            {
+                "key": "FEATURE_HELP_PAGE_DISPLAY",
+                "label": "Help Page Display",
+                "status": "wired",
+                "default_enabled": False,
+                "description": (
+                    "Show Help Center links in public and authenticated navigation "
+                    "plus public CTA surfaces."
+                ),
             },
         ],
     },
@@ -538,9 +570,9 @@ class DeveloperDashboardService:
     @staticmethod
     def save_marketing_payload(payload: Dict[str, Any]) -> None:
         if "reviews" in payload:
-            write_json_file("data/reviews.json", payload["reviews"])
+            MarketingContentService.save_reviews(payload["reviews"])
         if "spotlights" in payload:
-            write_json_file("data/spotlights.json", payload["spotlights"])
+            MarketingContentService.save_spotlights(payload["spotlights"])
         if any(
             key in payload
             for key in ("messages", "promo_codes", "demo_url", "demo_videos")

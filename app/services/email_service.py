@@ -12,6 +12,7 @@ Glossary:
 import hashlib
 import logging
 import secrets
+import sys
 from typing import Optional
 
 from flask import current_app, url_for
@@ -196,6 +197,12 @@ class EmailService:
                 f"Provider adapter error ({provider}): {e}; falling back to SMTP"
             )
 
+        if provider != "smtp" and not EmailService._smtp_configured():
+            logger.warning(
+                "Skipping SMTP fallback because SMTP credentials are not configured."
+            )
+            return False
+
         # SMTP default path via Flask-Mail
         try:
             default_sender = current_app.config.get("MAIL_DEFAULT_SENDER")
@@ -214,6 +221,64 @@ class EmailService:
             return False
 
     @staticmethod
+    def _http_post(
+        url: str,
+        timeout: float = 10,
+        headers: Optional[dict] = None,
+        json_payload: Optional[dict] = None,
+        form_payload: Optional[dict] = None,
+        auth: Optional[tuple] = None,
+    ) -> tuple[int, str]:
+        """HTTP POST helper with gevent-safe transport fallback."""
+        gevent_active = "gevent" in sys.modules
+        if gevent_active:
+            try:
+                import httpx
+
+                with httpx.Client(timeout=timeout, follow_redirects=False) as client:
+                    response = client.post(
+                        url,
+                        headers=headers,
+                        json=json_payload,
+                        data=form_payload,
+                        auth=auth,
+                    )
+                return response.status_code, response.text
+            except Exception as exc:
+                logger.warning(
+                    "HTTPX send failed under gevent for %s: %s; retrying with requests",
+                    url,
+                    exc,
+                )
+
+        import requests
+
+        response = requests.post(
+            url,
+            headers=headers,
+            json=json_payload,
+            data=form_payload,
+            auth=auth,
+            timeout=timeout,
+        )
+        return response.status_code, response.text
+
+    @staticmethod
+    def _smtp_configured() -> bool:
+        default_sender = current_app.config.get("MAIL_DEFAULT_SENDER") or current_app.config.get(
+            "DEFAULT_FROM_EMAIL"
+        )
+        mail_server = current_app.config.get("MAIL_SERVER")
+        if not default_sender or not mail_server:
+            return False
+        if current_app.config.get("EMAIL_SMTP_ALLOW_NO_AUTH"):
+            return True
+        return bool(
+            current_app.config.get("MAIL_USERNAME")
+            and current_app.config.get("MAIL_PASSWORD")
+        )
+
+    @staticmethod
     def _send_via_sendgrid(
         recipient: str, subject: str, html_body: str, text_body: Optional[str]
     ) -> bool:
@@ -224,8 +289,6 @@ class EmailService:
         if not api_key or not from_email:
             return False
         try:
-            import requests
-
             payload = {
                 "personalizations": [{"to": [{"email": recipient}]}],
                 "from": {"email": from_email},
@@ -239,16 +302,16 @@ class EmailService:
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             }
-            resp = requests.post(
-                "https://api.sendgrid.com/v3/mail/send",
-                json=payload,
+            status_code, response_text = EmailService._http_post(
+                url="https://api.sendgrid.com/v3/mail/send",
+                json_payload=payload,
                 headers=headers,
                 timeout=10,
             )
-            if 200 <= resp.status_code < 300:
+            if 200 <= status_code < 300:
                 logger.info(f"Email sent to {recipient} via SendGrid")
                 return True
-            logger.error(f"SendGrid error {resp.status_code}: {resp.text}")
+            logger.error(f"SendGrid error {status_code}: {response_text}")
             return False
         except Exception as e:
             logger.error(f"SendGrid send error: {e}")
@@ -265,8 +328,6 @@ class EmailService:
         if not server_token or not from_email:
             return False
         try:
-            import requests
-
             payload = {
                 "From": from_email,
                 "To": recipient,
@@ -275,19 +336,19 @@ class EmailService:
                 "HtmlBody": html_body or "",
             }
             headers = {"X-Postmark-Server-Token": server_token}
-            resp = requests.post(
+            status_code, response_text = EmailService._http_post(
                 "https://api.postmarkapp.com/email",
-                json=payload,
+                json_payload=payload,
                 headers=headers,
                 timeout=10,
             )
-            if 200 <= resp.status_code < 300:
+            if 200 <= status_code < 300:
                 logger.info(f"Email sent to {recipient} via Postmark")
                 return True
-            logger.error(f"Postmark error {resp.status_code}: {resp.text}")
+            logger.error(f"Postmark error {status_code}: {response_text}")  # pragma: allowlist secret
             return False
         except Exception as e:
-            logger.error(f"Postmark send error: {e}")
+            logger.exception("Postmark send error: %s", e)  # pragma: allowlist secret
             return False
 
     @staticmethod
@@ -304,8 +365,6 @@ class EmailService:
         if not api_key or not domain or not from_email:
             return False
         try:
-            import requests
-
             data = {
                 "from": from_email,
                 "to": [recipient],
@@ -313,16 +372,16 @@ class EmailService:
                 "text": text_body or "",
                 "html": html_body or "",
             }
-            resp = requests.post(
-                f"https://api.mailgun.net/v3/{domain}/messages",
+            status_code, response_text = EmailService._http_post(
+                url=f"https://api.mailgun.net/v3/{domain}/messages",
+                form_payload=data,
                 auth=("api", api_key),
-                data=data,
                 timeout=10,
             )
-            if 200 <= resp.status_code < 300:
+            if 200 <= status_code < 300:
                 logger.info(f"Email sent to {recipient} via Mailgun")
                 return True
-            logger.error(f"Mailgun error {resp.status_code}: {resp.text}")
+            logger.error(f"Mailgun error {status_code}: {response_text}")
             return False
         except Exception as e:
             logger.error(f"Mailgun send error: {e}")

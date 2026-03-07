@@ -69,7 +69,7 @@
             </div>
             {% endif %}
 
-            <form method="POST" class="card shadow-sm">
+            <form method="POST" class="card shadow-sm needs-validation" id="onboardingDetailsForm" novalidate>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="form_name" value="details">
                 <div class="card-body">
@@ -88,17 +88,20 @@
                     <h5 class="mb-3"><i class="fas fa-user me-2"></i>Your Profile</h5>
                       <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label class="form-label">First Name</label>
-                            <input type="text" class="form-control form-control-lg" name="first_name" value="{{ current_user.first_name or '' }}">
+                            <label class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg" name="first_name" value="{{ current_user.first_name or '' }}" required aria-required="true">
+                            <div class="invalid-feedback">First name is required.</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Last Name</label>
-                            <input type="text" class="form-control form-control-lg" name="last_name" value="{{ current_user.last_name or '' }}">
+                            <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg" name="last_name" value="{{ current_user.last_name or '' }}" required aria-required="true">
+                            <div class="invalid-feedback">Last name is required.</div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Phone</label>
                             <input type="tel" class="form-control form-control-lg" name="user_phone" value="{{ current_user.phone or '' }}" placeholder="(555) 555-5555">
                         </div>
+                      </div>
                       <div class="row g-3 mb-4">
                           <div class="col-md-6">
                               <label class="form-label">Username</label>
@@ -130,6 +133,17 @@
         </div>
     </div>
 </div>
+<style>
+@keyframes onboarding-bounce {
+    0%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
+    60% { transform: translateY(2px); }
+}
+
+.onboarding-bounce {
+    animation: onboarding-bounce 280ms ease-in-out;
+}
+</style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const ga4CheckoutConversion = {{ ga4_checkout_conversion|tojson }};
@@ -203,7 +217,30 @@ document.addEventListener('DOMContentLoaded', function() {
         show_team_step: {{ 'true' if show_team_step else 'false' }}
     });
 
+    const detailsForm = document.getElementById('onboardingDetailsForm');
     const completeBtn = document.querySelector('button[name="complete_checklist"][value="true"]');
+    if (detailsForm) {
+        detailsForm.addEventListener('submit', function(event) {
+            if (detailsForm.checkValidity()) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            detailsForm.classList.add('was-validated');
+
+            if (event.submitter === completeBtn && completeBtn) {
+                completeBtn.classList.remove('onboarding-bounce');
+                void completeBtn.offsetWidth;
+                completeBtn.classList.add('onboarding-bounce');
+            }
+
+            if (typeof detailsForm.reportValidity === 'function') {
+                detailsForm.reportValidity();
+            }
+        });
+    }
+
     if (completeBtn) {
         completeBtn.addEventListener('click', function() {
             window.BTAnalytics.capture('onboarding_complete_clicked', {

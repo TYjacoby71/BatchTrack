@@ -98,6 +98,11 @@ def welcome():
             user.phone = user_phone or None
 
             username_errors = []
+            profile_errors = []
+            if not user_first:
+                profile_errors.append("Please add your first name before continuing.")
+            if not user_last:
+                profile_errors.append("Please add your last name before continuing.")
             if desired_username and desired_username != user.username:
                 existing = User.query.filter(
                     User.username == desired_username, User.id != user.id
@@ -128,7 +133,7 @@ def welcome():
 
             user.last_login = user.last_login or TimezoneUtils.utc_now()
 
-            validation_errors = username_errors + completion_errors
+            validation_errors = username_errors + profile_errors + completion_errors
             if validation_errors:
                 for err in validation_errors:
                     flash(err, "error")
@@ -161,13 +166,18 @@ def welcome():
                             ),
                         )
                         session.pop("onboarding_welcome", None)
+                        session.pop("onboarding_welcome_flash_shown", None)
+                        session.pop("onboarding_completion_required_notice", None)
                         return redirect(url_for("app_routes.dashboard"))
     else:
-        if session.pop("onboarding_welcome", None):
+        if session.get("onboarding_welcome") and not session.get(
+            "onboarding_welcome_flash_shown"
+        ):
             flash(
                 "Thanks for joining BatchTrack! Let’s finish setting up your workspace.",
                 "success",
             )
+            session["onboarding_welcome_flash_shown"] = True
 
     team_size = len(
         [

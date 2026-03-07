@@ -36,6 +36,7 @@ from ...utils.json_store import read_json_file
 from ...utils.settings import get_settings
 from ...utils.timezone_utils import TimezoneUtils
 from ..dashboard_alerts import DashboardAlertService
+from ..marketing_content_service import MarketingContentService
 from ..marketing_lead_service import MarketingLeadService
 from ._core import StatisticsService
 from .global_item_stats import GlobalItemStatsService
@@ -169,7 +170,7 @@ class AnalyticsDataService:
 
     @classmethod
     def _legacy_waitlist_rows(cls) -> List[Dict[str, Any]]:
-        raw_data = read_json_file("data/waitlist.json", default=[]) or []
+        raw_data = MarketingContentService.get_waitlist_entries()
         if isinstance(raw_data, list):
             return raw_data
         if isinstance(raw_data, dict):
@@ -1030,8 +1031,8 @@ class AnalyticsDataService:
         if cached is not None:
             return cached
 
-        reviews = read_json_file("data/reviews.json", default=[]) or []
-        spotlights = read_json_file("data/spotlights.json", default=[]) or []
+        reviews = MarketingContentService.get_reviews()
+        spotlights = MarketingContentService.get_spotlights()
         settings = get_settings()
 
         payload = {
