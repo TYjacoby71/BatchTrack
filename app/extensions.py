@@ -65,6 +65,9 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
 
     class _MailStub:
+        def init_app(self, *_args, **_kwargs):
+            return None
+
         def send(self, *_, **__):
             raise RuntimeError("Flask-Mail is not installed; install it to send email.")
 

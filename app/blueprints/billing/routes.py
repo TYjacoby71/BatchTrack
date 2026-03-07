@@ -459,6 +459,8 @@ def complete_signup_from_stripe():
     )
 
     session["onboarding_welcome"] = True
+    session.pop("onboarding_welcome_flash_shown", None)
+    session.pop("onboarding_completion_required_notice", None)
     session["ga4_checkout_conversion"] = ga4_conversion_payload
     if owner_user.email and not owner_user.email_verified:
         flash(

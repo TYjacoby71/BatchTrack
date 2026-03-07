@@ -29,7 +29,12 @@ from .common import (
     resolve_route_permission_scope,
     wants_json_response,
 )
-from .guards import enforce_billing, enforce_edge_origin_auth, handle_developer_context
+from .guards import (
+    enforce_billing,
+    enforce_customer_onboarding_completion,
+    enforce_edge_origin_auth,
+    handle_developer_context,
+)
 from .security_headers import apply_security_headers
 
 logger = logging.getLogger(__name__)
@@ -233,6 +238,10 @@ def register_middleware(app: Flask) -> None:
 
         if getattr(current_user, "user_type", None) == "developer":
             return handle_developer_context(path, request.endpoint, permission_scope)
+
+        onboarding_redirect = enforce_customer_onboarding_completion()
+        if onboarding_redirect is not None:
+            return onboarding_redirect
 
         billing_redirect = enforce_billing()
         if billing_redirect is not None:

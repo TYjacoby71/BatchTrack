@@ -697,20 +697,6 @@ def quick_signup():
 
             db.session.commit()
 
-            if verification_enabled:
-                try:
-                    EmailService.send_verification_email(
-                        user.email,
-                        user.email_verification_token,
-                        user.first_name or user.username,
-                    )
-                except Exception as exc:
-                    logger.warning(
-                        "Quick-signup verification email failed for %s: %s",
-                        user.email,
-                        exc,
-                    )
-
             quick_signup_completion_properties = {
                 "signup_source": signup_source,
                 "signup_flow": "quick_signup",
@@ -731,6 +717,8 @@ def quick_signup():
             login_user(user)
             SessionService.rotate_user_session(user)
             session["onboarding_welcome"] = True
+            session.pop("onboarding_welcome_flash_shown", None)
+            session.pop("onboarding_completion_required_notice", None)
             if verification_enabled:
                 flash(
                     "Account created. Please verify your email while you complete setup.",
