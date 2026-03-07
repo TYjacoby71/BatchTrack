@@ -17,8 +17,8 @@ from typing import Any
 
 from markupsafe import Markup, escape
 
-_BULLET_PREFIX_RE = re.compile(r"^\s*(?:[-*•]+|\d+[.)])\s+")
-_STAR_SPLIT_RE = re.compile(r"\s+\*\s+")
+_BULLET_PREFIX_RE = re.compile(r"^\s*(?:[-*•]+|\d+[.)])\s*")
+_STAR_SPLIT_RE = re.compile(r"\s+\*(?=\S)")
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 
 _BOLD_RE = re.compile(r"\*\*(.+?)\*\*|__(.+?)__")
@@ -28,7 +28,7 @@ _ITALIC_RE = re.compile(
 _CODE_RE = re.compile(r"`([^`]+)`")
 
 _MAX_SUMMARY_CHARS = 200
-_MAX_BULLETS = 6
+_MAX_BULLETS = 100
 
 
 def _clean_text(value: Any) -> str:
@@ -66,12 +66,14 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
     return deduped
 
 
-def parse_marketing_bullets(raw_bullets: Any, *, max_items: int = _MAX_BULLETS) -> list[str]:
+def parse_marketing_bullets(
+    raw_bullets: Any, *, max_items: int | None = _MAX_BULLETS
+) -> list[str]:
     """Return cleaned marketing bullets from newline-delimited text."""
     if isinstance(raw_bullets, (list, tuple, set)):
         parsed_items = [_normalize_bullet_line(str(item or "")) for item in raw_bullets]
         parsed_items = _dedupe_preserve_order(parsed_items)
-        return parsed_items[:max_items]
+        return parsed_items[:max_items] if isinstance(max_items, int) else parsed_items
 
     text_value = _clean_text(raw_bullets)
     if not text_value:
@@ -80,7 +82,7 @@ def parse_marketing_bullets(raw_bullets: Any, *, max_items: int = _MAX_BULLETS) 
     lines = _normalize_line_breaks(text_value).split("\n")
     parsed = [_normalize_bullet_line(line) for line in lines]
     parsed = _dedupe_preserve_order(parsed)
-    return parsed[:max_items]
+    return parsed[:max_items] if isinstance(max_items, int) else parsed
 
 
 def _parse_legacy_bullets(description: str) -> tuple[str, list[str]]:

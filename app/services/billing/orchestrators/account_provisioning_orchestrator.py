@@ -38,4 +38,8 @@ class AccountProvisioningOrchestrator:
             coupon_code = str(metadata.get("promo_code") or "").strip()
             if coupon_code:
                 enriched["coupon"] = coupon_code
+            for key in ("gclid", "wbraid", "gbraid"):
+                click_id = str(metadata.get(key) or "").strip()
+                if click_id:
+                    enriched[key] = click_id
         return enriched

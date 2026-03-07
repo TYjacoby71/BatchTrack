@@ -38,6 +38,7 @@ from ...services.subscription_downgrade_service import (
     build_downgrade_context,
 )
 from ...services.whop_service import WhopService
+from ...utils.analytics_attribution import extract_click_ids
 from ...utils.analytics_timing import seconds_since_first_landing
 from ...utils.permissions import require_permission
 from ...utils.timezone_utils import TimezoneUtils
@@ -429,6 +430,7 @@ def complete_signup_from_stripe():
             else None
         ),
     }
+    ga4_conversion_payload.update(extract_click_ids(request))
     try:
         ga4_conversion_payload = (
             AccountProvisioningOrchestrator.enrich_checkout_conversion_payload(
@@ -441,6 +443,13 @@ def complete_signup_from_stripe():
             session_id,
             exc,
         )
+    ga4_conversion_payload.update(
+        {
+            key: value
+            for key, value in extract_click_ids(request).items()
+            if not ga4_conversion_payload.get(key)
+        }
+    )
 
     login_user(owner_user)
     SessionService.rotate_user_session(owner_user)

@@ -83,23 +83,21 @@
   }
 
   .tier-chip {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--theme-ext-space-004ce77bde);
     border-radius: var(--theme-ext-radius-13166981e2);
-    font-size: var(--theme-ext-size-6ab716b90b);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: 0.98rem;
+    text-transform: none;
+    letter-spacing: 0.01em;
     font-weight: 700;
     padding: var(--theme-ext-space-554b2d50a5);
     border: 1px solid rgba(92, 106, 188, 0.3);
-    color: var(--theme-ext-color-f5ed5fda4e);
-    background: var(--theme-ext-color-c9a540741b);
-  }
-
-  .tier-card h3 {
-    margin: var(--theme-ext-space-2742fc1a1a);
-    font-size: var(--theme-ext-size-27761ea286);
+    color: #111827;
+    background: #f3f7ff;
+    width: 100%;
+    text-align: center;
   }
 
   .tier-tagline {
@@ -136,6 +134,18 @@
     display: inline-flex;
     gap: var(--theme-ext-space-e0100a51c2);
     flex-wrap: wrap;
+  }
+
+  .pricing-card-cta {
+    background: linear-gradient(45deg, #ff6b6b, #ffa500);
+    border: none;
+    color: #ffffff;
+  }
+
+  .pricing-card-cta:hover,
+  .pricing-card-cta:focus {
+    filter: brightness(0.95);
+    color: #ffffff;
   }
 
   .tier-feature-list {
@@ -377,7 +387,6 @@
           <span class="tier-chip">
             {{ tier.name }}
           </span>
-          <h3>{{ tier.name }}</h3>
           <p class="tier-tagline">{{ tier.tagline }}</p>
           {% if tier.marketing_summary_html and tier.marketing_summary and (tier.marketing_summary|lower) != (tier.tagline|lower) %}
           <p class="tier-summary">{{ tier.marketing_summary_html }}</p>
@@ -396,7 +405,7 @@
           {% endif %}
           <ul class="tier-feature-list">
             {% if tier.marketing_bullets_html %}
-            {% for bullet in tier.marketing_bullets_html[:6] %}
+            {% for bullet in tier.marketing_bullets_html %}
             <li><span class="tier-feature-marker" aria-hidden="true">✓</span><span>{{ bullet }}</span></li>
             {% endfor %}
             {% else %}
@@ -413,7 +422,7 @@
             <div class="tier-billing-toggle" role="group" aria-label="{{ tier.name }} billing options">
               <a
                 href="{{ tier.signup_monthly_url }}"
-                class="btn btn-sm btn-primary pricing-checkout-link"
+                class="btn btn-sm pricing-card-cta pricing-checkout-link"
                 data-tier-id="{{ tier.tier_id }}"
                 data-tier-key="{{ tier.key }}"
                 data-tier-name="{{ tier.name }}"
@@ -426,7 +435,7 @@
             {% else %}
             <a
               href="{{ url_for('core.signup_alias', source='pricing_' ~ tier.key ~ '_overview') }}"
-              class="btn btn-outline-primary btn-sm pricing-checkout-link"
+              class="btn btn-sm pricing-card-cta pricing-checkout-link"
               data-tier-id="{{ tier.tier_id }}"
               data-tier-key="{{ tier.key }}"
               data-tier-name="{{ tier.name }}"
@@ -507,11 +516,15 @@
 {% if load_analytics %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+  var analyticsEvents = (
+    window.BTAnalyticsEvents &&
+    typeof window.BTAnalyticsEvents.emit === 'function'
+  ) ? window.BTAnalyticsEvents : null;
+  if (!analyticsEvents) {
     return;
   }
 
-  window.BTAnalytics.capture('pricing_page_viewed', {
+  analyticsEvents.emit('pricing_page_viewed', {
     authenticated: false
   });
 
@@ -523,7 +536,19 @@ document.addEventListener('DOMContentLoaded', function() {
       var billingMode = link.getAttribute('data-billing-mode') || 'standard';
       var billingCycle = link.getAttribute('data-billing-cycle') || 'monthly';
       var destination = link.getAttribute('href') || null;
-      window.BTAnalytics.capture('proceed_to_checkout', {
+      if (typeof analyticsEvents.proceedToCheckout === 'function') {
+        analyticsEvents.proceedToCheckout({
+          surface: 'public_pricing',
+          tier_id: tierId,
+          tier_key: tierKey,
+          tier_name: tierName,
+          billing_mode: billingMode,
+          billing_cycle: billingCycle,
+          destination_path: destination
+        });
+        return;
+      }
+      analyticsEvents.emit('proceed_to_checkout', {
         surface: 'public_pricing',
         tier_id: tierId,
         tier_key: tierKey,
