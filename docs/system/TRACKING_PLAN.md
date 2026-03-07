@@ -31,6 +31,23 @@ Feature code should prefer the relay (`AnalyticsTrackingService.emit(...)` or
 event-specific helpers) instead of constructing direct `EventEmitter` calls in
 many files. This keeps event naming and required-property contracts centralized.
 
+## Analytics Lanes Policy (Source of Truth)
+
+BatchTrack follows a two-lane model:
+
+1. **Server lane (source of truth)**  
+   Business milestones and operational lifecycle events are emitted through
+   `AnalyticsTrackingService` and persisted as domain events. These are the
+   canonical records used for reporting and downstream delivery.
+
+2. **Client lane (interaction telemetry)**  
+   Browser events are limited to UX interaction signals (page views, CTA clicks,
+   dwell/engagement context) and should route through `window.BTAnalyticsEvents`
+   rather than direct provider calls.
+
+This split avoids duplicate “truth” events across client/server paths and keeps
+schema validation centralized.
+
 ## Event Envelope (Current)
 Core fields on every event record:
 - `event_name`
@@ -102,6 +119,11 @@ Legacy compatibility notes:
 - `promo_code` (string or `null`)
 - `used_referral_code` (boolean)
 - `referral_code` (string or `null`)
+
+Checkout attribution also carries ad click identifiers when available:
+- `gclid`
+- `wbraid`
+- `gbraid`
 
 ## Analytics Mapping Guidance
 - Keep `event_name` stable for downstream models.
@@ -191,6 +213,11 @@ Recommended baseline:
 - `POSTHOG_HOST` (defaults to `https://us.i.posthog.com`)
 - `POSTHOG_CAPTURE_PAGEVIEW` (default `true`)
 - `POSTHOG_CAPTURE_PAGELEAVE` (default `true`)
+
+### Template policy guard
+- Public/auth templates rendered with `load_analytics=False` should not contain
+  inline analytics emit code.
+- Guard script: `python3 scripts/validate_analytics_template_policy.py`
 
 ## Relevance Check (2026-02-18)
 Validated against:

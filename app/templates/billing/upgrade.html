@@ -174,16 +174,24 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+    const analyticsEvents = (
+        window.BTAnalyticsEvents &&
+        typeof window.BTAnalyticsEvents.emit === 'function'
+    ) ? window.BTAnalyticsEvents : null;
+    if (!analyticsEvents) {
         return;
     }
 
-    window.BTAnalytics.capture('payment_page_viewed', {
+    analyticsEvents.emit('payment_page_viewed', {
         payment_surface: 'billing_upgrade'
     });
 
     const emitCheckoutClick = (payload) => {
-        window.BTAnalytics.capture('proceed_to_checkout', payload);
+        if (typeof analyticsEvents.proceedToCheckout === 'function') {
+            analyticsEvents.proceedToCheckout(payload);
+            return;
+        }
+        analyticsEvents.emit('proceed_to_checkout', payload);
     };
 
     document.querySelectorAll('.upgrade-checkout-form').forEach((form) => {

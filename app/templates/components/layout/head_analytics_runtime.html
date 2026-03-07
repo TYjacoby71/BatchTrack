@@ -7,6 +7,9 @@ Shared analytics runtime helpers and page-level event capture wiring.
   (function() {
     var FIRST_LANDING_STORAGE_KEY = 'bt:first_landing_at';
     var FIRST_LANDING_COOKIE_KEY = 'bt_first_landing_at';
+    var ATTRIBUTION_STORAGE_KEY = 'bt:attribution_params';
+    var ATTRIBUTION_COOKIE_PREFIX = 'bt_attr_';
+    var ATTRIBUTION_KEYS = ['gclid', 'wbraid', 'gbraid'];
 
     function nowMs() {
       return Date.now ? Date.now() : new Date().getTime();
@@ -30,6 +33,84 @@ Shared analytics runtime helpers and page-level event capture wiring.
       try {
         document.cookie = name + '=' + encodeURIComponent(String(value)) + '; path=/; max-age=31536000; SameSite=Lax';
       } catch (error) {}
+    }
+
+    function normalizeAttributionValue(value) {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      var parsed = String(value).trim();
+      if (!parsed) {
+        return null;
+      }
+      if (parsed.length > 256) {
+        parsed = parsed.slice(0, 256);
+      }
+      return parsed;
+    }
+
+    function readStoredAttribution() {
+      var payload = {};
+      var parsedStorage = null;
+      try {
+        if (window.localStorage) {
+          var raw = window.localStorage.getItem(ATTRIBUTION_STORAGE_KEY);
+          if (raw) {
+            parsedStorage = JSON.parse(raw);
+          }
+        }
+      } catch (error) {}
+
+      ATTRIBUTION_KEYS.forEach(function(key) {
+        var fromStorage = parsedStorage && typeof parsedStorage === 'object'
+          ? normalizeAttributionValue(parsedStorage[key])
+          : null;
+        var fromCookie = normalizeAttributionValue(getCookie(ATTRIBUTION_COOKIE_PREFIX + key));
+        var selected = fromStorage || fromCookie || null;
+        if (selected) {
+          payload[key] = selected;
+        }
+      });
+      return payload;
+    }
+
+    function readAttributionFromUrl() {
+      var payload = {};
+      try {
+        var params = new URLSearchParams(window.location.search || '');
+        ATTRIBUTION_KEYS.forEach(function(key) {
+          var value = normalizeAttributionValue(params.get(key));
+          if (value) {
+            payload[key] = value;
+          }
+        });
+      } catch (error) {}
+      return payload;
+    }
+
+    function persistAttribution(payload) {
+      if (!payload || typeof payload !== 'object') {
+        return;
+      }
+      ATTRIBUTION_KEYS.forEach(function(key) {
+        var normalized = normalizeAttributionValue(payload[key]);
+        if (normalized) {
+          setCookie(ATTRIBUTION_COOKIE_PREFIX + key, normalized);
+        }
+      });
+      try {
+        if (window.localStorage) {
+          window.localStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(payload));
+        }
+      } catch (error) {}
+    }
+
+    function resolveAttributionParams() {
+      var stored = readStoredAttribution();
+      var fromUrl = readAttributionFromUrl();
+      var merged = Object.assign({}, stored, fromUrl);
+      persistAttribution(merged);
+      return merged;
     }
 
     function resolveFirstLandingAt() {
@@ -59,6 +140,7 @@ Shared analytics runtime helpers and page-level event capture wiring.
     }
 
     var firstLandingAt = resolveFirstLandingAt();
+    var attributionParams = resolveAttributionParams();
     var firstLandingRecordedKey = 'bt:first_landing_recorded_sent';
 
     window.BTAnalytics = window.BTAnalytics || {};
@@ -68,6 +150,21 @@ Shared analytics runtime helpers and page-level event capture wiring.
     window.BTAnalytics.secondsSinceFirstLanding = function() {
       var elapsedMs = Math.max(0, nowMs() - firstLandingAt);
       return Math.round(elapsedMs / 1000);
+    };
+    window.BTAnalytics.getAttributionParams = function() {
+      return Object.assign({}, attributionParams);
+    };
+    window.BTAnalytics.appendAttributionToPayload = function(payload) {
+      var target = payload && typeof payload === 'object'
+        ? payload
+        : {};
+      ATTRIBUTION_KEYS.forEach(function(key) {
+        var value = normalizeAttributionValue(attributionParams[key]);
+        if (value) {
+          target[key] = value;
+        }
+      });
+      return target;
     };
     window.BTAnalytics.capture = function(eventName, properties) {
       if (!eventName || !canCapture()) {
@@ -81,9 +178,18 @@ Shared analytics runtime helpers and page-level event capture wiring.
         },
         properties || {}
       );
+      window.BTAnalytics.appendAttributionToPayload(payload);
       try {
         window.posthog.capture(eventName, payload);
       } catch (error) {}
+    };
+    window.BTAnalyticsEvents = window.BTAnalyticsEvents || {
+      emit: function(eventName, properties) {
+        window.BTAnalytics.capture(eventName, properties || {});
+      },
+      proceedToCheckout: function(properties) {
+        window.BTAnalytics.capture('proceed_to_checkout', properties || {});
+      }
     };
 
     document.addEventListener('DOMContentLoaded', function() {

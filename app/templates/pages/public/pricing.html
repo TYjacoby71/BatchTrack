@@ -516,11 +516,15 @@
 {% if load_analytics %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+  var analyticsEvents = (
+    window.BTAnalyticsEvents &&
+    typeof window.BTAnalyticsEvents.emit === 'function'
+  ) ? window.BTAnalyticsEvents : null;
+  if (!analyticsEvents) {
     return;
   }
 
-  window.BTAnalytics.capture('pricing_page_viewed', {
+  analyticsEvents.emit('pricing_page_viewed', {
     authenticated: false
   });
 
@@ -532,7 +536,19 @@ document.addEventListener('DOMContentLoaded', function() {
       var billingMode = link.getAttribute('data-billing-mode') || 'standard';
       var billingCycle = link.getAttribute('data-billing-cycle') || 'monthly';
       var destination = link.getAttribute('href') || null;
-      window.BTAnalytics.capture('proceed_to_checkout', {
+      if (typeof analyticsEvents.proceedToCheckout === 'function') {
+        analyticsEvents.proceedToCheckout({
+          surface: 'public_pricing',
+          tier_id: tierId,
+          tier_key: tierKey,
+          tier_name: tierName,
+          billing_mode: billingMode,
+          billing_cycle: billingCycle,
+          destination_path: destination
+        });
+        return;
+      }
+      analyticsEvents.emit('proceed_to_checkout', {
         surface: 'public_pricing',
         tier_id: tierId,
         tier_key: tierKey,

@@ -328,6 +328,7 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **POSTHOG_PROJECT_API_KEY** → Optional PostHog project API key that enables browser analytics bootstrap in the shared layout (see `app/config.py`, `app/config_schema_parts/operations.py`, and `app/templates/layout.html`)
 - **POSTHOG_HOST** → Configurable PostHog ingestion host for cloud-region or self-hosted analytics endpoints (see `app/config.py`, `app/config_schema_parts/operations.py`, and `app/templates/layout.html`)
 - **POSTHOG_CAPTURE_PAGEVIEW / POSTHOG_CAPTURE_PAGELEAVE** → PostHog toggles for automatic pageview and pageleave capture in the shared layout bootstrap (see `app/config.py`, `app/config_schema_parts/operations.py`, and `app/templates/layout.html`)
+- **BTAnalyticsEvents** → Browser-side analytics adapter that centralizes client event emits (`emit`, `proceedToCheckout`) on top of `BTAnalytics.capture` for template-level consistency (see `app/templates/components/layout/head_analytics_runtime.html`)
 - **EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS** → Verification token expiry window in hours (see `app/blueprints/auth/verification_routes.py`)
 - **PASSWORD_RESET_TOKEN_EXPIRY_HOURS** → Reset token expiry window in hours (see `app/blueprints/auth/password_routes.py`)
 - **DELETION_ARCHIVE_DIR** → Optional app config path used to store organization hard-delete marketplace snapshot JSON files (see `app/services/developer/deletion_utils.py`)

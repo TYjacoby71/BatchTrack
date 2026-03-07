@@ -147,6 +147,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const ga4CheckoutConversion = {{ ga4_checkout_conversion|tojson }};
+    const analyticsEvents = (
+        window.BTAnalyticsEvents &&
+        typeof window.BTAnalyticsEvents.emit === 'function'
+    ) ? window.BTAnalyticsEvents : null;
     const googleAdsConversionId = {{ (google_ads_conversion_id or '')|tojson }};
     const googleAdsPurchaseConversionLabel = {{ (google_ads_purchase_conversion_label or '')|tojson }};
     const googleAdsSendTo = (googleAdsConversionId && googleAdsPurchaseConversionLabel)
@@ -160,6 +164,35 @@ document.addEventListener('DOMContentLoaded', function() {
         const couponCode = ga4CheckoutConversion.coupon || null;
         const tierId = ga4CheckoutConversion.tier_id || null;
         const tierName = ga4CheckoutConversion.tier_name || null;
+        const gclid = ga4CheckoutConversion.gclid || null;
+        const wbraid = ga4CheckoutConversion.wbraid || null;
+        const gbraid = ga4CheckoutConversion.gbraid || null;
+
+        const runOncePerTransaction = (eventKey, callback) => {
+            if (typeof callback !== 'function') {
+                return;
+            }
+            if (!transactionId) {
+                callback();
+                return;
+            }
+            const storageKey = `bt:conversion_sent:${eventKey}:${transactionId}`;
+            let alreadySent = false;
+            try {
+                alreadySent = window.localStorage && window.localStorage.getItem(storageKey) === '1';
+            } catch (error) {
+                alreadySent = false;
+            }
+            if (alreadySent) {
+                return;
+            }
+            callback();
+            try {
+                if (window.localStorage) {
+                    window.localStorage.setItem(storageKey, '1');
+                }
+            } catch (error) {}
+        };
 
         const purchasePayload = {
             transaction_id: transactionId,
@@ -182,8 +215,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             purchasePayload.items = [itemPayload];
         }
+        if (gclid) {
+            purchasePayload.gclid = gclid;
+        }
+        if (wbraid) {
+            purchasePayload.wbraid = wbraid;
+        }
+        if (gbraid) {
+            purchasePayload.gbraid = gbraid;
+        }
 
-        window.gtag('event', 'purchase', purchasePayload);
+        runOncePerTransaction('ga4_purchase', function() {
+            window.gtag('event', 'purchase', purchasePayload);
+        });
         if (googleAdsSendTo) {
             const adsConversionPayload = {
                 send_to: googleAdsSendTo,
@@ -193,7 +237,18 @@ document.addEventListener('DOMContentLoaded', function() {
             if (hasValue) {
                 adsConversionPayload.value = normalizedValue;
             }
-            window.gtag('event', 'conversion', adsConversionPayload);
+            if (gclid) {
+                adsConversionPayload.gclid = gclid;
+            }
+            if (wbraid) {
+                adsConversionPayload.wbraid = wbraid;
+            }
+            if (gbraid) {
+                adsConversionPayload.gbraid = gbraid;
+            }
+            runOncePerTransaction('google_ads_conversion', function() {
+                window.gtag('event', 'conversion', adsConversionPayload);
+            });
         }
 
         const completionPayload = {
@@ -215,20 +270,33 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tierId) {
             completionPayload.tier_id = tierId;
         }
+        if (gclid) {
+            completionPayload.gclid = gclid;
+        }
+        if (wbraid) {
+            completionPayload.wbraid = wbraid;
+        }
+        if (gbraid) {
+            completionPayload.gbraid = gbraid;
+        }
 
-        window.gtag('event', 'purchase_completed', completionPayload);
-        window.gtag('event', 'account_created', {
-            signup_flow: 'checkout',
-            billing_provider: 'stripe',
-            purchase_completed: true,
-            tier_id: tierId
+        runOncePerTransaction('ga4_purchase_completed', function() {
+            window.gtag('event', 'purchase_completed', completionPayload);
+        });
+        runOncePerTransaction('ga4_account_created', function() {
+            window.gtag('event', 'account_created', {
+                signup_flow: 'checkout',
+                billing_provider: 'stripe',
+                purchase_completed: true,
+                tier_id: tierId
+            });
         });
     }
 
-    if (!window.BTAnalytics || typeof window.BTAnalytics.capture !== 'function') {
+    if (!analyticsEvents) {
         return;
     }
-    window.BTAnalytics.capture('onboarding_welcome_viewed', {
+    analyticsEvents.emit('onboarding_welcome_viewed', {
         requires_password_setup: {{ 'true' if requires_password_setup else 'false' }},
         show_team_step: {{ 'true' if show_team_step else 'false' }}
     });
@@ -259,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (completeBtn) {
         completeBtn.addEventListener('click', function() {
-            window.BTAnalytics.capture('onboarding_complete_clicked', {
+            analyticsEvents.emit('onboarding_complete_clicked', {
                 requires_password_setup: {{ 'true' if requires_password_setup else 'false' }}
             });
         });
