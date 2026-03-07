@@ -53,7 +53,6 @@
                             aria-pressed="{{ 'true' if tier_id == selected_paid_tier else 'false' }}"
                         >
                             <div class="plan-chip mb-2{% if card.is_free %} plan-chip-free{% endif %}">{{ card.name }}</div>
-                            <h3 class="h5 fw-bold mb-1">{{ card.name }}</h3>
                             <p class="plan-price mb-2{% if card.is_free %} plan-price-free{% endif %}">{{ card.monthly_price_display }}</p>
                             {% if card.tagline and (card.tagline|lower) != (card.summary|lower) %}
                             <p class="plan-blurb mb-1">{{ card.tagline }}</p>
@@ -410,20 +409,20 @@ document.addEventListener('DOMContentLoaded', () => {
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
-    background: #e8f0ff;
-    border: 1px solid #9eb8ee;
-    color: #244a97;
-    font-size: 0.72rem;
-    text-transform: uppercase;
+    background: #f3f7ff;
+    border: 1px solid #b9caef;
+    color: #111827;
+    font-size: 0.94rem;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    padding: 0.2rem 0.6rem;
+    letter-spacing: 0.01em;
+    padding: 0.26rem 0.72rem;
+    line-height: 1.1;
 }
 
 .plan-chip-free {
-    background: #e6f4ea;
-    border-color: #a8d8b6;
-    color: #1f6b39;
+    background: #edf8f1;
+    border-color: #afdcc0;
+    color: #111827;
 }
 
 .plan-price {

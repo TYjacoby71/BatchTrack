@@ -86,19 +86,14 @@
     align-items: center;
     gap: var(--theme-ext-space-004ce77bde);
     border-radius: var(--theme-ext-radius-13166981e2);
-    font-size: var(--theme-ext-size-6ab716b90b);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: 0.98rem;
+    text-transform: none;
+    letter-spacing: 0.01em;
     font-weight: 700;
     padding: var(--theme-ext-space-554b2d50a5);
     border: 1px solid rgba(92, 106, 188, 0.3);
-    color: var(--theme-ext-color-f5ed5fda4e);
-    background: var(--theme-ext-color-c9a540741b);
-  }
-
-  .tier-card h3 {
-    margin: var(--theme-ext-space-2742fc1a1a);
-    font-size: var(--theme-ext-size-27761ea286);
+    color: #111827;
+    background: #f3f7ff;
   }
 
   .tier-tagline {
@@ -377,7 +372,6 @@
           <span class="tier-chip">
             {{ tier.name }}
           </span>
-          <h3>{{ tier.name }}</h3>
           <p class="tier-tagline">{{ tier.tagline }}</p>
           {% if tier.marketing_summary_html and tier.marketing_summary and (tier.marketing_summary|lower) != (tier.tagline|lower) %}
           <p class="tier-summary">{{ tier.marketing_summary_html }}</p>
