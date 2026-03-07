@@ -147,6 +147,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const ga4CheckoutConversion = {{ ga4_checkout_conversion|tojson }};
+    const googleAdsConversionId = {{ (google_ads_conversion_id or '')|tojson }};
+    const googleAdsPurchaseConversionLabel = {{ (google_ads_purchase_conversion_label or '')|tojson }};
+    const googleAdsSendTo = (googleAdsConversionId && googleAdsPurchaseConversionLabel)
+        ? `${googleAdsConversionId}/${googleAdsPurchaseConversionLabel}`
+        : null;
     if (ga4CheckoutConversion && typeof window.gtag === 'function') {
         const normalizedValue = Number(ga4CheckoutConversion.value);
         const hasValue = Number.isFinite(normalizedValue);
@@ -179,6 +184,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         window.gtag('event', 'conversion_event_purchase', purchasePayload);
+        if (googleAdsSendTo) {
+            const adsConversionPayload = {
+                send_to: googleAdsSendTo,
+                currency: normalizedCurrency,
+                transaction_id: transactionId
+            };
+            if (hasValue) {
+                adsConversionPayload.value = normalizedValue;
+            }
+            window.gtag('event', 'conversion', adsConversionPayload);
+        }
 
         const completionPayload = {
             transaction_id: transactionId,

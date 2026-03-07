@@ -185,6 +185,8 @@ Recommended baseline:
 
 ### Config keys
 - `GOOGLE_ANALYTICS_MEASUREMENT_ID` (e.g., `G-XXXXXXXXXX`)
+- `GOOGLE_ADS_CONVERSION_ID` (e.g., `AW-XXXXXXXXXX`)
+- `GOOGLE_ADS_PURCHASE_CONVERSION_LABEL` (conversion label paired with `GOOGLE_ADS_CONVERSION_ID`)
 - `POSTHOG_PROJECT_API_KEY`
 - `POSTHOG_HOST` (defaults to `https://us.i.posthog.com`)
 - `POSTHOG_CAPTURE_PAGEVIEW` (default `true`)
