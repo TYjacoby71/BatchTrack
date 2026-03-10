@@ -21,6 +21,7 @@
 
         :root {
             --navbar-height: 72px;
+            --homepage-card-media-height: 240px;
         }
 
         body {
@@ -239,13 +240,14 @@
             border: 1px solid rgba(22, 32, 61, 0.12);
             background: #ffffff;
             padding: 0.5rem;
-            min-height: 0;
+            min-height: var(--homepage-card-media-height);
+            height: var(--homepage-card-media-height);
         }
 
         .tool-card-image {
             width: 100%;
-            height: auto;
-            max-height: 420px;
+            height: 100%;
+            max-height: none;
             object-fit: contain;
             object-position: center center;
             display: block;
@@ -255,8 +257,8 @@
 
         .tool-card-video {
             width: 100%;
-            height: auto;
-            max-height: 420px;
+            height: 100%;
+            max-height: none;
             object-fit: contain;
             object-position: center center;
             display: block;
@@ -271,7 +273,8 @@
         }
 
         .tool-slot-media {
-            min-height: 0;
+            min-height: var(--homepage-card-media-height);
+            height: var(--homepage-card-media-height);
             padding: 0.5rem !important;
             overflow: visible;
         }
@@ -279,9 +282,9 @@
         .tool-slot-image,
         .tool-slot-video {
             width: 100%;
-            height: auto;
+            height: 100%;
             min-height: 0;
-            max-height: 420px;
+            max-height: none;
             object-fit: contain;
             object-position: center center;
             display: block;
@@ -642,6 +645,10 @@
         }
 
         @media (max-width: 767.98px) {
+            :root {
+                --homepage-card-media-height: 210px;
+            }
+
             .hero-visual-placeholder {
                 min-height: 260px;
             }
