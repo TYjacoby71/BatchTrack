@@ -26,6 +26,7 @@ from .analytics_tracking_service import AnalyticsTrackingService
 from .affiliate_service import AffiliateService
 from .billing_service import BillingService
 from .lifetime_pricing_service import LifetimePricingService
+from .signup_info_partial_service import SignupInfoPartialService
 from .signup_service import SignupService
 from .tier_marketing_copy import build_marketing_copy
 
@@ -55,6 +56,8 @@ class SignupRequestContext:
     prefill_email: str
     prefill_phone: str
     signup_primary_tier_id: str | None
+    signup_info_panel_by_tier: dict[str, dict[str, Any]]
+    signup_info_posthog: dict[str, str]
     gclid: str | None = None
     wbraid: str | None = None
     gbraid: str | None = None
@@ -88,6 +91,7 @@ class SignupSubmission:
     selected_mode: str
     selected_standard_cycle: str
     selected_lifetime_key: str
+    signup_info_partial_id: str | None
     effective_promo_code: str | None
     detected_timezone: str | None
     client_first_landing_at: int | None = None
@@ -157,6 +161,11 @@ class SignupCheckoutService:
             db_tiers=db_tiers,
             include_live_pricing=include_live_pricing,
             allow_live_pricing_network=allow_live_pricing_network,
+        )
+        signup_info_panel_by_tier, signup_info_posthog = (
+            SignupInfoPartialService.build_signup_panels(
+                tier_ids=list(available_tiers.keys())
+            )
         )
 
         prefill_email = request.form.get("contact_email") or (
@@ -253,6 +262,8 @@ class SignupCheckoutService:
             prefill_email=prefill_email,
             prefill_phone=prefill_phone,
             signup_primary_tier_id=signup_primary_tier_id,
+            signup_info_panel_by_tier=signup_info_panel_by_tier,
+            signup_info_posthog=signup_info_posthog,
             gclid=click_ids.get("gclid"),
             wbraid=click_ids.get("wbraid"),
             gbraid=click_ids.get("gbraid"),
@@ -297,6 +308,10 @@ class SignupCheckoutService:
             selected_paid_tier_id = next(iter(context.available_tiers.keys()), "")
 
         signup_plan_cards = cls._build_signup_paid_plan_cards(context.available_tiers)
+        signup_info_panel_by_tier = dict(context.signup_info_panel_by_tier or {})
+        selected_signup_info_panel = signup_info_panel_by_tier.get(selected_paid_tier_id)
+        if not selected_signup_info_panel and signup_info_panel_by_tier:
+            selected_signup_info_panel = next(iter(signup_info_panel_by_tier.values()))
         artisan_upsell_offer = context.lifetime_by_tier_id.get(
             str(context.signup_primary_tier_id or "")
         )
@@ -329,6 +344,9 @@ class SignupCheckoutService:
             "signup_primary_tier_id": context.signup_primary_tier_id,
             "selected_paid_tier_id": selected_paid_tier_id,
             "signup_plan_cards": signup_plan_cards,
+            "signup_info_panel_by_tier": signup_info_panel_by_tier,
+            "signup_info_selected_panel": selected_signup_info_panel,
+            "signup_info_posthog": context.signup_info_posthog,
             "artisan_upsell_offer": artisan_upsell_offer,
             "page_title": page_title,
             "page_description": page_description,
@@ -573,6 +591,9 @@ class SignupCheckoutService:
             selected_mode=selected_mode,
             selected_standard_cycle=selected_standard_cycle,
             selected_lifetime_key=selected_lifetime_key,
+            signup_info_partial_id=(
+                str(form_data.get("signup_info_partial_id") or "").strip() or None
+            ),
             effective_promo_code=context.promo_code,
             detected_timezone=form_data.get("detected_timezone"),
             client_first_landing_at=cls._parse_client_epoch_ms(
@@ -778,6 +799,34 @@ class SignupCheckoutService:
             metadata["referral_code"] = context.referral_code
         if submission.effective_promo_code:
             metadata["promo_code"] = submission.effective_promo_code
+        resolved_panel = (
+            context.signup_info_panel_by_tier.get(str(submission.selected_tier or ""))
+            if context.signup_info_panel_by_tier
+            else None
+        )
+        selected_partial_id = (
+            submission.signup_info_partial_id
+            or str((resolved_panel or {}).get("partial_id") or "").strip()
+            or None
+        )
+        if selected_partial_id:
+            metadata["signup_info_partial_id"] = selected_partial_id
+            assignment_mode = str((resolved_panel or {}).get("assignment_mode") or "").strip()
+            if assignment_mode:
+                metadata["signup_info_assignment_mode"] = assignment_mode
+            variant_key = str((resolved_panel or {}).get("variant_key") or "").strip()
+            if variant_key:
+                metadata["signup_info_variant_key"] = variant_key
+            property_key = str(
+                (context.signup_info_posthog or {}).get("property_key") or ""
+            ).strip()
+            if property_key and property_key != "signup_info_partial_id":
+                metadata[property_key] = selected_partial_id
+            experiment_key = str(
+                (context.signup_info_posthog or {}).get("experiment_key") or ""
+            ).strip()
+            if experiment_key:
+                metadata["signup_info_experiment_key"] = experiment_key
         if submission.gclid:
             metadata["gclid"] = submission.gclid
         if submission.wbraid:

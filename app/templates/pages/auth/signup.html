@@ -88,6 +88,22 @@
                     </div>
                 </section>
 
+                {% if signup_info_panel_by_tier %}
+                <section class="signup-info-section mb-4" id="signupInfoSection">
+                    {% for tier_id, panel in signup_info_panel_by_tier.items() %}
+                    <article
+                        class="signup-info-panel{% if tier_id == selected_paid_tier %} is-active{% endif %}{% if tier_id != selected_paid_tier %} d-none{% endif %}"
+                        data-tier-id="{{ tier_id }}"
+                        data-partial-id="{{ panel.partial_id }}"
+                        data-assignment-mode="{{ panel.assignment_mode }}"
+                        data-variant-key="{{ panel.variant_key }}"
+                    >
+                        <div class="signup-info-content">{{ panel.html_content|safe }}</div>
+                    </article>
+                    {% endfor %}
+                </section>
+                {% endif %}
+
                 <form id="signupCheckoutForm" method="POST" action="{{ url_for('core.signup_alias') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input id="selectedTierInput" type="hidden" name="selected_tier" value="{{ selected_paid_tier }}">
@@ -95,6 +111,7 @@
                     <input id="billingCycleInput" type="hidden" name="billing_cycle" value="monthly">
                     <input id="lifetimeTierInput" type="hidden" name="lifetime_tier" value="">
                     <input id="promoCodeInput" type="hidden" name="promo" value="{{ promo_code or '' }}">
+                    <input id="signupInfoPartialInput" type="hidden" name="signup_info_partial_id" value="{{ (signup_info_selected_panel or {}).get('partial_id', '') }}">
                     {% if signup_source %}
                     <input type="hidden" name="source" value="{{ signup_source }}">
                     {% endif %}
@@ -145,8 +162,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const billingModeInput = document.getElementById('billingModeInput');
     const billingCycleInput = document.getElementById('billingCycleInput');
     const lifetimeTierInput = document.getElementById('lifetimeTierInput');
+    const signupInfoPartialInput = document.getElementById('signupInfoPartialInput');
+    const signupInfoPanels = Array.from(document.querySelectorAll('.signup-info-panel'));
     const promoCodeInput = document.getElementById('promoCodeInput');
     const signupSource = {{ (signup_source or 'direct')|tojson }};
+    const signupInfoExperimentKey = {{ ((signup_info_posthog or {}).get('experiment_key') if signup_info_posthog else '')|tojson }};
+    const signupInfoPropertyKey = {{ ((signup_info_posthog or {}).get('property_key') if signup_info_posthog else '')|tojson }};
     const initialPromoCode = {{ (promo_code or '')|tojson }};
     const artisanTierId = {{ (signup_primary_tier_id or '')|tojson }};
     const artisanUpsellOffer = {{ (artisan_upsell_offer if artisan_upsell_offer else none)|tojson }};
@@ -171,6 +192,43 @@ document.addEventListener('DOMContentLoaded', () => {
         analyticsEvents.emit('proceed_to_checkout', properties || {});
     };
 
+    const syncSignupInfoPanel = (tierId, emitEvent) => {
+        if (!signupInfoPanels.length) {
+            if (signupInfoPartialInput) signupInfoPartialInput.value = '';
+            return;
+        }
+        let activePanel = signupInfoPanels.find(
+            (panel) => String(panel.dataset.tierId || '') === String(tierId || '')
+        );
+        if (!activePanel) {
+            activePanel = signupInfoPanels[0];
+        }
+        signupInfoPanels.forEach((panel) => {
+            const isActive = panel === activePanel;
+            panel.classList.toggle('is-active', isActive);
+            panel.classList.toggle('d-none', !isActive);
+        });
+        if (signupInfoPartialInput) {
+            signupInfoPartialInput.value = String(activePanel.dataset.partialId || '');
+        }
+        if (emitEvent) {
+            const payload = {
+                signup_source: signupSource,
+                tier_id: String(tierId || ''),
+                signup_info_partial_id: String(activePanel.dataset.partialId || ''),
+                signup_info_assignment_mode: String(activePanel.dataset.assignmentMode || 'manual'),
+                signup_info_variant_key: String(activePanel.dataset.variantKey || 'A')
+            };
+            if (signupInfoExperimentKey) {
+                payload.signup_info_experiment_key = signupInfoExperimentKey;
+            }
+            if (signupInfoPropertyKey && signupInfoPropertyKey !== 'signup_info_partial_id') {
+                payload[signupInfoPropertyKey] = String(activePanel.dataset.partialId || '');
+            }
+            capture('signup_info_partial_viewed', payload);
+        }
+    };
+
     capture('signup_page_landed', {
         signup_source: signupSource,
         oauth_prefilled: Boolean({{ 'true' if oauth_user_info else 'false' }})
@@ -192,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.classList.toggle('is-selected', isSelected);
             card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
         });
+        syncSignupInfoPanel(tierId, true);
     };
 
     paidCards.forEach((card) => {
@@ -319,6 +378,12 @@ document.addEventListener('DOMContentLoaded', () => {
             openCheckoutForTier(String(button.dataset.tierId || '').trim());
         });
     });
+
+    if (selectedTierInput && selectedTierInput.value) {
+        syncSignupInfoPanel(selectedTierInput.value, false);
+    } else if (paidCards.length > 0) {
+        syncSignupInfoPanel(paidCards[0].dataset.tierId || '', false);
+    }
 
     if (upsellMonthlyBtn) {
         upsellMonthlyBtn.addEventListener('click', () => {
@@ -505,6 +570,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
 .plan-card-cta-wrap {
     margin-top: auto;
+}
+
+.signup-info-section {
+    border: 1px solid #dbe3f4;
+    background: #f8fbff;
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.signup-info-panel {
+    display: none;
+}
+
+.signup-info-panel.is-active {
+    display: block;
+}
+
+.signup-info-content h2,
+.signup-info-content h3,
+.signup-info-content h4 {
+    color: #1d355f;
+    margin-bottom: 0.45rem;
+}
+
+.signup-info-content p {
+    color: #405475;
+    margin-bottom: 0.65rem;
+}
+
+.signup-info-content ul {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.signup-info-content li {
+    color: #405475;
+    margin-bottom: 0.3rem;
 }
 
 .upsell-overlay {

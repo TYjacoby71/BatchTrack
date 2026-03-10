@@ -1,0 +1,380 @@
+{% extends 'layout.html' %}
+
+{% block title %}Signup Info Partials - Developer{% endblock %}
+
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
+{% block content %}
+{% set default_assignment = assignments.get('default', {}) %}
+{% set tier_assignments = assignments.get('tiers', {}) %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('developer.dashboard') }}">Developer Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}">Subscription Tiers</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Signup Info Partials</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h3 class="mb-1"><i class="fas fa-layer-group text-primary"></i> Signup Info Partials</h3>
+                <p class="text-muted mb-0">Create, version, preview, and assign below-pricing signup copy variants.</p>
+            </div>
+            <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Tier Management
+            </a>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Create New Partial</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ url_for('developer.subscription_tiers.create_signup_info_partial') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-3">
+                    <div class="col-lg-4">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" name="name" placeholder="Signup Info Partial C" required>
+                    </div>
+                    <div class="col-lg-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="status">
+                            <option value="draft">Draft</option>
+                            <option value="active">Active</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-5">
+                        <label class="form-label">Preview Tier</label>
+                        <select class="form-select" id="globalPreviewTier">
+                            {% for tier in signup_tiers %}
+                            <option value="{{ tier.id }}">{{ tier.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">HTML Content</label>
+                        <textarea class="form-control" rows="7" name="html_content" placeholder="<div class='signup-info-block'>...</div>" required></textarea>
+                        <div class="form-text">Use HTML so headlines, bullets, checkmarks, and custom sales-page blocks are fully configurable.</div>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Partial
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Tier Assignment (Manual or 50/50 Split)</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ url_for('developer.subscription_tiers.save_signup_info_assignments') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Target</th>
+                                <th>Mode</th>
+                                <th>Primary Partial (A)</th>
+                                <th>Secondary Partial (B)</th>
+                                <th>Preview</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-light">
+                                <td><strong>Default</strong></td>
+                                <td>
+                                    <select class="form-select form-select-sm" name="default_mode" id="default_mode">
+                                        <option value="manual" {% if default_assignment.get('mode') == 'manual' %}selected{% endif %}>Manual (single variant)</option>
+                                        <option value="split_50_50" {% if default_assignment.get('mode') == 'split_50_50' %}selected{% endif %}>50/50 split test</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" name="default_primary_partial_id" id="default_primary_partial_id">
+                                        <option value="">Select partial</option>
+                                        {% for partial in selectable_partials %}
+                                        <option value="{{ partial.id }}" {% if default_assignment.get('primary_partial_id') == partial.id %}selected{% endif %}>
+                                            {{ partial.name }} ({{ partial.status }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" name="default_secondary_partial_id" id="default_secondary_partial_id">
+                                        <option value="">Optional second variant</option>
+                                        {% for partial in selectable_partials %}
+                                        <option value="{{ partial.id }}" {% if default_assignment.get('secondary_partial_id') == partial.id %}selected{% endif %}>
+                                            {{ partial.name }} ({{ partial.status }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary btn-sm preview-default-assignment-btn"
+                                    >
+                                        Preview
+                                    </button>
+                                </td>
+                            </tr>
+                            {% for tier in signup_tiers %}
+                            {% set tier_key = tier.id|string %}
+                            {% set assignment = tier_assignments.get(tier_key, default_assignment) %}
+                            <tr>
+                                <td>
+                                    <strong>{{ tier.name }}</strong>
+                                    <div class="small text-muted">Tier ID {{ tier.id }}</div>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" name="tier_{{ tier.id }}_mode" id="tier_{{ tier.id }}_mode">
+                                        <option value="manual" {% if assignment.get('mode') == 'manual' %}selected{% endif %}>Manual</option>
+                                        <option value="split_50_50" {% if assignment.get('mode') == 'split_50_50' %}selected{% endif %}>50/50 split</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" name="tier_{{ tier.id }}_primary_partial_id" id="tier_{{ tier.id }}_primary_partial_id">
+                                        <option value="">Select partial</option>
+                                        {% for partial in selectable_partials %}
+                                        <option value="{{ partial.id }}" {% if assignment.get('primary_partial_id') == partial.id %}selected{% endif %}>
+                                            {{ partial.name }} ({{ partial.status }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" name="tier_{{ tier.id }}_secondary_partial_id" id="tier_{{ tier.id }}_secondary_partial_id">
+                                        <option value="">Optional second variant</option>
+                                        {% for partial in selectable_partials %}
+                                        <option value="{{ partial.id }}" {% if assignment.get('secondary_partial_id') == partial.id %}selected{% endif %}>
+                                            {{ partial.name }} ({{ partial.status }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary btn-sm preview-tier-assignment-btn"
+                                        data-tier-id="{{ tier.id }}"
+                                    >
+                                        Preview
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Save Assignment Rules
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for partial in partials %}
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">{{ partial.name }}</h5>
+                        <div class="small text-muted">
+                            ID: <code>{{ partial.id }}</code>
+                            {% if partial.parent_partial_id %}
+                            | Parent: <code>{{ partial.parent_partial_id }}</code>
+                            {% endif %}
+                            | Version: {{ partial.version }}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-{% if partial.status == 'active' %}success{% elif partial.status == 'draft' %}warning text-dark{% else %}secondary{% endif %}">
+                            {{ partial.status|title }}
+                        </span>
+                        <button
+                            type="button"
+                            class="btn btn-outline-primary btn-sm preview-partial-btn"
+                            data-mode="manual"
+                            data-primary="{{ partial.id }}"
+                            data-secondary=""
+                        >
+                            Preview on Signup
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Snippet:</strong> {{ partial.preview_text }}</p>
+                    <form method="post" action="{{ url_for('developer.subscription_tiers.update_signup_info_partial', partial_id=partial.id) }}" class="mb-3">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control" name="name" value="{{ partial.name }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" name="status">
+                                    <option value="draft" {% if partial.status == 'draft' %}selected{% endif %}>Draft</option>
+                                    <option value="active" {% if partial.status == 'active' %}selected{% endif %}>Active</option>
+                                    <option value="archived" {% if partial.status == 'archived' %}selected{% endif %}>Archived</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">HTML Content</label>
+                                <textarea class="form-control font-monospace" rows="8" name="html_content">{{ partial.html_content }}</textarea>
+                            </div>
+                            <div class="col-12 d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-save"></i> Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="row g-3">
+                        <div class="col-lg-5">
+                            <form method="post" action="{{ url_for('developer.subscription_tiers.clone_signup_info_partial', partial_id=partial.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <label class="form-label">Create New Version from This Partial</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" name="as_name" placeholder="{{ partial.name }} v{{ partial.version + 1 }}">
+                                    <button type="submit" class="btn btn-outline-secondary">
+                                        <i class="fas fa-copy"></i> Clone Draft
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-lg-7">
+                            <form method="post" action="{{ url_for('developer.subscription_tiers.generate_signup_info_ai_draft', partial_id=partial.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <label class="form-label">BatchBot Prompt (Generate New Draft)</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" name="prompt" placeholder="Rewrite this variant to emphasize 10-minute setup and risk-reversal guarantee." required>
+                                    <button type="submit" class="btn btn-outline-success">
+                                        <i class="fas fa-wand-magic-sparkles"></i> Generate AI Draft
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="modal fade" id="signupInfoPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Signup Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe
+                    id="signupInfoPreviewFrame"
+                    src="about:blank"
+                    title="Signup Preview"
+                    style="width: 100%; min-height: 78vh; border: 0;"
+                ></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalElement = document.getElementById('signupInfoPreviewModal');
+    const iframe = document.getElementById('signupInfoPreviewFrame');
+    const previewBaseUrl = {{ url_for('developer.subscription_tiers.preview_signup_info_partial') | tojson }};
+    const previewModal = modalElement ? new bootstrap.Modal(modalElement) : null;
+    const globalTierSelect = document.getElementById('globalPreviewTier');
+
+    function openPreview(url) {
+        if (!previewModal || !iframe) return;
+        iframe.src = url;
+        previewModal.show();
+    }
+
+    function buildUrl(params) {
+        const query = new URLSearchParams(params);
+        return `${previewBaseUrl}?${query.toString()}`;
+    }
+
+    document.querySelectorAll('.preview-partial-btn').forEach((button) => {
+        button.addEventListener('click', function () {
+            const tierId = globalTierSelect ? (globalTierSelect.value || '') : '';
+            const mode = this.dataset.mode || 'manual';
+            const primary = this.dataset.primary || '';
+            const secondary = this.dataset.secondary || '';
+            if (!tierId || !primary) return;
+            const url = buildUrl({
+                tier_id: tierId,
+                mode: mode,
+                primary_partial_id: primary,
+                secondary_partial_id: secondary
+            });
+            openPreview(url);
+        });
+    });
+
+    const defaultPreviewButton = document.querySelector('.preview-default-assignment-btn');
+    if (defaultPreviewButton) {
+        defaultPreviewButton.addEventListener('click', function () {
+            const tierId = globalTierSelect ? (globalTierSelect.value || '') : '';
+            const modeField = document.getElementById('default_mode');
+            const primaryField = document.getElementById('default_primary_partial_id');
+            const secondaryField = document.getElementById('default_secondary_partial_id');
+            const mode = modeField ? modeField.value : 'manual';
+            const primary = primaryField ? primaryField.value : '';
+            const secondary = secondaryField ? secondaryField.value : '';
+            if (!tierId || !primary) return;
+            const url = buildUrl({
+                tier_id: tierId,
+                mode: mode,
+                primary_partial_id: primary,
+                secondary_partial_id: secondary
+            });
+            openPreview(url);
+        });
+    }
+
+    document.querySelectorAll('.preview-tier-assignment-btn').forEach((button) => {
+        button.addEventListener('click', function () {
+            const tierId = this.dataset.tierId || '';
+            const modeField = document.getElementById(`tier_${tierId}_mode`);
+            const primaryField = document.getElementById(`tier_${tierId}_primary_partial_id`);
+            const secondaryField = document.getElementById(`tier_${tierId}_secondary_partial_id`);
+            const mode = modeField ? modeField.value : 'manual';
+            const primary = primaryField ? primaryField.value : '';
+            const secondary = secondaryField ? secondaryField.value : '';
+            if (!tierId || !primary) return;
+            const url = buildUrl({
+                tier_id: tierId,
+                mode: mode,
+                primary_partial_id: primary,
+                secondary_partial_id: secondary
+            });
+            openPreview(url);
+        });
+    });
+});
+</script>
+{% endblock %}
