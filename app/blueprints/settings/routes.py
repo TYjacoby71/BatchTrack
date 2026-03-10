@@ -455,8 +455,8 @@ def change_password():
         if new_password != confirm_password:
             return jsonify({"error": "New passwords do not match"}), 400
 
-        if len(new_password) < 6:
-            return jsonify({"error": "Password must be at least 6 characters"}), 400
+        if len(new_password) < 8:
+            return jsonify({"error": "Password must be at least 8 characters"}), 400
 
         current_user.password_hash = generate_password_hash(new_password)
         db.session.commit()

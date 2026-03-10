@@ -38,7 +38,7 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [x] Add password strength check (min 8 chars) to signup route (`app/services/signup_checkout_service.py` validates optional submitted password length)
 - [ ] Add password strength check to quick-signup route (`app/blueprints/auth/login_routes.py`)
 - [ ] Add password strength check to invite/user-creation flow (`app/services/user_invite_service.py`)
-- [ ] Add password strength check to password change route (`app/blueprints/settings/routes.py`)
+- [x] Add password strength check to password change route (`app/blueprints/settings/routes.py`)
 - [ ] Verify password reset route already has the check (`app/blueprints/auth/password_routes.py` line 150 — confirmed)
 - [ ] Add tests for password validation rejection
 
