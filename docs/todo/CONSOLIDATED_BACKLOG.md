@@ -46,6 +46,7 @@
 - Ship the multi-step retention/cancellation experience end-to-end: retention landing page, objection-specific paths, exit survey, analytics, FTC-compliant cancellation, win-back emails, and phased rollout.
 - Finish custom unit mapping experience: `CustomUnitMapping` flows with user attribution, density prompts, recipe editor enforcement, training content, and status badges in Unit Manager.
 - Batch augmentation system: split base yield into scented/colored variations pre-finish, with percentage allocation, automatic sub-labels (101A-Lavender, 101B-Rose), added-ingredient tracking, and container redistribution.
+- Soap Maker fragrance safety safeguards: support IFRA max-safe % per fragrance line, enforce blend-level cap using the most restrictive component, and show real-time over-limit warnings before batch save/finish.
 - Recipe-bound instruction propagation + maker tool: duplicate instructions across every test and variation while preserving the exact source recipe ID linkage, and add a maker tool on the batch in-progress page so makers can pull up the linked instructions instantly.
 - Multi-batch scheduling and resource optimization: plan batches across time with equipment scheduling and conflict prevention.
 - Quality control integration: batch testing protocols, specification compliance, recall management, and certificate generation.
