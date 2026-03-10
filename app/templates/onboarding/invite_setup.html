@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+
+{% block title %}Finish Invite Setup - BatchTrack{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1 class="fw-bold mb-2">Finish your BatchTrack setup</h1>
+            <p class="text-muted mb-0">Set your password and profile details to activate your invited account.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Invite Checklist</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        {% for item in checklist %}
+                        <li class="d-flex align-items-start mb-3">
+                            <i class="fas fa-{{ 'check-circle text-success' if item.complete else 'circle text-muted' }} me-3 mt-1"></i>
+                            <div>
+                                <strong>{{ item.label }}</strong>
+                                <p class="text-muted small mb-0">{{ item.description }}</p>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            {% if errors %}
+            <div class="alert alert-danger">
+                <ul class="mb-0">
+                    {% for error in errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="POST" class="card shadow-sm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="fas fa-user me-2"></i>Your Profile</h5>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-control form-control-lg" name="first_name" value="{{ invited_user.first_name or '' }}" placeholder="First name">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-control form-control-lg" name="last_name" value="{{ invited_user.last_name or '' }}" placeholder="Last name">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" class="form-control form-control-lg" name="user_phone" value="{{ invited_user.phone or '' }}" placeholder="(555) 555-5555">
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control form-control-lg" value="{{ invited_user.email or '' }}" readonly disabled>
+                            <small class="text-muted">Verified email for this invite.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Username <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg" name="username" value="{{ invited_user.username or '' }}" minlength="3" required>
+                            <small class="text-muted">Letters, numbers, and underscores only.</small>
+                        </div>
+                    </div>
+
+                    <h5 class="mb-3"><i class="fas fa-lock me-2"></i>Create your password</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">New Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control form-control-lg" name="new_password" minlength="8" autocomplete="new-password" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control form-control-lg" name="confirm_password" minlength="8" autocomplete="new-password" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-white d-flex justify-content-between">
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">Back to login</a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Complete setup
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

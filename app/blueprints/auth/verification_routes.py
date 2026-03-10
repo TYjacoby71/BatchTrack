@@ -108,6 +108,9 @@ def _resolve_resend_redirect_target() -> str:
 # Inputs: Current auth context.
 # Outputs: Redirect path to dashboard/login.
 def _resolve_verify_redirect_target() -> str:
+    next_candidate = _safe_local_path(request.args.get("next"))
+    if next_candidate:
+        return next_candidate
     if current_user.is_authenticated:
         if getattr(current_user, "user_type", None) == "developer":
             return url_for("developer.dashboard")
