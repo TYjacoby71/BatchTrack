@@ -1,8 +1,8 @@
 """Login lockout tracking for repeated failed authentication attempts.
 
 Synopsis:
-Tracks failed login attempts by identifier and IP, enforces temporary lockouts,
-and clears counters after successful authentication.
+Tracks failed login attempts per user identifier and enforces a password-reset
+unlock path after threshold breaches.
 """
 
 from __future__ import annotations
@@ -21,17 +21,11 @@ class LoginLockoutState:
     """Resolved lockout state for a login attempt."""
 
     locked: bool
-    remaining_seconds: int = 0
-
-    @property
-    def remaining_minutes(self) -> int:
-        if self.remaining_seconds <= 0:
-            return 0
-        return max(1, (self.remaining_seconds + 59) // 60)
+    requires_password_reset: bool = False
 
 
 class LoginLockoutService:
-    """Manage failed-login counters and temporary lockouts."""
+    """Manage failed-login counters and password-reset lockouts."""
 
     _KEY_PREFIX = "login_lockout:v1"
 
@@ -41,11 +35,11 @@ class LoginLockoutService:
 
     @staticmethod
     def _threshold() -> int:
-        raw = current_app.config.get("AUTH_LOGIN_LOCKOUT_THRESHOLD", 5)
+        raw = current_app.config.get("AUTH_LOGIN_LOCKOUT_THRESHOLD", 10)
         try:
             return max(1, int(raw))
         except (TypeError, ValueError):
-            return 5
+            return 10
 
     @staticmethod
     def _window_seconds() -> int:
@@ -55,36 +49,17 @@ class LoginLockoutService:
         except (TypeError, ValueError):
             return 900
 
-    @staticmethod
-    def _lockout_seconds() -> int:
-        raw = current_app.config.get("AUTH_LOGIN_LOCKOUT_DURATION_SECONDS", 1800)
-        try:
-            return max(60, int(raw))
-        except (TypeError, ValueError):
-            return 1800
-
-    @staticmethod
-    def _normalize_identifier(value: str | None) -> str | None:
-        normalized = (value or "").strip().lower()
-        return normalized or None
-
     @classmethod
-    def _hashed_key(cls, kind: str, value: str) -> str:
-        digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
-        return f"{cls._KEY_PREFIX}:{kind}:{digest}"
-
-    @classmethod
-    def _build_targets(
-        cls, *, identifier: str | None, ip_address: str | None
-    ) -> list[str]:
-        targets: list[str] = []
-        normalized_identifier = cls._normalize_identifier(identifier)
-        if normalized_identifier:
-            targets.append(cls._hashed_key("identifier", normalized_identifier))
-        normalized_ip = (ip_address or "").strip()
-        if normalized_ip:
-            targets.append(cls._hashed_key("ip", normalized_ip))
-        return targets
+    def _subject_key(
+        cls, *, user_id: int | None = None, identifier: str | None = None
+    ) -> str | None:
+        if user_id is not None:
+            return f"{cls._KEY_PREFIX}:user:{int(user_id)}"
+        normalized_identifier = (identifier or "").strip().lower()
+        if not normalized_identifier:
+            return None
+        digest = hashlib.sha256(normalized_identifier.encode("utf-8")).hexdigest()
+        return f"{cls._KEY_PREFIX}:identifier:{digest}"
 
     @staticmethod
     def _now_ts() -> int:
@@ -94,79 +69,92 @@ class LoginLockoutService:
     def _state_for_key(cls, key: str) -> dict:
         state = app_cache.get(key)
         if not isinstance(state, dict):
-            return {"count": 0, "window_started_at": cls._now_ts(), "locked_until": 0}
+            return {
+                "count": 0,
+                "window_started_at": cls._now_ts(),
+                "requires_password_reset": False,
+            }
         return {
             "count": int(state.get("count") or 0),
             "window_started_at": int(state.get("window_started_at") or cls._now_ts()),
-            "locked_until": int(state.get("locked_until") or 0),
+            "requires_password_reset": bool(state.get("requires_password_reset")),
         }
 
     @classmethod
     def _save_state(cls, key: str, state: dict) -> None:
-        now = cls._now_ts()
-        remaining_lock = max(0, int(state.get("locked_until", 0)) - now)
-        ttl = max(cls._window_seconds(), remaining_lock, 60)
+        ttl = max(cls._window_seconds(), 60)
+        if state.get("requires_password_reset"):
+            # Persistent lock state until password reset flow clears it.
+            ttl = max(ttl, 60 * 60 * 24 * 30)
         app_cache.set(key, state, ttl=ttl)
 
     @classmethod
     def is_locked(
-        cls, *, identifier: str | None, ip_address: str | None
+        cls, *, user_id: int | None = None, identifier: str | None = None
     ) -> LoginLockoutState:
         if not cls._enabled():
             return LoginLockoutState(locked=False)
-        now = cls._now_ts()
-        remaining = 0
-        for key in cls._build_targets(identifier=identifier, ip_address=ip_address):
-            state = cls._state_for_key(key)
-            locked_until = int(state.get("locked_until") or 0)
-            if locked_until > now:
-                remaining = max(remaining, locked_until - now)
-        return LoginLockoutState(locked=remaining > 0, remaining_seconds=remaining)
+        key = cls._subject_key(user_id=user_id, identifier=identifier)
+        if not key:
+            return LoginLockoutState(locked=False)
+        state = cls._state_for_key(key)
+        locked = bool(state.get("requires_password_reset"))
+        return LoginLockoutState(
+            locked=locked,
+            requires_password_reset=locked,
+        )
 
     @classmethod
     def record_failure(
-        cls, *, identifier: str | None, ip_address: str | None
+        cls, *, user_id: int | None = None, identifier: str | None = None
     ) -> LoginLockoutState:
         if not cls._enabled():
             return LoginLockoutState(locked=False)
+        key = cls._subject_key(user_id=user_id, identifier=identifier)
+        if not key:
+            return LoginLockoutState(locked=False)
+
         now = cls._now_ts()
         threshold = cls._threshold()
         window_seconds = cls._window_seconds()
-        lockout_seconds = cls._lockout_seconds()
-        max_remaining = 0
+        state = cls._state_for_key(key)
+        if bool(state.get("requires_password_reset")):
+            return LoginLockoutState(locked=True, requires_password_reset=True)
 
-        for key in cls._build_targets(identifier=identifier, ip_address=ip_address):
-            state = cls._state_for_key(key)
-            window_started_at = int(state.get("window_started_at") or now)
-            locked_until = int(state.get("locked_until") or 0)
-            count = int(state.get("count") or 0)
+        window_started_at = int(state.get("window_started_at") or now)
+        count = int(state.get("count") or 0)
+        if now - window_started_at >= window_seconds:
+            count = 0
+            window_started_at = now
 
-            if locked_until <= now and now - window_started_at >= window_seconds:
-                count = 0
-                window_started_at = now
-
-            count += 1
-            if count >= threshold:
-                locked_until = now + lockout_seconds
-                max_remaining = max(max_remaining, lockout_seconds)
-
-            state.update(
-                {
-                    "count": count,
-                    "window_started_at": window_started_at,
-                    "locked_until": locked_until,
-                }
-            )
-            cls._save_state(key, state)
-
-            if locked_until > now:
-                max_remaining = max(max_remaining, locked_until - now)
-
-        return LoginLockoutState(locked=max_remaining > 0, remaining_seconds=max_remaining)
+        count += 1
+        locked = count >= threshold
+        state.update(
+            {
+                "count": count,
+                "window_started_at": window_started_at,
+                "requires_password_reset": locked,
+            }
+        )
+        cls._save_state(key, state)
+        return LoginLockoutState(locked=locked, requires_password_reset=locked)
 
     @classmethod
-    def clear_failures(cls, *, identifier: str | None, ip_address: str | None) -> None:
+    def clear_failures(
+        cls,
+        *,
+        user_id: int | None = None,
+        identifiers: list[str] | tuple[str, ...] | None = None,
+    ) -> None:
         if not cls._enabled():
             return
-        for key in cls._build_targets(identifier=identifier, ip_address=ip_address):
+        keys: set[str] = set()
+        primary = cls._subject_key(user_id=user_id, identifier=None)
+        if primary:
+            keys.add(primary)
+        for identifier in identifiers or ():
+            alias_key = cls._subject_key(user_id=None, identifier=identifier)
+            if alias_key:
+                keys.add(alias_key)
+        for key in keys:
             app_cache.delete(key)

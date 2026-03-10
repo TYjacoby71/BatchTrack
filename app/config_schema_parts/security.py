@@ -184,15 +184,15 @@ FIELDS = [
         "key": "AUTH_LOGIN_LOCKOUT_ENABLED",
         "cast": "bool",
         "default": True,
-        "description": "Enable temporary account lockouts after repeated failed login attempts.",
+        "description": "Enable account lockout after repeated failed login attempts.",
         "recommended": "true",
     },
     {
         "key": "AUTH_LOGIN_LOCKOUT_THRESHOLD",
         "cast": "int",
-        "default": 5,
+        "default": 10,
         "description": "Failed login attempts allowed within the rolling window before lockout.",
-        "recommended": "5",
+        "recommended": "10",
     },
     {
         "key": "AUTH_LOGIN_LOCKOUT_WINDOW_SECONDS",
@@ -200,13 +200,6 @@ FIELDS = [
         "default": 900,
         "description": "Rolling failed-login window in seconds.",
         "recommended": "900",
-    },
-    {
-        "key": "AUTH_LOGIN_LOCKOUT_DURATION_SECONDS",
-        "cast": "int",
-        "default": 1800,
-        "description": "Auto-unlock duration in seconds after lockout is triggered.",
-        "recommended": "1800",
     },
     {
         "key": "BOT_TRAP_DB_MAX_HIT_ROWS",

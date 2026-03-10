@@ -231,21 +231,10 @@ def login():
     if form_is_valid:
         login_identifier = (request.form.get("username") or "").strip()
         password = request.form.get("password")
-        request_ip = PublicBotTrapService.resolve_request_ip(request)
 
         if not login_identifier or not password:
             flash("Please provide both email/username and password")
             return _render_login_page()
-
-        lockout_state = LoginLockoutService.is_locked(
-            identifier=login_identifier, ip_address=request_ip
-        )
-        if lockout_state.locked:
-            flash(
-                f"Too many failed login attempts. Try again in {lockout_state.remaining_minutes} minute(s).",
-                "error",
-            )
-            return _render_login_page(429)
 
         try:
             normalized_identifier = login_identifier.lower()
@@ -297,6 +286,17 @@ def login():
             )
             flash("Login temporarily unavailable. Please try again.")
             return _render_login_page(503)
+
+        lockout_state = LoginLockoutService.is_locked(
+            user_id=getattr(user, "id", None),
+            identifier=normalized_identifier,
+        )
+        if lockout_state.locked:
+            flash(
+                "Too many failed login attempts. Please reset your password to unlock your account.",
+                "error",
+            )
+            return redirect(url_for("auth.forgot_password"))
 
         if user and password_ok:
             if not user.is_active:
@@ -385,7 +385,8 @@ def login():
 
             login_user(user)
             LoginLockoutService.clear_failures(
-                identifier=login_identifier, ip_address=request_ip
+                user_id=user.id,
+                identifiers=[login_identifier, user.username or "", user.email or ""],
             )
             SessionService.rotate_user_session(user)
             session.pop("dismissed_alerts", None)
@@ -440,7 +441,8 @@ def login():
             {"identifier": login_identifier, "user_found": bool(user)},
         )
         post_failure_state = LoginLockoutService.record_failure(
-            identifier=login_identifier, ip_address=request_ip
+            user_id=getattr(user, "id", None),
+            identifier=normalized_identifier,
         )
         if login_identifier and login_identifier.startswith("[REDACTED]"):
             logger.warning(
@@ -448,9 +450,10 @@ def login():
             )
         if post_failure_state.locked:
             flash(
-                f"Too many failed login attempts. Try again in {post_failure_state.remaining_minutes} minute(s).",
+                "Too many failed login attempts. Please reset your password to unlock your account.",
                 "error",
             )
+            return redirect(url_for("auth.forgot_password"))
         else:
             flash("Invalid email/username or password")
         return _render_login_page()

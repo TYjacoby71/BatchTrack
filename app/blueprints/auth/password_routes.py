@@ -18,6 +18,7 @@ from flask import current_app, flash, redirect, render_template, request, url_fo
 from ...extensions import db, limiter
 from ...models import User
 from ...services.email_service import EmailService
+from ...services.login_lockout_service import LoginLockoutService
 from ...utils.timezone_utils import TimezoneUtils
 from . import auth_bp
 
@@ -166,6 +167,10 @@ def reset_password(token):
             # Invalidate existing sessions for safety after credential changes.
             user.active_session_token = None
             db.session.commit()
+            LoginLockoutService.clear_failures(
+                user_id=user.id,
+                identifiers=[user.username or "", user.email or ""],
+            )
         except Exception as exc:
             logger.warning("Suppressed exception fallback at app/blueprints/auth/password_routes.py:168", exc_info=True)
             db.session.rollback()

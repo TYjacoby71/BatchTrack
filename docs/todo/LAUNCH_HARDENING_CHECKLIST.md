@@ -43,9 +43,9 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [ ] Add tests for password validation rejection
 
 ### 1.4 Login lockout mechanism
-- [x] Add failed-login attempt tracking (counter per username or IP, stored in Redis or DB)
-- [x] Lock account or add CAPTCHA after N failed attempts (recommend 5 within 15 minutes)
-- [x] Add unlock mechanism (time-based auto-unlock after 30 minutes, or admin manual unlock)
+- [x] Add failed-login attempt tracking (counter per user identifier via cache-backed lockout state)
+- [x] Lock account after N failed attempts (configured at 10 within 15 minutes per user identifier)
+- [x] Add unlock mechanism (password reset flow via existing forgot/reset routes)
 - [ ] Add tests for lockout behavior
 
 ### 1.5 Public signup commerce hardening
