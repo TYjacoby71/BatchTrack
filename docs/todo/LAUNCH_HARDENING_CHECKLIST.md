@@ -35,7 +35,7 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [x] Final pass: 171 queries fixed across 31 files; only intentional exceptions remain (recipe library, auth system roles, global library with manual org_id filter)
 
 ### 1.3 Server-side password validation
-- [ ] Add password strength check (min 8 chars) to signup route (`app/blueprints/auth/login_routes.py` or signup handler)
+- [x] Add password strength check (min 8 chars) to signup route (`app/services/signup_checkout_service.py` validates optional submitted password length)
 - [ ] Add password strength check to quick-signup route (`app/blueprints/auth/login_routes.py`)
 - [ ] Add password strength check to invite/user-creation flow (`app/services/user_invite_service.py`)
 - [ ] Add password strength check to password change route (`app/blueprints/settings/routes.py`)

@@ -168,3 +168,34 @@ class TestSignupTierCharacterization:
             "Invalid subscription plan selected"
             in invalid_tier_response.get_data(as_text=True)
         )
+
+    def test_signup_rejects_short_password_when_password_present(self, app, client):
+        """Signup POST should reject provided passwords shorter than 8 chars."""
+        with app.app_context():
+            tier = SubscriptionTier(
+                name=_unique("PasswordGuardPlan"),
+                billing_provider="stripe",
+                stripe_lookup_key=_unique("price_pwd_guard_"),
+                is_customer_facing=True,
+                user_limit=1,
+            )
+            db.session.add(tier)
+            db.session.commit()
+            tier_id = str(tier.id)
+
+        response = client.post(
+            "/auth/signup",
+            data={
+                "selected_tier": tier_id,
+                "contact_email": "short-password@example.com",
+                "contact_phone": "555-0003",
+                "billing_mode": "standard",
+                "billing_cycle": "monthly",
+                "password": "short7",
+            },
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert "Password must be at least 8 characters." in response.get_data(
+            as_text=True
+        )

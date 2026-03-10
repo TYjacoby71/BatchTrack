@@ -119,6 +119,7 @@ class SignupCheckoutService:
     """Build signup state and execute checkout creation."""
 
     _FOUNDING_MEMBER_SEAT_LIMIT = 300
+    _MIN_PASSWORD_LENGTH = 8
     _SIGNUP_DISPLAY_LOOKUP_KEY_ORDER: tuple[str, ...] = (
         "hobbyist_monthly",
         "artisan_monthly",
@@ -343,6 +344,11 @@ class SignupCheckoutService:
         cls, *, context: SignupRequestContext, form_data
     ) -> SignupFlowResult:
         submission = cls._build_submission(context=context, form_data=form_data)
+        password_validation_error = cls._validate_optional_password(
+            form_data.get("password")
+        )
+        if password_validation_error:
+            return cls._error_result(password_validation_error, submission=submission)
 
         if not submission.selected_tier:
             return cls._error_result(
@@ -636,6 +642,18 @@ class SignupCheckoutService:
             flash_category="error",
             view_state=view_state,
         )
+
+    @classmethod
+    def _validate_optional_password(cls, raw_password: Any) -> str | None:
+        """Enforce minimum password length only when a password is submitted."""
+        password = str(raw_password or "").strip()
+        if not password:
+            return None
+        if len(password) < cls._MIN_PASSWORD_LENGTH:
+            return (
+                f"Password must be at least {cls._MIN_PASSWORD_LENGTH} characters."
+            )
+        return None
 
     @staticmethod
     def _load_signup_customer_facing_tiers() -> list[SubscriptionTier]:
