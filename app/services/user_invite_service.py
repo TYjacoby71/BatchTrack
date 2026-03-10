@@ -49,6 +49,12 @@ class UserInviteService:
         phone: str = "",
         force_inactive: bool = False,
     ) -> InviteResult:
+        normalized_email = User.normalize_email(email)
+        if not normalized_email:
+            return InviteResult(False, "Email is required")
+        if User.email_exists(normalized_email):
+            return InviteResult(False, "An account with that email already exists")
+
         # Validate role
         role: Optional[Role] = Role.query.filter_by(id=role_id).first()
         if not role:
@@ -68,17 +74,17 @@ class UserInviteService:
             )
 
         # Generate a unique username from email
-        base_username = (email.split("@")[0] or "user").strip()
+        base_username = (normalized_email.split("@")[0] or "user").strip()
         username = base_username
         counter = 1
-        while User.query.filter_by(username=username).first():
+        while User.username_exists(username):
             username = f"{base_username}{counter}"
             counter += 1
 
         # Create the user (inactive if org limit reached)
         new_user = User(
             username=username,
-            email=email,
+            email=normalized_email,
             first_name=first_name,
             last_name=last_name,
             phone=phone,
@@ -103,7 +109,7 @@ class UserInviteService:
         # Send password-setup email if configured
         if EmailService.is_configured():
             EmailService.send_password_setup_email(
-                email, setup_token, first_name or username
+                normalized_email, setup_token, first_name or username
             )
             msg = "User invited successfully! Password setup email sent."
         else:

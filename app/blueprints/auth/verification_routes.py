@@ -205,7 +205,7 @@ def resend_verification():
 
         if email and "@" in email:
             try:
-                user = User.query.filter_by(email=email).first()
+                user = User.find_by_email(email)
                 if user and not user.email_verified:
                     token = _issue_verification_token(user)
                     sent = EmailService.send_verification_email(

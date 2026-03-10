@@ -20,6 +20,7 @@ from typing import Any
 from flask import url_for
 
 from ..extensions import db
+from ..models import User
 from ..models.subscription_tier import SubscriptionTier
 from ..utils.analytics_attribution import extract_click_ids
 from .analytics_tracking_service import AnalyticsTrackingService
@@ -349,6 +350,11 @@ class SignupCheckoutService:
         )
         if password_validation_error:
             return cls._error_result(password_validation_error, submission=submission)
+        if submission.contact_email and User.email_exists(submission.contact_email):
+            return cls._error_result(
+                "An account with that email already exists. Please log in instead.",
+                submission=submission,
+            )
 
         if not submission.selected_tier:
             return cls._error_result(
@@ -572,9 +578,10 @@ class SignupCheckoutService:
         submission = SignupSubmission(
             selected_tier=form_data.get("selected_tier"),
             oauth_signup=form_data.get("oauth_signup") == "true",
-            contact_email=(
-                form_data.get("contact_email") or context.prefill_email or ""
-            ).strip(),
+            contact_email=User.normalize_email(
+                form_data.get("contact_email") or context.prefill_email
+            )
+            or "",
             contact_phone=(form_data.get("contact_phone") or "").strip(),
             selected_mode=selected_mode,
             selected_standard_cycle=selected_standard_cycle,

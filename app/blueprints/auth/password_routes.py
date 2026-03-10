@@ -80,7 +80,7 @@ def forgot_password():
 
         if reset_enabled and email and "@" in email:
             try:
-                user = User.query.filter_by(email=email).first()
+                user = User.find_by_email(email)
                 if user and user.is_active:
                     reset_token = EmailService.generate_reset_token(user.id)
                     user.password_reset_token = reset_token

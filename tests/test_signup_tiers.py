@@ -199,3 +199,41 @@ class TestSignupTierCharacterization:
         assert "Password must be at least 8 characters." in response.get_data(
             as_text=True
         )
+
+    def test_signup_rejects_existing_email_and_preserves_submission(self, app, client):
+        """Signup POST should block duplicate emails and keep submitted state."""
+        existing_email = "already-exists@example.com"
+        with app.app_context():
+            existing_user = User(
+                username=_unique("existing"),
+                email=existing_email,
+                user_type="developer",
+                is_active=True,
+            )
+            existing_user.set_password("existing-pass-123")
+            tier = SubscriptionTier(
+                name=_unique("ExistingEmailPlan"),
+                billing_provider="stripe",
+                stripe_lookup_key=_unique("price_existing_email_"),
+                is_customer_facing=True,
+                user_limit=1,
+            )
+            db.session.add_all([existing_user, tier])
+            db.session.commit()
+            tier_id = str(tier.id)
+
+        response = client.post(
+            "/auth/signup",
+            data={
+                "selected_tier": tier_id,
+                "contact_email": "ALREADY-EXISTS@example.com",
+                "contact_phone": "555-0004",
+                "billing_mode": "standard",
+                "billing_cycle": "monthly",
+            },
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert "An account with that email already exists. Please log in instead." in html
+        assert f'value="{tier_id}"' in html
