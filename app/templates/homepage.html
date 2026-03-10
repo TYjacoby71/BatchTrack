@@ -21,7 +21,6 @@
 
         :root {
             --navbar-height: 72px;
-            --homepage-card-media-height: 240px;
         }
 
         body {
@@ -240,29 +239,27 @@
             border: 1px solid rgba(22, 32, 61, 0.12);
             background: #ffffff;
             padding: 0;
-            min-height: var(--homepage-card-media-height);
-            height: var(--homepage-card-media-height);
-            overflow: hidden;
+            min-height: 0;
+            height: auto;
+            overflow: visible;
         }
 
         .tool-card-image {
             width: 100%;
-            height: 100%;
+            height: auto;
             max-height: none;
-            object-fit: cover;
+            object-fit: contain;
             object-position: center center;
             display: block;
             border-radius: 0;
             margin: 0 auto;
-            transform: scale(1.18);
-            transform-origin: center center;
         }
 
         .tool-card-video {
             width: 100%;
-            height: 100%;
+            height: auto;
             max-height: none;
-            object-fit: cover;
+            object-fit: contain;
             object-position: center center;
             display: block;
             border-radius: 0;
@@ -276,19 +273,19 @@
         }
 
         .tool-slot-media {
-            min-height: var(--homepage-card-media-height);
-            height: var(--homepage-card-media-height);
+            min-height: 0;
+            height: auto;
             padding: 0 !important;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .tool-slot-image,
         .tool-slot-video {
             width: 100%;
-            height: 100%;
+            height: auto;
             min-height: 0;
             max-height: none;
-            object-fit: cover;
+            object-fit: contain;
             object-position: center center;
             display: block;
             margin: 0 auto;
@@ -648,10 +645,6 @@
         }
 
         @media (max-width: 767.98px) {
-            :root {
-                --homepage-card-media-height: 210px;
-            }
-
             .hero-visual-placeholder {
                 min-height: 260px;
             }
