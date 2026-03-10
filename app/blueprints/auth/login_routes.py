@@ -40,6 +40,7 @@ from ...services.billing.orchestrators.auth_billing_orchestrator import (
 )
 from ...services.analytics_tracking_service import AnalyticsTrackingService
 from ...services.email_service import EmailService
+from ...services.login_lockout_service import LoginLockoutService
 from ...services.oauth_service import OAuthService
 from ...services.public_bot_trap_service import PublicBotTrapService
 from ...services.session_service import SessionService
@@ -230,10 +231,21 @@ def login():
     if form_is_valid:
         login_identifier = (request.form.get("username") or "").strip()
         password = request.form.get("password")
+        request_ip = PublicBotTrapService.resolve_request_ip(request)
 
         if not login_identifier or not password:
             flash("Please provide both email/username and password")
             return _render_login_page()
+
+        lockout_state = LoginLockoutService.is_locked(
+            identifier=login_identifier, ip_address=request_ip
+        )
+        if lockout_state.locked:
+            flash(
+                f"Too many failed login attempts. Try again in {lockout_state.remaining_minutes} minute(s).",
+                "error",
+            )
+            return _render_login_page(429)
 
         try:
             normalized_identifier = login_identifier.lower()
@@ -372,6 +384,9 @@ def login():
                         )
 
             login_user(user)
+            LoginLockoutService.clear_failures(
+                identifier=login_identifier, ip_address=request_ip
+            )
             SessionService.rotate_user_session(user)
             session.pop("dismissed_alerts", None)
             previous_last_login = TimezoneUtils.ensure_timezone_aware(
@@ -424,11 +439,20 @@ def login():
             "invalid_credentials",
             {"identifier": login_identifier, "user_found": bool(user)},
         )
+        post_failure_state = LoginLockoutService.record_failure(
+            identifier=login_identifier, ip_address=request_ip
+        )
         if login_identifier and login_identifier.startswith("[REDACTED]"):
             logger.warning(
                 "Load test login failed: invalid credentials for %s", login_identifier
             )
-        flash("Invalid email/username or password")
+        if post_failure_state.locked:
+            flash(
+                f"Too many failed login attempts. Try again in {post_failure_state.remaining_minutes} minute(s).",
+                "error",
+            )
+        else:
+            flash("Invalid email/username or password")
         return _render_login_page()
 
     return _render_login_page()

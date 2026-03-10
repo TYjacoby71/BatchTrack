@@ -36,16 +36,16 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 
 ### 1.3 Server-side password validation
 - [x] Add password strength check (min 8 chars) to signup route (`app/services/signup_checkout_service.py` validates optional submitted password length)
-- [ ] Add password strength check to quick-signup route (`app/blueprints/auth/login_routes.py`)
-- [ ] Add password strength check to invite/user-creation flow (`app/services/user_invite_service.py`)
+- [x] Add password strength check to quick-signup route (`app/blueprints/auth/login_routes.py`)
+- [x] Add password strength check to invite/user-creation flow (`app/services/user_invite_service.py` now issues invite setup path where password creation enforces min 8 in `app/blueprints/onboarding/routes.py`)
 - [x] Add password strength check to password change route (`app/blueprints/settings/routes.py`)
-- [ ] Verify password reset route already has the check (`app/blueprints/auth/password_routes.py` line 150 — confirmed)
+- [x] Verify password reset route already has the check (`app/blueprints/auth/password_routes.py` line 150 — confirmed)
 - [ ] Add tests for password validation rejection
 
 ### 1.4 Login lockout mechanism
-- [ ] Add failed-login attempt tracking (counter per username or IP, stored in Redis or DB)
-- [ ] Lock account or add CAPTCHA after N failed attempts (recommend 5 within 15 minutes)
-- [ ] Add unlock mechanism (time-based auto-unlock after 30 minutes, or admin manual unlock)
+- [x] Add failed-login attempt tracking (counter per username or IP, stored in Redis or DB)
+- [x] Lock account or add CAPTCHA after N failed attempts (recommend 5 within 15 minutes)
+- [x] Add unlock mechanism (time-based auto-unlock after 30 minutes, or admin manual unlock)
 - [ ] Add tests for lockout behavior
 
 ### 1.5 Public signup commerce hardening
