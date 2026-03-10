@@ -10,7 +10,7 @@
                     {% if focus_media %}
                         {% if focus_media.kind == 'video' %}
                     <video class="final-cta-media" autoplay muted loop playsinline preload="metadata" aria-label="BatchTrack app workflow media">
-                        <source src="{{ url_for('static', filename=focus_media.path) }}">
+                        <source src="{{ static_asset(focus_media.path) }}">
                     </video>
                         {% elif focus_media.kind == 'youtube' and focus_media.embed_url %}
                     <iframe
@@ -23,7 +23,7 @@
                         allowfullscreen
                     ></iframe>
                         {% else %}
-                    <img src="{{ url_for('static', filename=focus_media.path) }}" class="final-cta-media" alt="BatchTrack workflow screenshot" loading="lazy" decoding="async">
+                    <img src="{{ static_asset(focus_media.path) }}" class="final-cta-media" alt="BatchTrack workflow screenshot" loading="lazy" decoding="async">
                         {% endif %}
                     {% endif %}
                 </div>
@@ -46,7 +46,7 @@
                 </p>
                     {% elif focus_media.path %}
                 <p class="mb-3">
-                    <a href="{{ url_for('static', filename=focus_media.path) }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary">
+                    <a href="{{ static_asset(focus_media.path) }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary">
                         Open Media Preview
                     </a>
                 </p>
