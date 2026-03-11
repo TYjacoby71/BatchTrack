@@ -51,8 +51,8 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 ### 1.5 Public signup commerce hardening
 - [x] Add billing-consent microcopy near the signup CTA with Terms + Privacy links and recurring billing language (`app/templates/pages/auth/signup.html`)
 - [x] Make the 14-day trial explicit in checkout session construction (`app/services/billing_service.py`) by setting `subscription_data.trial_period_days` via `create_checkout_session_for_tier`
-- [ ] Configure explicit tax behavior for checkout (`app/services/billing_service.py`) including `automatic_tax` and tax-ID collection policy
-- [ ] Replace legal placeholders before launch (`app/templates/legal/terms_of_service.html`, `app/templates/legal/privacy_policy.html`) including governing jurisdiction and business address
+- [x] Configure explicit tax behavior for checkout (`app/services/billing_service.py`) including `automatic_tax` and tax-ID collection policy (`SIGNUP_STRIPE_AUTOMATIC_TAX_ENABLED`, `SIGNUP_STRIPE_TAX_ID_COLLECTION_ENABLED`)
+- [x] Replace legal placeholders before launch (`app/templates/legal/terms_of_service.html`, `app/templates/legal/privacy_policy.html`) including governing jurisdiction and business address (BatchTrack.com cloud business profile + no public mailing address)
 - [ ] Tighten public signup abuse controls (`app/blueprints/auth/signup_routes.py`) with stricter throttles and bot challenge strategy at threshold
 - [ ] Add a no-JavaScript fallback submit path for checkout handoff (`app/templates/pages/auth/signup.html`) so payment flow still works when scripts are blocked
 

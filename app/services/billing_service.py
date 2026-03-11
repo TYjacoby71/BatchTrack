@@ -1206,6 +1206,17 @@ class BillingService:
                     str(getattr(tier_obj, "billing_provider", "")).strip().lower()
                     == "stripe"
                 )
+            automatic_tax_enabled = bool(
+                current_app.config.get("SIGNUP_STRIPE_AUTOMATIC_TAX_ENABLED", True)
+            )
+            tax_id_collection_enabled = bool(
+                current_app.config.get("SIGNUP_STRIPE_TAX_ID_COLLECTION_ENABLED", True)
+            )
+            if requires_stripe_billing and not is_zero_priced_subscription:
+                session_params["automatic_tax"] = {"enabled": automatic_tax_enabled}
+                session_params["tax_id_collection"] = {
+                    "enabled": tax_id_collection_enabled
+                }
             trial_days = int(
                 current_app.config.get(
                     "SIGNUP_STRIPE_TRIAL_DAYS", BillingService._default_signup_trial_days
