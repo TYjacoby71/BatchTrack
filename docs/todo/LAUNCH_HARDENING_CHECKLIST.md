@@ -40,13 +40,13 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [x] Add password strength check to invite/user-creation flow (`app/services/user_invite_service.py` now issues invite setup path where password creation enforces min 8 in `app/blueprints/onboarding/routes.py`)
 - [x] Add password strength check to password change route (`app/blueprints/settings/routes.py`)
 - [x] Verify password reset route already has the check (`app/blueprints/auth/password_routes.py` line 150 — confirmed)
-- [ ] Add tests for password validation rejection
+- [x] Add tests for password validation rejection
 
 ### 1.4 Login lockout mechanism
 - [x] Add failed-login attempt tracking (counter per user identifier via cache-backed lockout state)
 - [x] Lock account after N failed attempts (configured at 10 within 15 minutes per user identifier)
 - [x] Add unlock mechanism (password reset flow via existing forgot/reset routes)
-- [ ] Add tests for lockout behavior
+- [x] Add tests for lockout behavior
 
 ### 1.5 Public signup commerce hardening
 - [ ] Add billing-consent microcopy near the signup CTA with Terms + Privacy links and recurring billing language (`app/templates/pages/auth/signup.html`)
