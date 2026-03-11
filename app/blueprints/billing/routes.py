@@ -395,6 +395,9 @@ def complete_signup_from_stripe():
         )
     except Exception as exc:
         logger.error("Stripe finalize failed for session %s: %s", session_id, exc)
+        if "already exists" in str(exc).lower():
+            flash(str(exc), "error")
+            return redirect(url_for("auth.login"))
         flash("Account setup failed. Please contact support.", "error")
         return redirect(url_for("core.signup_alias"))
 

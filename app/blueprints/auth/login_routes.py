@@ -40,6 +40,7 @@ from ...services.billing.orchestrators.auth_billing_orchestrator import (
 )
 from ...services.analytics_tracking_service import AnalyticsTrackingService
 from ...services.email_service import EmailService
+from ...services.login_lockout_service import LoginLockoutService
 from ...services.oauth_service import OAuthService
 from ...services.public_bot_trap_service import PublicBotTrapService
 from ...services.session_service import SessionService
@@ -286,6 +287,17 @@ def login():
             flash("Login temporarily unavailable. Please try again.")
             return _render_login_page(503)
 
+        lockout_state = LoginLockoutService.is_locked(
+            user_id=getattr(user, "id", None),
+            identifier=normalized_identifier,
+        )
+        if lockout_state.locked:
+            flash(
+                "Too many failed login attempts. Please reset your password to unlock your account.",
+                "error",
+            )
+            return redirect(url_for("auth.forgot_password"))
+
         if user and password_ok:
             if not user.is_active:
                 if login_identifier and login_identifier.startswith("[REDACTED]"):
@@ -372,6 +384,10 @@ def login():
                         )
 
             login_user(user)
+            LoginLockoutService.clear_failures(
+                user_id=user.id,
+                identifiers=[login_identifier, user.username or "", user.email or ""],
+            )
             SessionService.rotate_user_session(user)
             session.pop("dismissed_alerts", None)
             previous_last_login = TimezoneUtils.ensure_timezone_aware(
@@ -424,11 +440,22 @@ def login():
             "invalid_credentials",
             {"identifier": login_identifier, "user_found": bool(user)},
         )
+        post_failure_state = LoginLockoutService.record_failure(
+            user_id=getattr(user, "id", None),
+            identifier=normalized_identifier,
+        )
         if login_identifier and login_identifier.startswith("[REDACTED]"):
             logger.warning(
                 "Load test login failed: invalid credentials for %s", login_identifier
             )
-        flash("Invalid email/username or password")
+        if post_failure_state.locked:
+            flash(
+                "Too many failed login attempts. Please reset your password to unlock your account.",
+                "error",
+            )
+            return redirect(url_for("auth.forgot_password"))
+        else:
+            flash("Invalid email/username or password")
         return _render_login_page()
 
     return _render_login_page()
@@ -468,7 +495,7 @@ def _generate_username_from_email(email: str) -> str:
     base = re.sub(r"[^a-zA-Z0-9]+", "", base) or "user"
     candidate = base
     counter = 1
-    while User.query.filter_by(username=candidate).first():
+    while User.username_exists(candidate):
         candidate = f"{base}{counter}"
         counter += 1
     return candidate
@@ -575,7 +602,7 @@ def quick_signup():
 
         first_name = (request.form.get("first_name") or "").strip()
         last_name = (request.form.get("last_name") or "").strip()
-        email = (request.form.get("email") or "").strip().lower()
+        email = User.normalize_email(request.form.get("email")) or ""
         password = (request.form.get("password") or "").strip()
 
         if not first_name:
@@ -639,13 +666,20 @@ def quick_signup():
                 signup_source=signup_source,
             )
 
-        existing_by_email = User.query.filter_by(email=email).first()
-        if existing_by_email:
+        if User.email_exists(email):
             flash(
-                "An account with that email already exists. Please log in to continue.",
-                "info",
+                "An account with that email already exists. Please log in instead.",
+                "error",
             )
-            return redirect(url_for("auth.login", next=next_url))
+            return _render_quick_signup_form(
+                next_url=next_url,
+                global_item_id=global_item_id,
+                global_item_name=(request.form.get("global_item_name") or "").strip(),
+                prefill_first_name=first_name,
+                prefill_last_name=last_name,
+                prefill_email=email,
+                signup_source=signup_source,
+            )
 
         try:
             tier = _resolve_free_tools_tier()

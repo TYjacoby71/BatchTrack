@@ -69,7 +69,7 @@ def _oauth_success_or_signup_redirect(
         flash("Email address is required for account creation.", "error")
         return redirect(url_for("auth.login"))
 
-    user = User.query.filter_by(email=email).first()
+    user = User.find_by_email(email)
     if user:
         if not user.oauth_provider:
             user.oauth_provider = provider

@@ -152,6 +152,9 @@ class SignupService:
             email = oauth_email
         if not email:
             raise ValueError("Stripe checkout session missing customer email")
+        email = User.normalize_email(email) or email
+        if User.find_by_email(email):
+            raise ValueError("An account with that email already exists. Please log in instead.")
 
         phone = SignupService._first_non_empty(
             customer_details.get("phone"),
@@ -402,7 +405,7 @@ class SignupService:
         base = "".join(ch for ch in base if ch.isalnum()) or "user"
         candidate = base
         counter = 1
-        while User.query.filter_by(username=candidate).first():
+        while User.username_exists(candidate):
             candidate = f"{base}{counter}"
             counter += 1
         return candidate

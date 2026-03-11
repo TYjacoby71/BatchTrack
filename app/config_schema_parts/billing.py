@@ -61,6 +61,20 @@ FIELDS = [
         ),
         "recommended": "true",
     },
+    {
+        "key": "SIGNUP_STRIPE_AUTOMATIC_TAX_ENABLED",
+        "cast": "bool",
+        "default": True,
+        "description": "Enable Stripe automatic tax calculation for checkout sessions.",
+        "recommended": "true",
+    },
+    {
+        "key": "SIGNUP_STRIPE_TAX_ID_COLLECTION_ENABLED",
+        "cast": "bool",
+        "default": True,
+        "description": "Enable Stripe tax ID collection on checkout sessions.",
+        "recommended": "true",
+    },
 ]
 
 # --- Billing section ---

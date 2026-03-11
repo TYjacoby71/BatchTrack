@@ -390,7 +390,7 @@ def invite_user():
             return jsonify({"success": False, "error": "No data provided"})
 
         # Validate required fields
-        email = data.get("email", "").strip()
+        email = User.normalize_email(data.get("email"))
         role_id = data.get("role_id")
         first_name = data.get("first_name", "").strip()
         last_name = data.get("last_name", "").strip()
@@ -405,10 +405,7 @@ def invite_user():
             return jsonify({"success": False, "error": "Invalid email format"})
 
         # Check if user already exists (by email or username)
-        existing_user = User.query.filter(
-            (User.email == email) | (User.username == email)
-        ).first()
-        if existing_user:
+        if User.email_exists(email):
             return jsonify(
                 {"success": False, "error": "User with this email already exists"}
             )
@@ -439,14 +436,6 @@ def invite_user():
                     "error": f"Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription",
                 }
             )
-
-        # Generate a unique username from email
-        username = email.split("@")[0]
-        counter = 1
-        original_username = username
-        while User.query.filter_by(username=username).first():
-            username = f"{original_username}{counter}"
-            counter += 1
 
         # Delegate to service for invite orchestration
         from app.services.user_invite_service import UserInviteService
@@ -580,8 +569,8 @@ def add_user():
         data = request.get_json()
 
         # Validate required fields
-        username = data.get("username")
-        email = data.get("email")
+        username = User.normalize_username(data.get("username"))
+        email = User.normalize_email(data.get("email"))
         password = data.get("password")
         role_id = data.get("role_id")
 
@@ -589,10 +578,10 @@ def add_user():
             return jsonify({"success": False, "error": "All fields are required"})
 
         # Check if user already exists
-        if User.query.filter_by(username=username).first():
+        if User.username_exists(username):
             return jsonify({"success": False, "error": "Username already exists"})
 
-        if User.query.filter_by(email=email).first():
+        if User.email_exists(email):
             return jsonify({"success": False, "error": "Email already exists"})
 
         # Check if organization can add more users

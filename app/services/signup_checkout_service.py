@@ -20,6 +20,7 @@ from typing import Any
 from flask import url_for
 
 from ..extensions import db
+from ..models import User
 from ..models.subscription_tier import SubscriptionTier
 from ..utils.analytics_attribution import extract_click_ids
 from .analytics_tracking_service import AnalyticsTrackingService
@@ -123,6 +124,7 @@ class SignupCheckoutService:
     """Build signup state and execute checkout creation."""
 
     _FOUNDING_MEMBER_SEAT_LIMIT = 300
+    _MIN_PASSWORD_LENGTH = 8
     _SIGNUP_DISPLAY_LOOKUP_KEY_ORDER: tuple[str, ...] = (
         "hobbyist_monthly",
         "artisan_monthly",
@@ -361,6 +363,16 @@ class SignupCheckoutService:
         cls, *, context: SignupRequestContext, form_data
     ) -> SignupFlowResult:
         submission = cls._build_submission(context=context, form_data=form_data)
+        password_validation_error = cls._validate_optional_password(
+            form_data.get("password")
+        )
+        if password_validation_error:
+            return cls._error_result(password_validation_error, submission=submission)
+        if submission.contact_email and User.email_exists(submission.contact_email):
+            return cls._error_result(
+                "An account with that email already exists. Please log in instead.",
+                submission=submission,
+            )
 
         if not submission.selected_tier:
             return cls._error_result(
@@ -584,9 +596,10 @@ class SignupCheckoutService:
         submission = SignupSubmission(
             selected_tier=form_data.get("selected_tier"),
             oauth_signup=form_data.get("oauth_signup") == "true",
-            contact_email=(
-                form_data.get("contact_email") or context.prefill_email or ""
-            ).strip(),
+            contact_email=User.normalize_email(
+                form_data.get("contact_email") or context.prefill_email
+            )
+            or "",
             contact_phone=(form_data.get("contact_phone") or "").strip(),
             selected_mode=selected_mode,
             selected_standard_cycle=selected_standard_cycle,
@@ -657,6 +670,18 @@ class SignupCheckoutService:
             flash_category="error",
             view_state=view_state,
         )
+
+    @classmethod
+    def _validate_optional_password(cls, raw_password: Any) -> str | None:
+        """Enforce minimum password length only when a password is submitted."""
+        password = str(raw_password or "").strip()
+        if not password:
+            return None
+        if len(password) < cls._MIN_PASSWORD_LENGTH:
+            return (
+                f"Password must be at least {cls._MIN_PASSWORD_LENGTH} characters."
+            )
+        return None
 
     @staticmethod
     def _load_signup_customer_facing_tiers() -> list[SubscriptionTier]:

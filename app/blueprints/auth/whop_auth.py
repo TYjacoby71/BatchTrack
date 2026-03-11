@@ -34,6 +34,11 @@ class WhopAuth:
     @staticmethod
     def handle_whop_login(license_key, email):
         """Handle login with Whop license key"""
+        normalized_email = User.normalize_email(email)
+        if not normalized_email:
+            flash("Email is required.", "error")
+            return None
+
         # Validate license with Whop
         license_data = WhopService.validate_license_key(license_key)
         if not license_data:
@@ -41,12 +46,12 @@ class WhopAuth:
             return None
 
         # Check if email matches
-        if license_data["email"] != email:
+        if User.normalize_email(license_data.get("email")) != normalized_email:
             flash("Email does not match license key", "error")
             return None
 
         # Find existing user or create new one
-        user = User.query.filter_by(email=email).first()
+        user = User.find_by_email(normalized_email)
 
         if user:
             # Existing user - sync their organization
@@ -67,9 +72,16 @@ class WhopAuth:
                 license_key, license_data
             )
 
+            base_username = (normalized_email.split("@")[0] or "user").strip()
+            username = base_username
+            counter = 1
+            while User.username_exists(username):
+                username = f"{base_username}{counter}"
+                counter += 1
+
             user = User(
-                email=email,
-                username=email.split("@")[0],
+                email=normalized_email,
+                username=username,
                 organization_id=organization.id,
                 is_active=True,
             )

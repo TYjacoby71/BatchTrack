@@ -15,6 +15,7 @@ from datetime import timedelta
 
 from app.extensions import db
 from app.models import Organization, User
+from app.services.login_lockout_service import LoginLockoutService
 from app.utils.timezone_utils import TimezoneUtils
 
 
@@ -36,6 +37,9 @@ def _create_user(*, username: str, email: str, password: str, verified: bool) ->
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
+    LoginLockoutService.clear_failures(
+        user_id=user.id, identifiers=[user.username or "", user.email or ""]
+    )
     return user
 
 
@@ -362,6 +366,115 @@ def test_login_rejects_unknown_identifier(client, app):
         assert sess.get("_user_id") is None
 
 
+# --- Lockout threshold behavior ---
+# Purpose: Verify 10 failed attempts lock login and route users to password reset.
+def test_login_lockout_requires_password_reset_after_ten_failures(client, app):
+    app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+    app.config["AUTH_LOGIN_LOCKOUT_ENABLED"] = True
+    app.config["AUTH_LOGIN_LOCKOUT_THRESHOLD"] = 10
+    app.config["AUTH_LOGIN_LOCKOUT_WINDOW_SECONDS"] = 900
+
+    with app.app_context():
+        user = _create_user(
+            username=f"lockout_{uuid.uuid4().hex[:6]}",
+            email=f"lockout_{uuid.uuid4().hex[:6]}@example.com",
+            password="right-password-123",
+            verified=True,
+        )
+        username = user.username
+        user_id = user.id
+        LoginLockoutService.clear_failures(
+            user_id=user_id, identifiers=[user.username or "", user.email or ""]
+        )
+
+    for _ in range(9):
+        response = client.post(
+            "/auth/login",
+            data={"username": username, "password": "wrong-password-123"},
+            follow_redirects=False,
+        )
+        assert response.status_code == 200
+        assert "Invalid email/username or password" in response.get_data(as_text=True)
+
+    threshold_response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "wrong-password-123"},
+        follow_redirects=False,
+    )
+    assert threshold_response.status_code == 302
+    assert threshold_response.headers["Location"].endswith("/auth/forgot-password")
+
+    locked_response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "right-password-123"},
+        follow_redirects=False,
+    )
+    assert locked_response.status_code == 302
+    assert locked_response.headers["Location"].endswith("/auth/forgot-password")
+
+
+# --- Lockout clear-on-reset behavior ---
+# Purpose: Verify successful password reset clears lockout and allows login.
+def test_password_reset_clears_lockout_and_restores_login(client, app):
+    app.config["AUTH_PASSWORD_RESET_ENABLED"] = True
+    app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
+    app.config["AUTH_LOGIN_LOCKOUT_ENABLED"] = True
+    app.config["AUTH_LOGIN_LOCKOUT_THRESHOLD"] = 10
+    app.config["AUTH_LOGIN_LOCKOUT_WINDOW_SECONDS"] = 900
+
+    with app.app_context():
+        user = _create_user(
+            username=f"unlock_{uuid.uuid4().hex[:6]}",
+            email=f"unlock_{uuid.uuid4().hex[:6]}@example.com",
+            password="start-password-123",
+            verified=True,
+        )
+        username = user.username
+        email = user.email
+        user_id = user.id
+        LoginLockoutService.clear_failures(
+            user_id=user_id, identifiers=[user.username or "", user.email or ""]
+        )
+
+    for _ in range(10):
+        client.post(
+            "/auth/login",
+            data={"username": username, "password": "wrong-password-123"},
+            follow_redirects=False,
+        )
+
+    forgot_response = client.post(
+        "/auth/forgot-password",
+        data={"email": email},
+        follow_redirects=False,
+    )
+    assert forgot_response.status_code == 302
+    assert forgot_response.headers["Location"].endswith("/auth/login")
+
+    with app.app_context():
+        refreshed = User.query.filter_by(email=email).first()
+        assert refreshed is not None
+        token = refreshed.password_reset_token
+        assert token
+
+    reset_response = client.post(
+        f"/auth/reset-password/{token}",
+        data={"password": "new-password-123", "confirm_password": "new-password-123"},
+        follow_redirects=False,
+    )
+    assert reset_response.status_code == 302
+    assert reset_response.headers["Location"].endswith("/auth/login")
+
+    login_response = client.post(
+        "/auth/login",
+        data={"username": username, "password": "new-password-123"},
+        follow_redirects=False,
+    )
+    assert login_response.status_code == 302
+    assert "/auth/forgot-password" not in login_response.headers["Location"]
+
+
 # --- Provider fallback login ---
 # Purpose: Verify auth-email features auto-relax when provider-required mode lacks credentials.
 def test_login_falls_back_to_legacy_when_email_provider_missing(client, app):
@@ -566,6 +679,36 @@ def test_forgot_password_and_reset_flow(client, app):
     )
     assert login_response.status_code == 302
     assert "/auth/resend-verification" not in login_response.headers["Location"]
+
+
+# --- Reset mismatch validation ---
+# Purpose: Verify reset flow rejects mismatched password confirmation.
+def test_reset_password_rejects_mismatched_confirmation(client, app):
+    with app.app_context():
+        user = _create_user(
+            username=f"reset_mismatch_{uuid.uuid4().hex[:6]}",
+            email=f"reset_mismatch_{uuid.uuid4().hex[:6]}@example.com",
+            password="start-password",
+            verified=True,
+        )
+        token = f"token-{uuid.uuid4().hex}"
+        user.password_reset_token = token
+        user.password_reset_sent_at = TimezoneUtils.utc_now()
+        db.session.commit()
+        email = user.email
+
+    response = client.post(
+        f"/auth/reset-password/{token}",
+        data={"password": "new-password-123", "confirm_password": "different-password"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert "Passwords do not match." in response.get_data(as_text=True)
+
+    with app.app_context():
+        refreshed = User.query.filter_by(email=email).first()
+        assert refreshed is not None
+        assert refreshed.password_reset_token == token
 
 
 # --- Reset implies verification ---

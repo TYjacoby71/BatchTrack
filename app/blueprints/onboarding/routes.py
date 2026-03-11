@@ -9,6 +9,7 @@ Glossary:
 """
 
 import re
+from datetime import timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
@@ -22,6 +23,118 @@ from ...utils.analytics_timing import seconds_since_first_landing
 from ...utils.timezone_utils import TimezoneUtils
 
 onboarding_bp = Blueprint("onboarding", __name__, url_prefix="/onboarding")
+
+
+def _invite_setup_token_expired(user: User) -> bool:
+    """Return True when invite setup token timestamp is absent or expired."""
+    from flask import current_app
+
+    expiry_hours_raw = current_app.config.get("PASSWORD_RESET_TOKEN_EXPIRY_HOURS", 24)
+    try:
+        expiry_hours = max(1, int(expiry_hours_raw))
+    except (TypeError, ValueError):
+        expiry_hours = 24
+
+    sent_at = TimezoneUtils.ensure_timezone_aware(
+        getattr(user, "password_reset_sent_at", None)
+    )
+    if not sent_at:
+        return True
+    expires_at = sent_at + timedelta(hours=expiry_hours)
+    return TimezoneUtils.utc_now() > expires_at
+
+
+@onboarding_bp.route("/invite-setup/<token>", methods=["GET", "POST"])
+def invite_setup(token: str):
+    """Complete invited-user profile + password setup after email verification."""
+    user = User.query.filter_by(password_reset_token=token).first()
+    if not user or _invite_setup_token_expired(user):
+        if user and user.password_reset_token == token:
+            user.password_reset_token = None
+            user.password_reset_sent_at = None
+            db.session.commit()
+        flash("This invite setup link is invalid or has expired.", "error")
+        return redirect(url_for("auth.login"))
+
+    if not user.email_verified:
+        flash("Please verify your email before completing profile setup.", "warning")
+        return redirect(
+            url_for(
+                "auth.resend_verification",
+                email=user.email,
+                next=url_for("onboarding.invite_setup", token=token),
+            )
+        )
+
+    errors: list[str] = []
+    if request.method == "POST":
+        first_name = (request.form.get("first_name") or "").strip()
+        last_name = (request.form.get("last_name") or "").strip()
+        phone = (request.form.get("user_phone") or "").strip()
+        desired_username = (request.form.get("username") or user.username or "").strip()
+        new_password = (request.form.get("new_password") or "").strip()
+        confirm_password = (request.form.get("confirm_password") or "").strip()
+
+        if not desired_username:
+            errors.append("Username is required.")
+        elif len(desired_username) < 3:
+            errors.append("Username must be at least 3 characters.")
+        elif not re.fullmatch(r"[A-Za-z0-9_]+", desired_username):
+            errors.append(
+                "Username can only contain letters, numbers, and underscores."
+            )
+        elif User.username_exists(desired_username, exclude_user_id=user.id):
+            errors.append("That username is already taken.")
+
+        if not new_password or not confirm_password:
+            errors.append("Please enter and confirm your password.")
+        elif new_password != confirm_password:
+            errors.append("Passwords do not match.")
+        elif len(new_password) < 8:
+            errors.append("Password must be at least 8 characters long.")
+
+        if not errors:
+            user.first_name = first_name
+            user.last_name = last_name
+            user.phone = phone or None
+            user.username = desired_username
+            user.set_password(new_password)
+            user.password_reset_token = None
+            user.password_reset_sent_at = None
+            db.session.commit()
+            flash("Profile setup complete. Please log in to continue.", "success")
+            return redirect(url_for("auth.login"))
+
+        for error in errors:
+            flash(error, "error")
+
+    checklist = [
+        {
+            "key": "verify",
+            "label": "Verify your email",
+            "description": "Your email address has been confirmed.",
+            "complete": True,
+        },
+        {
+            "key": "password",
+            "label": "Create your password",
+            "description": "Set a secure password to finish account access.",
+            "complete": False,
+        },
+        {
+            "key": "profile",
+            "label": "Complete your profile",
+            "description": "Add your name, username, and optional phone.",
+            "complete": False,
+        },
+    ]
+    return render_template(
+        "onboarding/invite_setup.html",
+        invited_user=user,
+        organization=getattr(user, "organization", None),
+        checklist=checklist,
+        errors=errors,
+    )
 
 
 # --- Welcome checklist route ---

@@ -32,11 +32,16 @@ class EmailService:
     """Service for sending emails"""
 
     @staticmethod
-    def send_verification_email(email, verification_token, user_name=None):
+    def send_verification_email(
+        email, verification_token, user_name=None, next_path: str | None = None
+    ):
         """Send email verification link"""
         try:
             verification_url = url_for(
-                "auth.verify_email", token=verification_token, _external=True
+                "auth.verify_email",
+                token=verification_token,
+                next=next_path or None,
+                _external=True,
             )
 
             subject = "Verify your BatchTrack account"
@@ -49,6 +54,7 @@ class EmailService:
             <p>If the button doesn't work, copy and paste this link into your browser:</p>
             <p>{verification_url}</p>
             <p>This link will expire in 24 hours.</p>
+            {"<p>After verification, you'll continue to profile setup.</p>" if next_path else ""}
             <p>If you didn't create an account with BatchTrack, please ignore this email.</p>
             <br>
             <p>Best regards,<br>The BatchTrack Team</p>
@@ -63,6 +69,7 @@ class EmailService:
             {verification_url}
 
             This link will expire in 24 hours.
+            {"After verification, you'll continue to profile setup." if next_path else ""}
 
             If you didn't create an account with BatchTrack, please ignore this email.
 

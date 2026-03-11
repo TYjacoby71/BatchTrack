@@ -85,17 +85,18 @@ class OrganizationService:
         form_data: Dict[str, str],
     ) -> Tuple[bool, Optional[Organization], str]:
         name = form_data.get("name")
-        username = form_data.get("username")
-        email = form_data.get("email")
+        username = User.normalize_username(form_data.get("username"))
+        email = User.normalize_email(form_data.get("email"))
         password = form_data.get("password")
         subscription_tier = form_data.get("subscription_tier", "free")
 
         if not all([name, username, email, password]):
             return False, None, "Missing required fields"
 
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
+        if User.username_exists(username):
             return False, None, "Username already exists"
+        if User.email_exists(email):
+            return False, None, "An account with that email already exists"
 
         try:
             org = Organization(name=name, contact_email=email, is_active=True)

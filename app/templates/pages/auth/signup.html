@@ -125,6 +125,13 @@
                     <input id="attributionWbraidInput" type="hidden" name="wbraid" value="{{ attribution_wbraid or '' }}">
                     <input id="attributionGbraidInput" type="hidden" name="gbraid" value="{{ attribution_gbraid or '' }}">
                 </form>
+                <p class="small text-muted text-center mt-3 mb-0">
+                    By continuing to checkout, you agree to the
+                    <a href="{{ url_for('legal.terms_of_service') }}" target="_blank" rel="noopener">Terms of Service</a>
+                    and
+                    <a href="{{ url_for('legal.privacy_policy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
+                    Paid plans start with a 14-day trial and then renew automatically each billing cycle until canceled.
+                </p>
             </div>
         </div>
     </div>

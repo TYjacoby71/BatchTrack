@@ -295,24 +295,27 @@ def create_developer_user():
     """Create new developer user"""
     try:
         data = request.get_json()
+        username = User.normalize_username(data.get("username"))
+        email = User.normalize_email(data.get("email"))
+        if not username or not data.get("password"):
+            return jsonify(
+                {"success": False, "error": "Username and password are required"}
+            )
 
         # Check if username already exists
-        existing_user = User.query.filter_by(username=data["username"]).first()
-        if existing_user:
+        if User.username_exists(username):
             return jsonify({"success": False, "error": "Username already exists"})
 
         # Check if email already exists
-        if data.get("email"):
-            existing_email = User.query.filter_by(email=data["email"]).first()
-            if existing_email:
-                return jsonify({"success": False, "error": "Email already exists"})
+        if email and User.email_exists(email):
+            return jsonify({"success": False, "error": "Email already exists"})
 
         user = User(
-            username=data["username"],
+            username=username,
             password_hash=generate_password_hash(data["password"]),
             first_name=data.get("first_name"),
             last_name=data.get("last_name"),
-            email=data.get("email"),
+            email=email,
             user_type="developer",
             organization_id=None,  # Developers don't belong to organizations
             is_active=True,

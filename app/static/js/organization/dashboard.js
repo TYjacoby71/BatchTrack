@@ -192,8 +192,8 @@ async function inviteUser() {
         force_inactive: document.getElementById('inviteUserModal').dataset.addAsInactive === 'true'
     };
 
-    if (!inviteData.email || !inviteData.first_name || !inviteData.last_name || !inviteData.role_id) {
-        showMessage('Please fill in all required fields', 'danger');
+    if (!inviteData.email || !inviteData.role_id) {
+        showMessage('Please provide at least email and role', 'danger');
         return;
     }
 
@@ -225,13 +225,6 @@ async function inviteUser() {
             const inactiveNotice = document.getElementById('inactiveUserNotice');
             if (inactiveNotice) {
                 inactiveNotice.remove();
-            }
-
-            if (result.user_data && result.user_data.temp_password) {
-                const statusText = inviteData.force_inactive ? ' (Account is inactive - activate when a seat becomes available)' : '';
-                setTimeout(() => {
-                    alert(`Login Credentials:\nUsername: ${result.user_data.username}\nPassword: ${result.user_data.temp_password}${statusText}\n\nPlease share these securely with the new user.`);
-                }, 500);
             }
 
             setTimeout(() => window.location.reload(), 2000);
