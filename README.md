@@ -10,11 +10,8 @@ BatchTrack helps soap makers, candle makers, and other artisans track recipes, m
 # Install dependencies
 pip install -r requirements.txt
 
-# Safe local environment wrapper (prevents remote DB usage)
-chmod +x scripts/dev_local.sh
-
 # Initialize database
-scripts/dev_local.sh db upgrade
+flask db upgrade
 
 # Seed all essential data (recommended for new installations)
 flask init-production
@@ -26,10 +23,8 @@ flask init-production
 # flask seed-users
 
 # Run the application
-scripts/dev_local.sh run
+python run.py
 ```
-
-Local DB safety: `scripts/dev_local.sh` forces development mode and unsets deployed DB env vars (`DATABASE_URL`, `DATABASE_INTERNAL_URL`, `SQLALCHEMY_DATABASE_URI`) unless `DEV_ALLOW_DEPLOYED_DB=1` is explicitly set.
 
 ## 🚢 Render Deployment Commands
 
