@@ -699,13 +699,12 @@ class SignupInfoPartialService:
                 "parent_partial_id": None,
                 "html_content": (
                     "<div class='signup-info-block'>"
-                    "<h3>Get your first tracked batch in under 20 minutes.</h3>"
-                    "<p>Never lose recipe history, never miss critical ingredients, "
-                    "and stop guessing your true costs.</p>"
+                    "<h3>See value in your first 20 minutes.</h3>"
                     "<ul>"
-                    "<li><strong>Set up fast:</strong> import and log your first workflow quickly.</li>"
-                    "<li><strong>Track with confidence:</strong> preserve batch and recipe history.</li>"
-                    "<li><strong>Reduce waste:</strong> prevent avoidable ingredient mistakes.</li>"
+                    "<li><strong>Start fast:</strong> set up your first tracked batch in one short session.</li>"
+                    "<li><strong>Know what happened:</strong> keep each recipe, lot, and batch decision in one place.</li>"
+                    "<li><strong>Avoid preventable waste:</strong> catch ingredient and process gaps before they become costly.</li>"
+                    "<li><strong>Feel in control quickly:</strong> move from guessing to clear next steps today.</li>"
                     "</ul>"
                     "</div>"
                 ),
@@ -724,12 +723,12 @@ class SignupInfoPartialService:
                 "parent_partial_id": None,
                 "html_content": (
                     "<div class='signup-info-block'>"
-                    "<h3>Start risk-free and see value before your next production run.</h3>"
-                    "<p>Choose the tier that fits today, then upgrade as your operation grows.</p>"
+                    "<h3>Start risk-free with the tools you need right now.</h3>"
                     "<ul>"
-                    "<li><strong>Low friction:</strong> start now and expand later.</li>"
-                    "<li><strong>Better decisions:</strong> connect ingredients, batches, and costs.</li>"
-                    "<li><strong>Built for makers:</strong> practical tools without clutter.</li>"
+                    "<li><strong>No heavy lift:</strong> pick the tier that fits today and start immediately.</li>"
+                    "<li><strong>Grow at your pace:</strong> upgrade only when your operation is ready.</li>"
+                    "<li><strong>Better decisions:</strong> connect ingredients, batches, and costs in one flow.</li>"
+                    "<li><strong>Built for makers:</strong> practical workflows your team can trust.</li>"
                     "</ul>"
                     "</div>"
                 ),
