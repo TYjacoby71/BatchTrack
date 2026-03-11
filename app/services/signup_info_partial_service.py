@@ -259,6 +259,61 @@ class SignupInfoPartialService:
         )
 
     @classmethod
+    def apply_ai_edit(
+        cls,
+        *,
+        partial_id: str,
+        prompt: str,
+        tier_names: list[str] | None = None,
+        allow_name_update: bool = False,
+    ) -> dict[str, Any]:
+        """Apply an AI rewrite directly to an existing partial."""
+        base = cls.get_partial(partial_id)
+        if not base:
+            raise SignupInfoPartialServiceError("Draft partial not found.")
+        clean_prompt = str(prompt or "").strip()
+        if not clean_prompt:
+            raise SignupInfoPartialServiceError("Prompt is required.")
+
+        client = GoogleAIClient.from_app()
+        model_name = (
+            current_app.config.get("GOOGLE_AI_BATCHBOT_MODEL")
+            or current_app.config.get("GOOGLE_AI_DEFAULT_MODEL")
+            or "gemini-1.5-flash"
+        )
+        ai_payload = cls._generate_ai_payload(
+            client=client,
+            model_name=model_name,
+            base_partial=base,
+            prompt=clean_prompt,
+            tier_names=tier_names or [],
+        )
+        updated = cls.update_partial(
+            partial_id=str(partial_id),
+            name=ai_payload.get("name") if allow_name_update else None,
+            html_content=ai_payload.get("html_content") or str(base.get("html_content") or ""),
+        )
+        updated["source_prompt"] = clean_prompt
+        updated["ai_model"] = model_name
+        updated["updated_at"] = cls._utc_now_iso()
+
+        store = cls.load_store()
+        partials = list(store.get("partials") or [])
+        for partial in partials:
+            if str(partial.get("id") or "") == str(partial_id):
+                partial.update(
+                    {
+                        "source_prompt": updated["source_prompt"],
+                        "ai_model": updated["ai_model"],
+                        "updated_at": updated["updated_at"],
+                    }
+                )
+                break
+        store["partials"] = partials
+        cls.save_store(store)
+        return updated
+
+    @classmethod
     def get_assignments(cls) -> dict[str, Any]:
         """Return normalized assignment payload."""
         store = cls.load_store()
@@ -362,6 +417,36 @@ class SignupInfoPartialService:
             partial_lookup=partial_lookup,
             session_seed=session_seed,
         )
+
+    @classmethod
+    def build_uniform_preview_panels(
+        cls, *, partial_id: str, tier_ids: list[str]
+    ) -> dict[str, dict[str, Any]]:
+        """Return one draft override mapped to every preview tier."""
+        selected = cls.get_partial(partial_id)
+        if not selected:
+            return {}
+        selected_html = cls._sanitize_html(str(selected.get("html_content") or ""))
+        if not selected_html:
+            return {}
+        selected_id = str(selected.get("id") or "")
+        selected_name = str(selected.get("name") or "")
+        preview_text = cls._preview_text(selected_html)
+        panels: dict[str, dict[str, Any]] = {}
+        for tier_id in tier_ids:
+            tier_key = str(tier_id or "").strip()
+            if not tier_key:
+                continue
+            panels[tier_key] = {
+                "tier_id": tier_key,
+                "partial_id": selected_id,
+                "partial_name": selected_name,
+                "assignment_mode": "preview_override",
+                "variant_key": "PREVIEW",
+                "html_content": selected_html,
+                "preview_text": preview_text,
+            }
+        return panels
 
     @classmethod
     def _resolve_panel_for_assignment(

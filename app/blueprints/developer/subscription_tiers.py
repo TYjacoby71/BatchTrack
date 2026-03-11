@@ -173,20 +173,25 @@ def manage_tiers():
 @require_permission("dev.manage_tiers")
 def manage_signup_info_partials():
     partials = SignupInfoPartialService.list_partials(include_archived=True)
-    selectable_partials = SignupInfoPartialService.list_selectable_partials()
-    assignments = SignupInfoPartialService.get_assignments()
-    signup_tiers = (
-        SubscriptionTier.query.filter_by(is_customer_facing=True)
-        .filter(SubscriptionTier.billing_provider != "exempt")
-        .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
-        .all()
-    )
+    open_partial_id = str(request.args.get("open_partial_id") or "").strip()
+    active_partial = None
+    if open_partial_id:
+        active_partial = next(
+            (
+                partial
+                for partial in partials
+                if str(partial.get("id") or "") == open_partial_id
+            ),
+            None,
+        )
+    if not active_partial and partials:
+        active_partial = partials[0]
+        open_partial_id = str(active_partial.get("id") or "")
     return render_template(
         "developer/signup_info_partials.html",
         partials=partials,
-        selectable_partials=selectable_partials,
-        assignments=assignments,
-        signup_tiers=signup_tiers,
+        open_partial_id=open_partial_id,
+        active_partial=active_partial,
     )
 
 
@@ -201,9 +206,18 @@ def create_signup_info_partial():
     name = (request.form.get("name") or "").strip()
     html_content = request.form.get("html_content") or ""
     status = request.form.get("status") or "draft"
+    created = None
     if not name:
         flash("Partial name is required.", "error")
         return redirect(url_for(".manage_signup_info_partials"))
+    if not str(html_content or "").strip():
+        html_content = (
+            "<div class='signup-info-block'>"
+            "<h3>Start your first tracked batch in under 20 minutes.</h3>"
+            "<p>Use this draft as a base and tell BatchBot exactly what to change.</p>"
+            "<ul><li>Outcome-first headline</li><li>Fast perceived value</li><li>Trust anchor</li></ul>"
+            "</div>"
+        )
     try:
         created = SignupInfoPartialService.create_partial(
             name=name,
@@ -216,6 +230,13 @@ def create_signup_info_partial():
     except Exception as exc:
         logger.error("Failed to create signup info partial: %s", exc)
         flash("Unable to create signup info partial.", "error")
+    if created and str(request.form.get("open_after") or "") == "1":
+        return redirect(
+            url_for(
+                ".manage_signup_info_partials",
+                open_partial_id=str(created.get("id") or ""),
+            )
+        )
     return redirect(url_for(".manage_signup_info_partials"))
 
 
@@ -243,7 +264,7 @@ def update_signup_info_partial(partial_id):
     except Exception as exc:
         logger.error("Failed to update signup info partial %s: %s", partial_id, exc)
         flash("Unable to update signup info partial.", "error")
-    return redirect(url_for(".manage_signup_info_partials"))
+    return redirect(url_for(".manage_signup_info_partials", open_partial_id=partial_id))
 
 
 # --- Clone signup info partial ---
@@ -255,6 +276,7 @@ def update_signup_info_partial(partial_id):
 @require_permission("dev.manage_tiers")
 def clone_signup_info_partial(partial_id):
     as_name = (request.form.get("as_name") or "").strip() or None
+    cloned = None
     try:
         cloned = SignupInfoPartialService.clone_partial(
             partial_id=str(partial_id),
@@ -270,7 +292,52 @@ def clone_signup_info_partial(partial_id):
     except Exception as exc:
         logger.error("Failed to clone signup info partial %s: %s", partial_id, exc)
         flash("Unable to clone signup info partial.", "error")
-    return redirect(url_for(".manage_signup_info_partials"))
+    if cloned:
+        return redirect(
+            url_for(
+                ".manage_signup_info_partials",
+                open_partial_id=str(cloned.get("id") or ""),
+            )
+        )
+    return redirect(url_for(".manage_signup_info_partials", open_partial_id=partial_id))
+
+
+# --- Apply AI edits to existing signup info draft ---
+# Purpose: Rewrite the currently open draft in-place from a prompt.
+# Inputs: Function arguments plus active request/application context.
+# Outputs: Return value or response payload for caller/HTTP client.
+@subscription_tiers_bp.route("/signup-info-partials/<partial_id>/ai-edit", methods=["POST"])
+@login_required
+@require_permission("dev.manage_tiers")
+def apply_signup_info_ai_edit(partial_id):
+    prompt = (request.form.get("prompt") or "").strip()
+    if not prompt:
+        flash("BatchBot prompt is required.", "error")
+        return redirect(url_for(".manage_signup_info_partials", open_partial_id=partial_id))
+    signup_tiers = (
+        SubscriptionTier.query.filter_by(is_customer_facing=True)
+        .filter(SubscriptionTier.billing_provider != "exempt")
+        .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
+        .all()
+    )
+    tier_names = [str(tier.name or "").strip() for tier in signup_tiers if tier.name]
+    allow_name_update = str(request.form.get("allow_name_update") or "") == "1"
+    try:
+        SignupInfoPartialService.apply_ai_edit(
+            partial_id=str(partial_id),
+            prompt=prompt,
+            tier_names=tier_names,
+            allow_name_update=allow_name_update,
+        )
+        flash("BatchBot updated this draft version.", "success")
+    except SignupInfoPartialServiceError as exc:
+        flash(str(exc), "error")
+    except GoogleAIClientError as exc:
+        flash(str(exc), "error")
+    except Exception as exc:
+        logger.error("Failed to apply AI edits to signup info draft %s: %s", partial_id, exc)
+        flash("Unable to apply BatchBot draft edits.", "error")
+    return redirect(url_for(".manage_signup_info_partials", open_partial_id=partial_id))
 
 
 # --- Generate AI signup info draft ---
@@ -282,6 +349,7 @@ def clone_signup_info_partial(partial_id):
 @require_permission("dev.manage_tiers")
 def generate_signup_info_ai_draft(partial_id):
     prompt = (request.form.get("prompt") or "").strip()
+    drafted = None
     if not prompt:
         flash("AI prompt is required.", "error")
         return redirect(url_for(".manage_signup_info_partials"))
@@ -309,7 +377,14 @@ def generate_signup_info_ai_draft(partial_id):
     except Exception as exc:
         logger.error("Failed to generate AI signup info draft for %s: %s", partial_id, exc)
         flash("Unable to generate AI draft.", "error")
-    return redirect(url_for(".manage_signup_info_partials"))
+    if drafted:
+        return redirect(
+            url_for(
+                ".manage_signup_info_partials",
+                open_partial_id=str(drafted.get("id") or ""),
+            )
+        )
+    return redirect(url_for(".manage_signup_info_partials", open_partial_id=partial_id))
 
 
 # --- Save signup info assignments ---
@@ -379,31 +454,25 @@ def preview_signup_info_partial():
         canonical_url=url_for("core.signup_alias", _external=True),
     )
 
-    selected_tier_id = str(
-        request.args.get("tier_id")
-        or template_context.get("selected_paid_tier_id")
-        or template_context.get("default_tier_id")
-        or ""
-    ).strip()
-    if selected_tier_id and selected_tier_id in (template_context.get("available_tiers") or {}):
-        template_context["selected_paid_tier_id"] = selected_tier_id
-        template_context["default_tier_id"] = selected_tier_id
-        template_context["preselected_tier"] = selected_tier_id
-
-    primary_partial_id = str(request.args.get("primary_partial_id") or "").strip()
-    mode = str(request.args.get("mode") or "manual").strip()
-    secondary_partial_id = str(request.args.get("secondary_partial_id") or "").strip()
-    if primary_partial_id and selected_tier_id:
-        panel = SignupInfoPartialService.build_preview_panel(
-            tier_id=selected_tier_id,
-            mode=mode,
-            primary_partial_id=primary_partial_id,
-            secondary_partial_id=secondary_partial_id or None,
+    preview_partial_id = str(request.args.get("partial_id") or "").strip()
+    if preview_partial_id:
+        available_tiers = template_context.get("available_tiers") or {}
+        tier_ids = [str(tier_id) for tier_id in available_tiers.keys()]
+        preview_panels = SignupInfoPartialService.build_uniform_preview_panels(
+            partial_id=preview_partial_id,
+            tier_ids=tier_ids,
         )
-        if panel:
-            panel_map = dict(template_context.get("signup_info_panel_by_tier") or {})
-            panel_map[selected_tier_id] = panel
-            template_context["signup_info_panel_by_tier"] = panel_map
+        if preview_panels:
+            template_context["signup_info_panel_by_tier"] = preview_panels
+            selected_tier_id = str(
+                template_context.get("selected_paid_tier_id")
+                or template_context.get("default_tier_id")
+                or ""
+            ).strip()
+            selected_panel = preview_panels.get(selected_tier_id)
+            if not selected_panel:
+                selected_panel = next(iter(preview_panels.values()))
+            template_context["signup_info_selected_panel"] = selected_panel
 
     template_context["show_public_header"] = True
     template_context["preview_mode"] = True
