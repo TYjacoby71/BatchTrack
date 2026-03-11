@@ -350,7 +350,8 @@ def save_profile():
             phone = request.form.get("phone", "").strip()
             timezone = request.form.get("timezone", current_user.timezone)
 
-        username = (username or "").strip()
+        username = User.normalize_username(username) or ""
+        email = User.normalize_email(email) or ""
         print(
             f"Parsed data - Username: '{username}', First: '{first_name}', Last: '{last_name}', Email: '{email}', Phone: '{phone}'"
         )
@@ -377,12 +378,14 @@ def save_profile():
             flash(error_msg, "error")
             return redirect(request.referrer or url_for("settings.index"))
 
-        existing_user = User.query.filter(
-            User.username == username,
-            User.id != current_user.id,
-        ).first()
-        if existing_user:
+        if User.username_exists(username, exclude_user_id=current_user.id):
             error_msg = "Username is already in use"
+            if expects_json:
+                return jsonify({"success": False, "error": error_msg}), 400
+            flash(error_msg, "error")
+            return redirect(request.referrer or url_for("settings.index"))
+        if User.email_exists(email, exclude_user_id=current_user.id):
+            error_msg = "Email is already in use"
             if expects_json:
                 return jsonify({"success": False, "error": error_msg}), 400
             flash(error_msg, "error")
@@ -452,8 +455,8 @@ def change_password():
         if new_password != confirm_password:
             return jsonify({"error": "New passwords do not match"}), 400
 
-        if len(new_password) < 6:
-            return jsonify({"error": "Password must be at least 6 characters"}), 400
+        if len(new_password) < 8:
+            return jsonify({"error": "Password must be at least 8 characters"}), 400
 
         current_user.password_hash = generate_password_hash(new_password)
         db.session.commit()

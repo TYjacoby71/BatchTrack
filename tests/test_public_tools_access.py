@@ -731,7 +731,7 @@ def test_homepage_tool_cards_render_uploaded_soap_image(app):
             client, "/", label="homepage", query_string={"refresh": "1"}
         )
         html = response.get_data(as_text=True)
-        assert 'src="/static/images/homepage/tools/soap/soap-tool-card.png"' in html
+        assert 'src="/static/images/homepage/tools/soap/soap-tool-card.png' in html
     finally:
         if soap_image_path is not None and soap_image_path.exists():
             soap_image_path.unlink(missing_ok=True)
@@ -817,7 +817,7 @@ def test_homepage_feature_cards_render_uploaded_image_without_strict_filename(ap
         )
         html = response.get_data(as_text=True)
         assert (
-            'src="/static/images/homepage/features/fifo-inventory/000%20Inventory%20Snapshot.png"'
+            'src="/static/images/homepage/features/fifo-inventory/000%20Inventory%20Snapshot.png'
             in html
         )
     finally:
@@ -872,9 +872,7 @@ def test_homepage_hero_slot_renders_uploaded_video_without_strict_filename(app):
             client, "/", label="homepage", query_string={"refresh": "1"}
         )
         html = response.get_data(as_text=True)
-        assert (
-            'src="/static/images/homepage/hero/primary/000%20hero%20clip.mp4"' in html
-        )
+        assert 'src="/static/images/homepage/hero/primary/000%20hero%20clip.mp4' in html
         assert 'class="final-cta-media"' in html
     finally:
         if custom_video is not None and custom_video.exists():

@@ -87,6 +87,7 @@ class RouteAccessConfig:
         "core.signup_alias",
         "core.affiliates_info",
         "core.affiliates_signup",
+        "onboarding.invite_setup",
     )
 
     PUBLIC_PATH_PREFIXES: Tuple[str, ...] = (
@@ -102,6 +103,7 @@ class RouteAccessConfig:
         "/auth/logout",
         "/auth/forgot-password",
         "/auth/reset-password",
+        "/onboarding/invite-setup",
         "/signup",
         "/affiliates",
         "/affiliates/",

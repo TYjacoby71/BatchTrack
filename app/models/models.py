@@ -18,7 +18,7 @@ import secrets
 
 from flask import g, has_app_context
 from flask_login import UserMixin
-from sqlalchemy import event
+from sqlalchemy import event, func
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import selectinload
 
@@ -306,7 +306,7 @@ class User(UserMixin, db.Model):
     )
     first_name = db.Column(db.String(64), nullable=True)
     last_name = db.Column(db.String(64), nullable=True)
-    email = db.Column(db.String(120), nullable=True)
+    email = db.Column(db.String(120), nullable=True, unique=True)
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(
         db.Integer, db.ForeignKey("organization.id"), nullable=True
@@ -398,6 +398,54 @@ class User(UserMixin, db.Model):
         from werkzeug.security import check_password_hash
 
         return check_password_hash(self.password_hash, password)
+
+    @staticmethod
+    def normalize_email(value: str | None) -> str | None:
+        """Normalize emails for consistent case-insensitive identity matching."""
+        normalized = str(value or "").strip().lower()
+        return normalized or None
+
+    @staticmethod
+    def normalize_username(value: str | None) -> str | None:
+        """Normalize usernames for consistent uniqueness checks."""
+        normalized = str(value or "").strip()
+        return normalized or None
+
+    @classmethod
+    def find_by_email(cls, value: str | None):
+        """Return first user matching the email case-insensitively."""
+        normalized = cls.normalize_email(value)
+        if not normalized:
+            return None
+        return (
+            cls.query.filter(func.lower(cls.email) == normalized)
+            .order_by(cls.id.asc())
+            .first()
+        )
+
+    @classmethod
+    def email_exists(cls, value: str | None, *, exclude_user_id: int | None = None) -> bool:
+        """Return True when another user already uses the email (case-insensitive)."""
+        normalized = cls.normalize_email(value)
+        if not normalized:
+            return False
+        query = cls.query.filter(func.lower(cls.email) == normalized)
+        if exclude_user_id is not None:
+            query = query.filter(cls.id != exclude_user_id)
+        return query.first() is not None
+
+    @classmethod
+    def username_exists(
+        cls, value: str | None, *, exclude_user_id: int | None = None
+    ) -> bool:
+        """Return True when another user already uses the username."""
+        normalized = cls.normalize_username(value)
+        if not normalized:
+            return False
+        query = cls.query.filter(func.lower(cls.username) == normalized.lower())
+        if exclude_user_id is not None:
+            query = query.filter(cls.id != exclude_user_id)
+        return query.first() is not None
 
     @property
     def full_name(self):
@@ -714,15 +762,27 @@ class User(UserMixin, db.Model):
 
 # --- Default username hook ---
 # Purpose: Ensure a username exists before inserting a user record.
+def _normalize_user_identity_fields(target) -> None:
+    target.username = User.normalize_username(getattr(target, "username", None))
+    target.email = User.normalize_email(getattr(target, "email", None))
+
+
 @event.listens_for(User, "before_insert")
 def _default_username_before_insert(mapper, connection, target):
     """Auto-generate username if not provided (for test compatibility)"""
+    _normalize_user_identity_fields(target)
     if not getattr(target, "username", None):
         base = None
         if getattr(target, "email", None):
             local = target.email.split("@", 1)[0]
             base = re.sub(r"[^a-zA-Z0-9_.-]", "", local) or None
         target.username = (base or "user") + "_" + secrets.token_hex(3)
+
+
+@event.listens_for(User, "before_update")
+def _normalize_identity_before_update(mapper, connection, target):
+    """Normalize mutable identity fields before update writes."""
+    _normalize_user_identity_fields(target)
 
 
 # Add the imported classes to __all__

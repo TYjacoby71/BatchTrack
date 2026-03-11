@@ -21,7 +21,7 @@
                         preload="metadata"
                         aria-label="{{ integration.name }} integration media"
                     >
-                        <source src="{{ url_for('static', filename=integration.media.path) }}">
+                        <source src="{{ static_asset(integration.media.path) }}">
                     </video>
                         {% elif integration.media.kind == 'youtube' and integration.media.embed_url %}
                     <iframe
@@ -35,7 +35,7 @@
                     ></iframe>
                         {% else %}
                     <img
-                        src="{{ url_for('static', filename=integration.media.path) }}"
+                        src="{{ static_asset(integration.media.path) }}"
                         alt="{{ integration.name }} logo"
                         class="integration-logo-media"
                         width="52"

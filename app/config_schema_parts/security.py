@@ -181,6 +181,27 @@ FIELDS = [
         "note": "Leave off unless you need forensics; this adds write load.",
     },
     {
+        "key": "AUTH_LOGIN_LOCKOUT_ENABLED",
+        "cast": "bool",
+        "default": True,
+        "description": "Enable account lockout after repeated failed login attempts.",
+        "recommended": "true",
+    },
+    {
+        "key": "AUTH_LOGIN_LOCKOUT_THRESHOLD",
+        "cast": "int",
+        "default": 10,
+        "description": "Failed login attempts allowed within the rolling window before lockout.",
+        "recommended": "10",
+    },
+    {
+        "key": "AUTH_LOGIN_LOCKOUT_WINDOW_SECONDS",
+        "cast": "int",
+        "default": 900,
+        "description": "Rolling failed-login window in seconds.",
+        "recommended": "900",
+    },
+    {
         "key": "BOT_TRAP_DB_MAX_HIT_ROWS",
         "cast": "int",
         "default": 5000,

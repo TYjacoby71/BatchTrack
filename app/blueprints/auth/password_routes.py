@@ -18,6 +18,7 @@ from flask import current_app, flash, redirect, render_template, request, url_fo
 from ...extensions import db, limiter
 from ...models import User
 from ...services.email_service import EmailService
+from ...services.login_lockout_service import LoginLockoutService
 from ...utils.timezone_utils import TimezoneUtils
 from . import auth_bp
 
@@ -80,7 +81,7 @@ def forgot_password():
 
         if reset_enabled and email and "@" in email:
             try:
-                user = User.query.filter_by(email=email).first()
+                user = User.find_by_email(email)
                 if user and user.is_active:
                     reset_token = EmailService.generate_reset_token(user.id)
                     user.password_reset_token = reset_token
@@ -166,6 +167,10 @@ def reset_password(token):
             # Invalidate existing sessions for safety after credential changes.
             user.active_session_token = None
             db.session.commit()
+            LoginLockoutService.clear_failures(
+                user_id=user.id,
+                identifiers=[user.username or "", user.email or ""],
+            )
         except Exception as exc:
             logger.warning("Suppressed exception fallback at app/blueprints/auth/password_routes.py:168", exc_info=True)
             db.session.rollback()

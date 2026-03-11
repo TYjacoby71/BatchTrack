@@ -47,7 +47,7 @@
                         {% if logo_media %}
                             {% if logo_media.kind == 'video' %}
                         <video class="testimonial-logo-media" autoplay muted loop playsinline preload="metadata" aria-label="{{ review_name }} logo media">
-                            <source src="{{ url_for('static', filename=logo_media.path) }}">
+                            <source src="{{ static_asset(logo_media.path) }}">
                         </video>
                             {% elif logo_media.kind == 'youtube' and logo_media.embed_url %}
                         <iframe
@@ -60,7 +60,7 @@
                             allowfullscreen
                         ></iframe>
                             {% else %}
-                        <img src="{{ url_for('static', filename=logo_media.path) }}"
+                        <img src="{{ static_asset(logo_media.path) }}"
                              alt="{{ review_name }} logo"
                              class="testimonial-logo-media"
                              loading="lazy"
@@ -76,7 +76,7 @@
                             {% if photo_media %}
                                 {% if photo_media.kind == 'video' %}
                             <video class="testimonial-photo-media" autoplay muted loop playsinline preload="metadata" aria-label="{{ review_name }} profile media">
-                                <source src="{{ url_for('static', filename=photo_media.path) }}">
+                                <source src="{{ static_asset(photo_media.path) }}">
                             </video>
                                 {% elif photo_media.kind == 'youtube' and photo_media.embed_url %}
                             <iframe
@@ -89,7 +89,7 @@
                                 allowfullscreen
                             ></iframe>
                                 {% else %}
-                            <img src="{{ url_for('static', filename=photo_media.path) }}"
+                            <img src="{{ static_asset(photo_media.path) }}"
                                  alt="{{ review_name }}"
                                  class="testimonial-photo-media"
                                  width="50"

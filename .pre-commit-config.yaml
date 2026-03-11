@@ -43,3 +43,9 @@ repos:
         language: system
         pass_filenames: false
         stages: [manual]
+      - id: migrations-guard
+        name: migrations-guard
+        entry: python3 scripts/validate_migration_integrity.py
+        language: system
+        pass_filenames: false
+        stages: [manual]

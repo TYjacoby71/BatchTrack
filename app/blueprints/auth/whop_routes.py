@@ -16,7 +16,6 @@ from flask import flash, redirect, request, url_for
 from flask_login import login_user
 
 from ...extensions import db
-from ...models import User
 from ...services.session_service import SessionService
 from ...utils.timezone_utils import TimezoneUtils
 from . import auth_bp
@@ -37,22 +36,8 @@ def whop_login():
         flash("License key is required.", "error")
         return redirect(url_for("auth.login"))
 
-    user_data = WhopAuth.handle_whop_login(license_key, email)
-    if user_data:
-        user = User.query.filter_by(email=user_data.get("email")).first()
-        if not user:
-            username = user_data.get("username", user_data.get("email").split("@")[0])
-            user = User(
-                username=username,
-                email=user_data.get("email"),
-                first_name=user_data.get("first_name", ""),
-                last_name=user_data.get("last_name", ""),
-                is_active=True,
-                user_type="customer",
-            )
-            db.session.add(user)
-            db.session.flush()
-
+    user = WhopAuth.handle_whop_login(license_key, email)
+    if user:
         login_user(user)
         SessionService.rotate_user_session(user)
         user.last_login = TimezoneUtils.utc_now()

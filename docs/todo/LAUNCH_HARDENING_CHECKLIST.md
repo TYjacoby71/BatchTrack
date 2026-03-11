@@ -35,24 +35,25 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [x] Final pass: 171 queries fixed across 31 files; only intentional exceptions remain (recipe library, auth system roles, global library with manual org_id filter)
 
 ### 1.3 Server-side password validation
-- [ ] Add password strength check (min 8 chars) to signup route (`app/blueprints/auth/login_routes.py` or signup handler)
-- [ ] Add password strength check to quick-signup route (`app/blueprints/auth/login_routes.py`)
-- [ ] Add password strength check to invite/user-creation flow (`app/services/user_invite_service.py`)
-- [ ] Add password strength check to password change route (`app/blueprints/settings/routes.py`)
-- [ ] Verify password reset route already has the check (`app/blueprints/auth/password_routes.py` line 150 — confirmed)
-- [ ] Add tests for password validation rejection
+- [x] Add password strength check (min 8 chars) to signup route (`app/services/signup_checkout_service.py` validates optional submitted password length)
+- [x] Add password strength check to quick-signup route (`app/blueprints/auth/login_routes.py`)
+- [x] Add password strength check to invite/user-creation flow (`app/services/user_invite_service.py` now issues invite setup path where password creation enforces min 8 in `app/blueprints/onboarding/routes.py`)
+- [x] Add password strength check to password change route (`app/blueprints/settings/routes.py`)
+- [x] Verify password reset route already has the check (`app/blueprints/auth/password_routes.py` line 150 — confirmed)
+- [x] Add tests for password validation rejection
 
 ### 1.4 Login lockout mechanism
-- [ ] Add failed-login attempt tracking (counter per username or IP, stored in Redis or DB)
-- [ ] Lock account or add CAPTCHA after N failed attempts (recommend 5 within 15 minutes)
-- [ ] Add unlock mechanism (time-based auto-unlock after 30 minutes, or admin manual unlock)
-- [ ] Add tests for lockout behavior
+- [x] Add failed-login attempt tracking (counter per user identifier via cache-backed lockout state)
+- [x] Lock account after N failed attempts (configured at 10 within 15 minutes per user identifier)
+- [x] Add unlock mechanism (password reset flow via existing forgot/reset routes)
+- [x] Add tests for lockout behavior
 
 ### 1.5 Public signup commerce hardening
-- [ ] Add billing-consent microcopy near the signup CTA with Terms + Privacy links and recurring billing language (`app/templates/pages/auth/signup.html`)
-- [ ] Make the 14-day trial explicit in checkout session construction (`app/services/billing_service.py`) by setting subscription trial parameters in code, or documenting the enforced Stripe-level equivalent
-- [ ] Configure explicit tax behavior for checkout (`app/services/billing_service.py`) including `automatic_tax` and tax-ID collection policy
-- [ ] Replace legal placeholders before launch (`app/templates/legal/terms_of_service.html`, `app/templates/legal/privacy_policy.html`) including governing jurisdiction and business address
+- [x] Add billing-consent microcopy near the signup CTA with Terms + Privacy links and recurring billing language (`app/templates/pages/auth/signup.html`)
+- [x] Make the 14-day trial explicit in checkout session construction (`app/services/billing_service.py`) by setting `subscription_data.trial_period_days` via `create_checkout_session_for_tier`
+- [x] Configure explicit tax behavior for checkout (`app/services/billing_service.py`) including `automatic_tax` and tax-ID collection policy (`SIGNUP_STRIPE_AUTOMATIC_TAX_ENABLED`, `SIGNUP_STRIPE_TAX_ID_COLLECTION_ENABLED`)
+- [x] Replace legal placeholders before launch (`app/templates/legal/terms_of_service.html`, `app/templates/legal/privacy_policy.html`, `app/templates/legal/cookie_policy.html`) including governing jurisdiction and business/address copy (BatchTrack.com cloud business profile + no public mailing address)
+- [ ] Finalize enforceable legal metadata in Terms/Privacy (`app/templates/legal/terms_of_service.html`, `app/templates/legal/privacy_policy.html`): explicit governing jurisdiction + venue, formal registered legal entity name, and legal notice contact policy
 - [ ] Tighten public signup abuse controls (`app/blueprints/auth/signup_routes.py`) with stricter throttles and bot challenge strategy at threshold
 - [ ] Add a no-JavaScript fallback submit path for checkout handoff (`app/templates/pages/auth/signup.html`) so payment flow still works when scripts are blocked
 

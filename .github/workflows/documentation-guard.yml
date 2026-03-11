@@ -40,3 +40,9 @@ jobs:
             BASE_REF="HEAD~1"
           fi
           python3 scripts/validate_pr_documentation.py --base-ref "$BASE_REF"
+
+      - name: Run migration integrity guard (manual finalization)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          python3 scripts/validate_migration_integrity.py
