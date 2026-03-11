@@ -1,0 +1,256 @@
+{% extends 'layout.html' %}
+
+{% block title %}Signup Info Partials - Developer{% endblock %}
+
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
+{% block content %}
+{% set active_partial_id = open_partial_id or ((active_partial or {}).get('id') if active_partial else '') %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('developer.dashboard') }}">Developer Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}">Subscription Tiers</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Signup Info Partials</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h3 class="mb-1"><i class="fas fa-layer-group text-primary"></i> Signup Info Partials</h3>
+                <p class="text-muted mb-0">Manage signup partial drafts with a console-style BatchBot editing flow.</p>
+            </div>
+            <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Tier Management
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Existing Partials</h5>
+                </div>
+                <div class="card-body">
+                    {% if partials %}
+                    <div class="d-grid gap-3">
+                        {% for partial in partials %}
+                        <div class="border rounded p-3 {% if partial.id == active_partial_id %}border-primary bg-light{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">{{ partial.name }}</h6>
+                                    <div class="small text-muted">
+                                        ID: <code>{{ partial.id }}</code> · Version {{ partial.version }}
+                                    </div>
+                                </div>
+                                <span class="badge bg-{% if partial.status == 'active' %}success{% elif partial.status == 'draft' %}warning text-dark{% else %}secondary{% endif %}">
+                                    {{ partial.status|title }}
+                                </span>
+                            </div>
+                            <p class="small mb-2">{{ partial.preview_text }}</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a
+                                    href="{{ url_for('developer.subscription_tiers.manage_signup_info_partials', open_partial_id=partial.id) }}"
+                                    class="btn btn-outline-primary btn-sm"
+                                >
+                                    <i class="fas fa-terminal"></i> Open Draft
+                                </a>
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary btn-sm preview-partial-btn"
+                                    data-partial-id="{{ partial.id }}"
+                                >
+                                    <i class="fas fa-eye"></i> Preview on Signup
+                                </button>
+                            </div>
+                            <form method="post" action="{{ url_for('developer.subscription_tiers.clone_signup_info_partial', partial_id=partial.id) }}" class="mt-2">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" name="as_name" placeholder="{{ partial.name }} v{{ partial.version + 1 }}">
+                                    <button type="submit" class="btn btn-outline-dark">
+                                        <i class="fas fa-copy"></i> Clone & Open
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No partials found yet. Create your first draft from the console.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">BatchBot Draft Console</h5>
+                </div>
+                <div class="card-body">
+                    {% if active_partial %}
+                    <div class="rounded p-3 mb-3" style="background: #111827; color: #e5e7eb;">
+                        <div class="font-monospace small">&gt; open_draft_id: {{ active_partial.id }}</div>
+                        <div class="font-monospace small">&gt; open_draft_name: {{ active_partial.name }}</div>
+                        <div class="font-monospace small">&gt; mode: edit_this_version</div>
+                    </div>
+                    <form method="post" action="{{ url_for('developer.subscription_tiers.apply_signup_info_ai_edit', partial_id=active_partial.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label class="form-label">Bot Prompt</label>
+                            <textarea
+                                class="form-control font-monospace"
+                                rows="5"
+                                name="prompt"
+                                placeholder="Example: Make the headline bigger, add urgency, and tighten the bullets for first-batch-under-20-minutes messaging."
+                                required
+                            ></textarea>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="1" id="allow_name_update" name="allow_name_update">
+                            <label class="form-check-label" for="allow_name_update">
+                                Allow BatchBot to rename this draft
+                            </label>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-wand-magic-sparkles"></i> Edit This Version
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary preview-partial-btn"
+                                data-partial-id="{{ active_partial.id }}"
+                            >
+                                <i class="fas fa-eye"></i> Preview Open Draft
+                            </button>
+                        </div>
+                        <div class="form-text mt-2">
+                            Clone first when you want a fresh branch, then keep prompting this open draft until it feels right.
+                        </div>
+                    </form>
+                    {% else %}
+                    <p class="text-muted mb-0">Create a new draft, then open it to use BatchBot editing.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Make New Draft</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('developer.subscription_tiers.create_signup_info_partial') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="draft">
+                        <input type="hidden" name="open_after" value="1">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-8">
+                                <label class="form-label">Draft Name</label>
+                                <input type="text" class="form-control" name="name" placeholder="Signup Info Partial C" required>
+                            </div>
+                            <div class="col-md-4 d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Make New Draft
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-text mt-2">
+                            New drafts open automatically, then you can run "Edit This Version" with your prompt.
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if active_partial %}
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Open Draft HTML</h5>
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary btn-sm preview-partial-btn"
+                        data-partial-id="{{ active_partial.id }}"
+                    >
+                        <i class="fas fa-eye"></i> Preview on Signup
+                    </button>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('developer.subscription_tiers.update_signup_info_partial', partial_id=active_partial.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control" name="name" value="{{ active_partial.name }}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" name="status">
+                                    <option value="draft" {% if active_partial.status == 'draft' %}selected{% endif %}>Draft</option>
+                                    <option value="active" {% if active_partial.status == 'active' %}selected{% endif %}>Active</option>
+                                    <option value="archived" {% if active_partial.status == 'archived' %}selected{% endif %}>Archived</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">HTML Content</label>
+                                <textarea class="form-control font-monospace" rows="12" name="html_content">{{ active_partial.html_content }}</textarea>
+                            </div>
+                            <div class="col-12 d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Draft
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="signupInfoPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Signup Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe
+                    id="signupInfoPreviewFrame"
+                    src="about:blank"
+                    title="Signup Preview"
+                    style="width: 100%; min-height: 78vh; border: 0;"
+                ></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalElement = document.getElementById('signupInfoPreviewModal');
+    const iframe = document.getElementById('signupInfoPreviewFrame');
+    const previewBaseUrl = {{ url_for('developer.subscription_tiers.preview_signup_info_partial') | tojson }};
+    const previewModal = modalElement ? new bootstrap.Modal(modalElement) : null;
+
+    function openPreviewForPartial(partialId) {
+        if (!previewModal || !iframe || !partialId) return;
+        const query = new URLSearchParams({ partial_id: partialId });
+        iframe.src = `${previewBaseUrl}?${query.toString()}`;
+        previewModal.show();
+    }
+
+    document.querySelectorAll('.preview-partial-btn').forEach((button) => {
+        button.addEventListener('click', function () {
+            openPreviewForPartial(this.dataset.partialId || '');
+        });
+    });
+});
+</script>
+{% endblock %}
