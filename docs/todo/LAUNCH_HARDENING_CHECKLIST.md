@@ -49,7 +49,7 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [x] Add tests for lockout behavior
 
 ### 1.5 Public signup commerce hardening
-- [ ] Add billing-consent microcopy near the signup CTA with Terms + Privacy links and recurring billing language (`app/templates/pages/auth/signup.html`)
+- [x] Add billing-consent microcopy near the signup CTA with Terms + Privacy links and recurring billing language (`app/templates/pages/auth/signup.html`)
 - [ ] Make the 14-day trial explicit in checkout session construction (`app/services/billing_service.py`) by setting subscription trial parameters in code, or documenting the enforced Stripe-level equivalent
 - [ ] Configure explicit tax behavior for checkout (`app/services/billing_service.py`) including `automatic_tax` and tax-ID collection policy
 - [ ] Replace legal placeholders before launch (`app/templates/legal/terms_of_service.html`, `app/templates/legal/privacy_policy.html`) including governing jurisdiction and business address
