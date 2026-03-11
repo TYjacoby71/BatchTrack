@@ -30,6 +30,11 @@ This guide captures the current engineering workflow and guardrails for changing
 - Use timezone helpers/filters for display conversion.
 - See `TIMEZONE_SYSTEM.md` and `STORAGE_VS_DISPLAY.md`.
 
+### 5) Follow notification UX standards
+- Use the notification decision matrix in `NOTIFICATION_UX_STANDARD.md`.
+- Prefer inline alerts/toasts/modals/drawers over native browser dialogs.
+- Keep server `flash(...)` messages routed through shared flash rendering.
+
 ## Implementation Workflow
 
 1. **Plan the change**
@@ -42,6 +47,7 @@ This guide captures the current engineering workflow and guardrails for changing
    - Services: business rules and orchestration.
    - Routes/blueprints: transport + authorization + response shape.
    - Templates/static: presentation only.
+   - Notifications: use shared patterns from `NOTIFICATION_UX_STANDARD.md`.
 
 3. **Validate behavior**
    - Do not add new tests by default during implementation.
