@@ -55,16 +55,16 @@ Audit current notification emitters, classify each source, assign priority, and 
 | ALRT-038 | Flask `flash()` sources in `app/blueprints/products/product_variants.py` (20) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-039 | Flask `flash()` sources in `app/blueprints/production_planning/routes.py` (2) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-040 | Flask `flash()` sources in `app/blueprints/recipe_library/routes.py` (2) | Server flash message (explicit categories normalized) | Correct post-redirect messaging | done | P3 | Yes |
-| ALRT-041 | Flask `flash()` sources in `app/blueprints/onboarding/routes.py` (10) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-042 | Flask `flash()` sources in `app/blueprints/conversion/routes.py` (18) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-043 | Flask `flash()` sources in `app/blueprints/bulk_stock/routes.py` (11) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-044 | Flask `flash()` sources in `app/blueprints/auth/verification_routes.py` (11) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-045 | Flask `flash()` sources in `app/blueprints/auth/whop_routes.py` (3) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-046 | Flask `flash()` sources in `app/blueprints/auth/password_routes.py` (7) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-047 | Flask `flash()` sources in `app/blueprints/auth/login_routes.py` (23) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-048 | Flask `flash()` sources in `app/blueprints/auth/oauth_routes.py` (21) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-049 | Flask `flash()` sources in `app/blueprints/auth/signup_routes.py` (2) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-050 | Flask `flash()` sources in `app/blueprints/global_library/routes.py` (6) | Server flash message | Correct post-redirect messaging | done | P3 | No |
+| ALRT-041 | Flask `flash()` sources in `app/blueprints/onboarding/routes.py` (10) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-042 | Flask `flash()` sources in `app/blueprints/conversion/routes.py` (18) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-043 | Flask `flash()` sources in `app/blueprints/bulk_stock/routes.py` (11) | Server flash message (explicit categories normalized) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-044 | Flask `flash()` sources in `app/blueprints/auth/verification_routes.py` (11) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-045 | Flask `flash()` sources in `app/blueprints/auth/whop_routes.py` (3) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-046 | Flask `flash()` sources in `app/blueprints/auth/password_routes.py` (7) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-047 | Flask `flash()` sources in `app/blueprints/auth/login_routes.py` (23) | Server flash message (explicit categories normalized) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-048 | Flask `flash()` sources in `app/blueprints/auth/oauth_routes.py` (21) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-049 | Flask `flash()` sources in `app/blueprints/auth/signup_routes.py` (2) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-050 | Flask `flash()` sources in `app/blueprints/global_library/routes.py` (6) | Server flash message (explicit categories normalized) | Correct post-redirect messaging | done | P3 | Yes |
 | ALRT-051 | Flask `flash()` sources in `app/blueprints/inventory/routes.py` (17) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-052 | Flask `flash()` sources in `app/blueprints/auth/whop_auth.py` (3) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-053 | Flask `flash()` sources in `app/blueprints/billing/routes.py` (42) | Server flash message | Correct post-redirect messaging | done | P3 | No |
@@ -101,3 +101,4 @@ Audit current notification emitters, classify each source, assign priority, and 
 - Phase-1 implementation pass complete for ALRT-001 through ALRT-010.
 - Phase-2 implementation pass complete for ALRT-011 through ALRT-030.
 - Phase-3 implementation pass complete for ALRT-031 through ALRT-040.
+- Phase-4 implementation pass complete for ALRT-041 through ALRT-050.

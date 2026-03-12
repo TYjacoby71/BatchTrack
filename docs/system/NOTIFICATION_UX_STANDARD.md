@@ -95,3 +95,4 @@ Do not use in standard feature paths.
 - Phase 1 implemented: ALRT-001 through ALRT-010 converted to shared in-app notifications/confirmations and removed direct native `alert()`/`confirm()` calls in those source paths.
 - Phase 2 implemented: ALRT-011 through ALRT-030 converted to shared in-app notifications/confirmations, local notification helpers were routed to shared global helpers, and duplicate local flash renderers were removed from login/units templates.
 - Phase 3 implemented: ALRT-031 through ALRT-040 verified server-side flash usage in backend route modules and normalized implicit/default-category flashes to explicit categories where needed.
+- Phase 4 implemented: ALRT-041 through ALRT-050 verified and normalized backend auth/onboarding/library/bulk-stock flash callsites so all flash severity categories are explicit and consistently rendered.
