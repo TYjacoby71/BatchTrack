@@ -138,7 +138,8 @@ def recipe_library():
             )
             if not allowed:
                 flash(
-                    "Create a free account to keep searching the recipe library. You've reached the preview limit."
+                    "Create a free account to keep searching the recipe library. You've reached the preview limit.",
+                    "warning",
                 )
                 return redirect(
                     url_for(
@@ -305,7 +306,8 @@ def recipe_library_detail(recipe_id: int, slug: str):
         )
         if not allowed:
             flash(
-                "Create a free account to keep exploring recipes. You've reached the preview limit."
+                "Create a free account to keep exploring recipes. You've reached the preview limit.",
+                "warning",
             )
             return redirect(
                 url_for(

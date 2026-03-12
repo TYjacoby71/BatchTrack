@@ -45,8 +45,8 @@ Audit current notification emitters, classify each source, assign priority, and 
 | ALRT-028 | Flask `flash()` sources in `app/middleware/guards.py` (4) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-029 | Flask `flash()` sources in `app/middleware/registry.py` (2) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-030 | Flask `flash()` sources in `app/blueprints/recipes/views/lineage_routes.py` (3) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-031 | Flask `flash()` sources in `app/blueprints/recipes/views/create_routes.py` (45) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-032 | Flask `flash()` sources in `app/blueprints/recipes/views/manage_routes.py` (35) | Server flash message | Correct post-redirect messaging | done | P3 | No |
+| ALRT-031 | Flask `flash()` sources in `app/blueprints/recipes/views/create_routes.py` (45) | Server flash message (explicit categories normalized) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-032 | Flask `flash()` sources in `app/blueprints/recipes/views/manage_routes.py` (35) | Server flash message (explicit categories normalized) | Correct post-redirect messaging | done | P3 | Yes |
 | ALRT-033 | Flask `flash()` sources in `app/blueprints/organization/routes.py` (13) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-034 | Flask `flash()` sources in `app/blueprints/settings/routes.py` (18) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-035 | Flask `flash()` sources in `app/blueprints/products/sku.py` (12) | Server flash message | Correct post-redirect messaging | done | P3 | No |
@@ -54,7 +54,7 @@ Audit current notification emitters, classify each source, assign priority, and 
 | ALRT-037 | Flask `flash()` sources in `app/blueprints/products/product_inventory_routes.py` (12) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-038 | Flask `flash()` sources in `app/blueprints/products/product_variants.py` (20) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-039 | Flask `flash()` sources in `app/blueprints/production_planning/routes.py` (2) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-040 | Flask `flash()` sources in `app/blueprints/recipe_library/routes.py` (2) | Server flash message | Correct post-redirect messaging | done | P3 | No |
+| ALRT-040 | Flask `flash()` sources in `app/blueprints/recipe_library/routes.py` (2) | Server flash message (explicit categories normalized) | Correct post-redirect messaging | done | P3 | Yes |
 | ALRT-041 | Flask `flash()` sources in `app/blueprints/onboarding/routes.py` (10) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-042 | Flask `flash()` sources in `app/blueprints/conversion/routes.py` (18) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-043 | Flask `flash()` sources in `app/blueprints/bulk_stock/routes.py` (11) | Server flash message | Correct post-redirect messaging | done | P3 | No |
@@ -100,3 +100,4 @@ Audit current notification emitters, classify each source, assign priority, and 
 - Built assets under `app/static/dist/` are intentionally excluded from classification to avoid duplicate entries.
 - Phase-1 implementation pass complete for ALRT-001 through ALRT-010.
 - Phase-2 implementation pass complete for ALRT-011 through ALRT-030.
+- Phase-3 implementation pass complete for ALRT-031 through ALRT-040.
