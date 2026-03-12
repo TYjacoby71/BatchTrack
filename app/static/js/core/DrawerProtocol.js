@@ -39,7 +39,12 @@ class DrawerProtocol {
 
         if (!detail.modal_url) {
             if (detail.error_message) {
-                alert(detail.error_message);
+                if (typeof window.showAlert === 'function') {
+                    window.showAlert('danger', detail.error_message);
+                } else {
+                    console.error(detail.error_message);
+                }
+                this.emitAnalyticsEvent('fallback_error', detail);
             }
             return;
         }

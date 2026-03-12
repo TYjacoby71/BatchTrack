@@ -17,7 +17,7 @@ Use for most success, warning, and error messages that do not require a decision
 - Behavior: dismissible and optionally auto-hide.
 - Typical source:
   - Server redirect/postback: Flask `flash(...)` rendered in `content_chrome.html`.
-  - Client async actions: shared JS notification helper.
+  - Client async actions: shared JS notification helper (`window.showAlert`).
 
 ### 2) Toast (ephemeral feedback)
 Use for short-lived, non-critical confirmations.
@@ -37,6 +37,7 @@ Use when user must confirm, choose, or acknowledge a high-impact action.
   - Destructive confirms (cancel batch, archive/expire inventory)
   - Force-start with shortages
   - Multi-step decisions
+- Shared helper: `window.showConfirmDialog(...)`
 
 ### 4) Drawer modal (guided recovery)
 Use for recoverable, domain-specific errors requiring in-context fixes.
@@ -85,6 +86,9 @@ Do not use in standard feature paths.
 
 ## Reference Implementation Points
 - Global flash renderer: `app/templates/components/layout/content_chrome.html`
-- Global helper baseline: `app/static/js/main.js` (`showAlert`)
+- Global helper baseline: `app/static/js/main.js` (`window.showAlert`, `window.showConfirmDialog`)
 - Drawer protocol: `app/static/js/core/DrawerProtocol.js`
 - Drawer UX spec: `docs/system/WALL_OF_DRAWERS_PROTOCOL.md`
+
+## Current Migration Status
+- Phase 1 implemented: ALRT-001 through ALRT-010 converted to shared in-app notifications/confirmations and removed direct native `alert()`/`confirm()` calls in those source paths.

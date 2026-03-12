@@ -64,14 +64,22 @@ export class ManualContainerMode {
     }
 
     addContainerRow() {
+        const notify = (type, message) => {
+            if (typeof window.showAlert === 'function') {
+                window.showAlert(type, message);
+                return;
+            }
+            console.warn(message);
+        };
+
         const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
         if (autoFillEnabled) {
-            alert('Please uncheck Auto-Fill to add containers manually.');
+            notify('warning', 'Please uncheck Auto-Fill to add containers manually.');
             return;
         }
 
         if (!this.container.containerPlan?.container_selection?.length) {
-            alert('No containers available for this recipe.');
+            notify('info', 'No containers available for this recipe.');
             return;
         }
 
