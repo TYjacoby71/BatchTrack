@@ -34,7 +34,7 @@ This guide captures the current engineering workflow and guardrails for changing
 - Use the notification decision matrix in `NOTIFICATION_UX_STANDARD.md`.
 - Prefer inline alerts/toasts/modals/drawers over native browser dialogs.
 - Keep server `flash(...)` messages routed through shared flash rendering.
-- Use shared client helpers from `app/static/js/main.js` (`window.showAlert`, `window.showConfirmDialog`) instead of creating per-module dialog wrappers.
+- Use shared client helpers from `app/static/js/main.js` (`window.showAlert`, `window.showToast`, `window.showConfirmDialog`) instead of creating per-module dialog wrappers.
 
 ## Implementation Workflow
 

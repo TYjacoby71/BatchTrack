@@ -27,6 +27,7 @@ Use for short-lived, non-critical confirmations.
 - Examples:
   - "Copied to clipboard"
   - "Autosaved"
+- Shared helper: `window.showToast(...)`
 
 ### 3) Modal (blocking decision)
 Use when user must confirm, choose, or acknowledge a high-impact action.
@@ -86,9 +87,10 @@ Do not use in standard feature paths.
 
 ## Reference Implementation Points
 - Global flash renderer: `app/templates/components/layout/content_chrome.html`
-- Global helper baseline: `app/static/js/main.js` (`window.showAlert`, `window.showConfirmDialog`)
+- Global helper baseline: `app/static/js/main.js` (`window.showAlert`, `window.showToast`, `window.showConfirmDialog`)
 - Drawer protocol: `app/static/js/core/DrawerProtocol.js`
 - Drawer UX spec: `docs/system/WALL_OF_DRAWERS_PROTOCOL.md`
 
 ## Current Migration Status
 - Phase 1 implemented: ALRT-001 through ALRT-010 converted to shared in-app notifications/confirmations and removed direct native `alert()`/`confirm()` calls in those source paths.
+- Phase 2 implemented: ALRT-011 through ALRT-030 converted to shared in-app notifications/confirmations, local notification helpers were routed to shared global helpers, and duplicate local flash renderers were removed from login/units templates.

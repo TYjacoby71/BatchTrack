@@ -145,6 +145,52 @@ function ensureConfirmModal() {
   return modalEl;
 }
 
+function ensureToastContainer() {
+  let container = document.getElementById('appGlobalToastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'appGlobalToastContainer';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1090';
+    document.body.appendChild(container);
+  }
+  return container;
+}
+
+function showToast(message, options = {}) {
+  const type = normalizeAlertType(options.type || options.variant || 'info');
+  const autoHideMs = typeof options.autoHideMs === 'number' ? options.autoHideMs : 2500;
+  const title = options.title || (type === 'danger' ? 'Error' : type === 'success' ? 'Success' : 'Notice');
+
+  if (!window.bootstrap?.Toast) {
+    return showAlert(type, message, { autoHideMs });
+  }
+
+  const container = ensureToastContainer();
+  const toastEl = document.createElement('div');
+  const textBgClass = type === 'danger' ? 'text-bg-danger' : `text-bg-${type}`;
+  toastEl.className = `toast align-items-center border-0 ${textBgClass}`;
+  toastEl.setAttribute('role', 'alert');
+  toastEl.setAttribute('aria-live', 'assertive');
+  toastEl.setAttribute('aria-atomic', 'true');
+  toastEl.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">
+        <strong class="me-1">${title}:</strong> ${message}
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  `;
+  container.appendChild(toastEl);
+  const toast = window.bootstrap.Toast.getOrCreateInstance(toastEl, {
+    autohide: autoHideMs > 0,
+    delay: autoHideMs > 0 ? autoHideMs : 9999999,
+  });
+  toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove(), { once: true });
+  toast.show();
+  return toastEl;
+}
+
 function showConfirmDialog(options = {}) {
   const message = options.message || 'Are you sure?';
   if (!window.bootstrap?.Modal) {
@@ -255,4 +301,5 @@ window.filterUnits = function(filterValue) {
 // Expose shared notification + confirmation helpers globally.
 window.showAlert = showAlert;
 window.showNotification = showAlert;
+window.showToast = showToast;
 window.showConfirmDialog = showConfirmDialog;

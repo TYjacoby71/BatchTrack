@@ -25,21 +25,21 @@ Audit current notification emitters, classify each source, assign priority, and 
 | ALRT-008 | `app/static/js/settings.js` (3 `alert()` calls) | Shared inline app alert helper (`window.showAlert`) | Shared notification helper (inline alert/toast) | done | P2 | Yes |
 | ALRT-009 | `app/static/js/inventory/inventory_adjust.js` (2 `alert()` validation calls) | Inline field validation + shared inline app alert helper | Inline field validation + inline app alert | done | P2 | Yes |
 | ALRT-010 | `app/static/js/production_planning/modules/manual-container-mode.js` (2 `alert()` calls) | Shared inline app alert helper (`window.showAlert`) | Inline card/form warning | done | P2 | Yes |
-| ALRT-011 | `app/static/js/conversion/unit_converter.js` (1 `alert()` copy confirmation) | Native browser alert | Toast ("copied") | incorrect | P2 | Yes |
-| ALRT-012 | `app/static/js/organization/dashboard.js` (5 `confirm()` calls) | Native browser confirm | Confirmation modal for destructive/role actions | incorrect | P2 | Yes |
-| ALRT-013 | `app/static/js/conversion/unit_converter.js` (1 `confirm()` decision flow) | Native browser confirm | Decision modal/drawer | incorrect | P2 | Yes |
-| ALRT-014 | `app/static/js/subscription_tiers.js` (fallback `alert`) | Native alert fallback | Shared notification helper only | incorrect | P2 | Yes |
-| ALRT-015 | `app/static/js/products/product_inventory.js` (fallback `alert`) | Native alert fallback | Shared notification helper only | incorrect | P2 | Yes |
+| ALRT-011 | `app/static/js/conversion/unit_converter.js` (1 `alert()` copy confirmation) | Shared toast helper (`window.showToast`) | Toast ("copied") | done | P2 | Yes |
+| ALRT-012 | `app/static/js/organization/dashboard.js` (5 `confirm()` calls) | Shared confirmation modal helper (`window.showConfirmDialog`) | Confirmation modal for destructive/role actions | done | P2 | Yes |
+| ALRT-013 | `app/static/js/conversion/unit_converter.js` (1 `confirm()` decision flow) | Shared confirmation modal helper (`window.showConfirmDialog`) | Decision modal/drawer | done | P2 | Yes |
+| ALRT-014 | `app/static/js/subscription_tiers.js` (fallback `alert`) | Shared notification helper only (console fallback) | Shared notification helper only | done | P2 | Yes |
+| ALRT-015 | `app/static/js/products/product_inventory.js` (fallback `alert`) | Shared notification/toast helper only (console fallback) | Shared notification helper only | done | P2 | Yes |
 | ALRT-016 | `app/static/js/main.js` global `showAlert()` | Bootstrap inline dismissible alert | Shared baseline in-app notification helper | done | P3 | Yes |
-| ALRT-017 | `app/static/js/organization/dashboard.js` custom `showToast()` | Custom fixed-position alert-as-toast | Shared toast helper | incorrect | P2 | Yes |
-| ALRT-018 | `app/static/js/organization/dashboard.js` custom `showMessage()` | Custom inline/fixed alerts | Shared notification helper | incorrect | P2 | Yes |
+| ALRT-017 | `app/static/js/organization/dashboard.js` custom `showToast()` | Wrapper to shared toast helper (`window.showToast`) | Shared toast helper | done | P2 | Yes |
+| ALRT-018 | `app/static/js/organization/dashboard.js` custom `showMessage()` | Wrapper to shared notification helper (`window.showAlert`) | Shared notification helper | done | P2 | Yes |
 | ALRT-019 | `app/static/js/expiration_alerts.js` custom `showAlert()` | Wrapper to shared inline app alert helper | Shared notification helper | done | P2 | Yes |
 | ALRT-020 | `app/static/js/tools/soaps/soap_tool_ui.js` (`showAutosaveToast`, `showUndoToast`, `showSoapAlert`) | Bootstrap toasts + inline alert stack | Correct for feature-local workflow | done | P3 | No |
 | ALRT-021 | `app/static/js/production_planning/modules/batch-management.js` (`showSuccessMessage`/`showErrorMessage`) | Shared inline app alert helper | Shared notification helper | done | P2 | Yes |
 | ALRT-022 | `app/templates/pages/production_planning/plan_production.html` (`#insufficientStockModal`) | Bootstrap confirmation modal | Correct for override decision | done | P3 | No |
 | ALRT-023 | `app/templates/components/layout/content_chrome.html` flash renderer | Flask flash rendered as Bootstrap alerts | Correct global flash presentation | done | P3 | No |
-| ALRT-024 | `app/templates/pages/auth/login.html` local flash renderer | Local flash rendering | Prefer global flash renderer unless auth-specific rationale | incorrect | P3 | Yes |
-| ALRT-025 | `app/templates/conversion/units.html` local flash renderer | Local flash rendering | Prefer global flash renderer unless page-specific rationale | incorrect | P3 | Yes |
+| ALRT-024 | `app/templates/pages/auth/login.html` local flash renderer | Global flash renderer via layout chrome | Prefer global flash renderer unless auth-specific rationale | done | P3 | Yes |
+| ALRT-025 | `app/templates/conversion/units.html` local flash renderer | Global flash renderer via layout chrome | Prefer global flash renderer unless page-specific rationale | done | P3 | Yes |
 | ALRT-026 | Flask `flash()` sources in `app/utils/permissions.py` (4) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-027 | Flask `flash()` sources in `app/resilience.py` (1) | Server flash message | Correct post-redirect messaging | done | P3 | No |
 | ALRT-028 | Flask `flash()` sources in `app/middleware/guards.py` (4) | Server flash message | Correct post-redirect messaging | done | P3 | No |
@@ -99,3 +99,4 @@ Audit current notification emitters, classify each source, assign priority, and 
 - This list is generated from current source emitters (JS `alert`/`confirm`, JS notification helpers, and Python `flash` callsites).
 - Built assets under `app/static/dist/` are intentionally excluded from classification to avoid duplicate entries.
 - Phase-1 implementation pass complete for ALRT-001 through ALRT-010.
+- Phase-2 implementation pass complete for ALRT-011 through ALRT-030.
