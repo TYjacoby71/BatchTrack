@@ -124,6 +124,11 @@
                     <input id="attributionGclidInput" type="hidden" name="gclid" value="{{ attribution_gclid or '' }}">
                     <input id="attributionWbraidInput" type="hidden" name="wbraid" value="{{ attribution_wbraid or '' }}">
                     <input id="attributionGbraidInput" type="hidden" name="gbraid" value="{{ attribution_gbraid or '' }}">
+                    {% if turnstile_enabled and turnstile_site_key %}
+                    <div class="d-flex justify-content-center mt-3">
+                        <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
+                    </div>
+                    {% endif %}
                 </form>
                 <p class="small text-muted text-center mt-3 mb-0">
                     By continuing to checkout, you agree to the
@@ -178,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialPromoCode = {{ (promo_code or '')|tojson }};
     const artisanTierId = {{ (signup_primary_tier_id or '')|tojson }};
     const artisanUpsellOffer = {{ (artisan_upsell_offer if artisan_upsell_offer else none)|tojson }};
+    const turnstileRequired = Boolean({{ 'true' if turnstile_enabled else 'false' }});
     const upsellOverlay = document.getElementById('artisanUpsellOverlay');
     const upsellLifetimeBtn = document.getElementById('upsellLifetimeBtn');
     const upsellMonthlyBtn = document.getElementById('upsellMonthlyBtn');
@@ -308,6 +314,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!checkoutForm || !selectedTierInput || !selectedTierInput.value) {
             window.alert('Select a plan to continue.');
             return;
+        }
+        if (turnstileRequired) {
+            const turnstileTokenField = checkoutForm.querySelector('input[name="cf-turnstile-response"]');
+            if (!turnstileTokenField || !turnstileTokenField.value) {
+                window.alert('Please complete the security check first.');
+                return;
+            }
         }
         try {
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -449,6 +462,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
+{% if turnstile_enabled and turnstile_site_key %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
 
 <style>
 .signup-shell {
