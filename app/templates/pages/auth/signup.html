@@ -124,6 +124,18 @@
                     <input id="attributionGclidInput" type="hidden" name="gclid" value="{{ attribution_gclid or '' }}">
                     <input id="attributionWbraidInput" type="hidden" name="wbraid" value="{{ attribution_wbraid or '' }}">
                     <input id="attributionGbraidInput" type="hidden" name="gbraid" value="{{ attribution_gbraid or '' }}">
+                    {% if captcha_turnstile_enabled and captcha_provider == 'turnstile' and captcha_turnstile_site_key %}
+                    <div class="d-flex justify-content-center mt-3">
+                        <div
+                            class="cf-turnstile"
+                            data-sitekey="{{ captcha_turnstile_site_key }}"
+                            data-action="signup_checkout"
+                        ></div>
+                    </div>
+                    <p class="small text-muted text-center mt-2 mb-0">
+                        Complete the security check before checkout.
+                    </p>
+                    {% endif %}
                 </form>
                 <p class="small text-muted text-center mt-3 mb-0">
                     By continuing to checkout, you agree to the
@@ -160,6 +172,10 @@
 </div>
 {% endif %}
 
+{% if captcha_turnstile_enabled and captcha_provider == 'turnstile' and captcha_turnstile_site_key %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const paidCards = Array.from(document.querySelectorAll('.paid-plan-card'));
@@ -172,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const signupInfoPartialInput = document.getElementById('signupInfoPartialInput');
     const signupInfoPanels = Array.from(document.querySelectorAll('.signup-info-panel'));
     const promoCodeInput = document.getElementById('promoCodeInput');
+    const requiresTurnstile = {{ 'true' if captcha_turnstile_enabled and captcha_provider == 'turnstile' and captcha_turnstile_site_key else 'false' }};
     const signupSource = {{ (signup_source or 'direct')|tojson }};
     const signupInfoExperimentKey = {{ ((signup_info_posthog or {}).get('experiment_key') if signup_info_posthog else '')|tojson }};
     const signupInfoPropertyKey = {{ ((signup_info_posthog or {}).get('property_key') if signup_info_posthog else '')|tojson }};
@@ -308,6 +325,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!checkoutForm || !selectedTierInput || !selectedTierInput.value) {
             window.alert('Select a plan to continue.');
             return;
+        }
+        if (requiresTurnstile) {
+            const tokenField = checkoutForm.querySelector('input[name="cf-turnstile-response"]');
+            const token = tokenField ? String(tokenField.value || '').trim() : '';
+            if (!token) {
+                window.alert('Complete the security check before continuing.');
+                return;
+            }
         }
         try {
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;

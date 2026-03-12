@@ -18,6 +18,7 @@ from flask_login import current_user
 from ...extensions import limiter
 from ...services.oauth_service import OAuthService
 from ...services.affiliate_service import AffiliateService
+from ...services.captcha_service import CaptchaService
 from ...services.billing.orchestrators.public_signup_orchestrator import (
     PublicSignupOrchestrator,
 )
@@ -170,26 +171,56 @@ def signup():
         oauth_user_info=session.get("oauth_user_info"),
         allow_live_pricing_network=allow_live_pricing_network,
     )
+    captcha_provider = CaptchaService.provider()
+    captcha_turnstile_enabled = CaptchaService.is_turnstile_enabled()
+    captcha_turnstile_site_key = CaptchaService.turnstile_site_key()
 
     if request.method == "POST":
-        result = PublicSignupOrchestrator.process_submission(
-            context=signup_context,
-            form_data=request.form,
-        )
-        if result.redirect_url:
-            response = redirect(result.redirect_url)
-            return AffiliateService.set_referral_cookie(
-                response,
-                signup_context.referral_code,
-                secure=request.is_secure,
+        captcha_valid = True
+        if captcha_turnstile_enabled:
+            captcha_token = request.form.get("cf-turnstile-response")
+            captcha_valid, captcha_error = CaptchaService.verify_signup_token(
+                token=captcha_token,
+                remote_ip=request.headers.get("X-Forwarded-For", request.remote_addr),
             )
+            if not captcha_valid:
+                flash(
+                    captcha_error or "Please complete the security check to continue.",
+                    "error",
+                )
 
-        if result.flash_message:
-            flash(result.flash_message, result.flash_category)
-        view_state = (
-            result.view_state
-            or PublicSignupOrchestrator.build_initial_view_state(signup_context)
-        )
+        if captcha_valid:
+            result = PublicSignupOrchestrator.process_submission(
+                context=signup_context,
+                form_data=request.form,
+            )
+            if result.redirect_url:
+                response = redirect(result.redirect_url)
+                return AffiliateService.set_referral_cookie(
+                    response,
+                    signup_context.referral_code,
+                    secure=request.is_secure,
+                )
+
+            if result.flash_message:
+                flash(result.flash_message, result.flash_category)
+            view_state = (
+                result.view_state
+                or PublicSignupOrchestrator.build_initial_view_state(signup_context)
+            )
+        else:
+            view_state = PublicSignupOrchestrator.build_initial_view_state(signup_context)
+            view_state.selected_tier = request.form.get("selected_tier") or view_state.selected_tier
+            view_state.selected_mode = request.form.get("billing_mode") or view_state.selected_mode
+            view_state.selected_lifetime_key = (
+                request.form.get("lifetime_tier") or view_state.selected_lifetime_key
+            )
+            view_state.selected_standard_cycle = (
+                request.form.get("billing_cycle") or view_state.selected_standard_cycle
+            )
+            view_state.contact_email = request.form.get("contact_email") or view_state.contact_email
+            view_state.contact_phone = request.form.get("contact_phone") or view_state.contact_phone
+            view_state.promo = request.form.get("promo") or view_state.promo
     else:
         view_state = PublicSignupOrchestrator.build_initial_view_state(signup_context)
 
@@ -200,6 +231,13 @@ def signup():
         oauth_available=bool(any(oauth_providers.values())),
         oauth_providers=oauth_providers,
         canonical_url=url_for("core.signup_alias", _external=True),
+    )
+    template_context.update(
+        {
+            "captcha_provider": captcha_provider,
+            "captcha_turnstile_enabled": captcha_turnstile_enabled,
+            "captcha_turnstile_site_key": captcha_turnstile_site_key,
+        }
     )
     response = make_response(render_template("pages/auth/signup.html", **template_context))
     return AffiliateService.set_referral_cookie(

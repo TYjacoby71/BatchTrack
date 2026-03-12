@@ -15,6 +15,7 @@ from app.models.domain_event import DomainEvent
 from app.models.pending_signup import PendingSignup
 from app.models.subscription_tier import SubscriptionTier
 from app.services.billing_service import BillingService
+from app.services.captcha_service import CaptchaService
 from app.services.signup_checkout_service import (
     SignupCheckoutService,
     SignupRequestContext,
@@ -207,6 +208,8 @@ def test_submission_uses_oauth_prefill_email_when_form_email_missing(app):
         prefill_email="social@example.com",
         prefill_phone="",
         signup_primary_tier_id="1",
+        signup_info_panel_by_tier={},
+        signup_info_posthog={},
     )
 
     submission = SignupCheckoutService._build_submission(
@@ -345,3 +348,59 @@ def test_signup_completion_events_include_code_usage_flags(app):
             assert props.get("promo_code") == "SAVE-20"
             assert props.get("used_referral_code") is True
             assert props.get("referral_code") == "REF-CODE-1"
+
+
+def test_signup_blocks_checkout_when_turnstile_verification_fails(app, client, monkeypatch):
+    with app.app_context():
+        paid_tier = SubscriptionTier(
+            name="Captcha Guard Plan",
+            user_limit=1,
+            billing_provider="stripe",
+            is_customer_facing=True,
+            stripe_lookup_key="price_captcha_guard",
+        )
+        db.session.add(paid_tier)
+        db.session.commit()
+        tier_id = str(paid_tier.id)
+
+    app.config["CAPTCHA_PROVIDER"] = "turnstile"
+    app.config["CAPTCHA_TURNSTILE_SITE_KEY"] = "test-site-key"
+    app.config["CAPTCHA_TURNSTILE_SECRET_KEY"] = "test-secret-key"
+
+    def _should_not_create_checkout(*args, **kwargs):
+        raise AssertionError("Checkout should not run when captcha fails")
+
+    monkeypatch.setattr(
+        BillingService,
+        "create_checkout_session_for_tier",
+        _should_not_create_checkout,
+    )
+    monkeypatch.setattr(
+        CaptchaService,
+        "verify_signup_token",
+        classmethod(
+            lambda cls, *, token, remote_ip: (
+                False,
+                "Please complete the security check to continue.",
+            )
+        ),
+    )
+
+    response = client.post(
+        "/auth/signup",
+        data={
+            "selected_tier": tier_id,
+            "contact_email": "captcha-check@example.com",
+            "billing_mode": "standard",
+            "billing_cycle": "monthly",
+        },
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert (
+        "Please complete the security check to continue."
+        in response.get_data(as_text=True)
+    )
+    with app.app_context():
+        pending = PendingSignup.query.filter_by(email="captcha-check@example.com").first()
+        assert pending is None
