@@ -96,3 +96,4 @@ Do not use in standard feature paths.
 - Phase 2 implemented: ALRT-011 through ALRT-030 converted to shared in-app notifications/confirmations, local notification helpers were routed to shared global helpers, and duplicate local flash renderers were removed from login/units templates.
 - Phase 3 implemented: ALRT-031 through ALRT-040 verified server-side flash usage in backend route modules and normalized implicit/default-category flashes to explicit categories where needed.
 - Phase 4 implemented: ALRT-041 through ALRT-050 verified and normalized backend auth/onboarding/library/bulk-stock flash callsites so all flash severity categories are explicit and consistently rendered.
+- Phase 5 implemented: ALRT-051 through ALRT-069 verified and normalized remaining backend inventory/developer/batches flash callsites so all checklist flash sources now use explicit severity categories.

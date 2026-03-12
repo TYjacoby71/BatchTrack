@@ -65,25 +65,25 @@ Audit current notification emitters, classify each source, assign priority, and 
 | ALRT-048 | Flask `flash()` sources in `app/blueprints/auth/oauth_routes.py` (21) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
 | ALRT-049 | Flask `flash()` sources in `app/blueprints/auth/signup_routes.py` (2) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
 | ALRT-050 | Flask `flash()` sources in `app/blueprints/global_library/routes.py` (6) | Server flash message (explicit categories normalized) | Correct post-redirect messaging | done | P3 | Yes |
-| ALRT-051 | Flask `flash()` sources in `app/blueprints/inventory/routes.py` (17) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-052 | Flask `flash()` sources in `app/blueprints/auth/whop_auth.py` (3) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-053 | Flask `flash()` sources in `app/blueprints/billing/routes.py` (42) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-054 | Flask `flash()` sources in `app/blueprints/dashboard/routes.py` (5) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-055 | Flask `flash()` sources in `app/blueprints/developer/subscription_tiers.py` (43) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-056 | Flask `flash()` sources in `app/blueprints/developer/views/organization_routes.py` (4) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-057 | Flask `flash()` sources in `app/blueprints/developer/views/reference_routes.py` (14) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-058 | Flask `flash()` sources in `app/blueprints/developer/views/affiliate_routes.py` (18) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-059 | Flask `flash()` sources in `app/blueprints/developer/views/product_category_routes.py` (8) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-060 | Flask `flash()` sources in `app/blueprints/batches/start_batch.py` (6) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-061 | Flask `flash()` sources in `app/blueprints/developer/views/user_routes.py` (1) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-062 | Flask `flash()` sources in `app/blueprints/batches/cancel_batch.py` (4) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-063 | Flask `flash()` sources in `app/blueprints/developer/views/global_item_routes.py` (11) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-064 | Flask `flash()` sources in `app/blueprints/batches/finish_batch.py` (6) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-065 | Flask `flash()` sources in `app/blueprints/developer/views/analytics_routes.py` (1) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-066 | Flask `flash()` sources in `app/blueprints/batches/routes.py` (13) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-067 | Flask `flash()` sources in `app/blueprints/developer/views/masquerade_routes.py` (3) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-068 | Flask `flash()` sources in `app/blueprints/developer/decorators.py` (1) | Server flash message | Correct post-redirect messaging | done | P3 | No |
-| ALRT-069 | Flask `flash()` sources in `app/blueprints/developer/addons.py` (8) | Server flash message | Correct post-redirect messaging | done | P3 | No |
+| ALRT-051 | Flask `flash()` sources in `app/blueprints/inventory/routes.py` (17) | Server flash message (explicit categories normalized) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-052 | Flask `flash()` sources in `app/blueprints/auth/whop_auth.py` (3) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-053 | Flask `flash()` sources in `app/blueprints/billing/routes.py` (42) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-054 | Flask `flash()` sources in `app/blueprints/dashboard/routes.py` (5) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-055 | Flask `flash()` sources in `app/blueprints/developer/subscription_tiers.py` (43) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-056 | Flask `flash()` sources in `app/blueprints/developer/views/organization_routes.py` (4) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-057 | Flask `flash()` sources in `app/blueprints/developer/views/reference_routes.py` (14) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-058 | Flask `flash()` sources in `app/blueprints/developer/views/affiliate_routes.py` (18) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-059 | Flask `flash()` sources in `app/blueprints/developer/views/product_category_routes.py` (8) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-060 | Flask `flash()` sources in `app/blueprints/batches/start_batch.py` (6) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-061 | Flask `flash()` sources in `app/blueprints/developer/views/user_routes.py` (1) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-062 | Flask `flash()` sources in `app/blueprints/batches/cancel_batch.py` (4) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-063 | Flask `flash()` sources in `app/blueprints/developer/views/global_item_routes.py` (11) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-064 | Flask `flash()` sources in `app/blueprints/batches/finish_batch.py` (6) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-065 | Flask `flash()` sources in `app/blueprints/developer/views/analytics_routes.py` (1) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-066 | Flask `flash()` sources in `app/blueprints/batches/routes.py` (13) | Server flash message (explicit categories normalized) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-067 | Flask `flash()` sources in `app/blueprints/developer/views/masquerade_routes.py` (3) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-068 | Flask `flash()` sources in `app/blueprints/developer/decorators.py` (1) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-069 | Flask `flash()` sources in `app/blueprints/developer/addons.py` (8) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
 
 ## Compiled priority queue (from checklist)
 ### P1 (highest)
@@ -102,3 +102,4 @@ Audit current notification emitters, classify each source, assign priority, and 
 - Phase-2 implementation pass complete for ALRT-011 through ALRT-030.
 - Phase-3 implementation pass complete for ALRT-031 through ALRT-040.
 - Phase-4 implementation pass complete for ALRT-041 through ALRT-050.
+- Phase-5 implementation pass complete for ALRT-051 through ALRT-069.
