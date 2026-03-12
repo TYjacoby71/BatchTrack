@@ -84,6 +84,7 @@ class RouteAccessConfig:
         "core.sitemap_xml",
         "core.robots_txt",
         "core.llms_txt",
+        "core.meta_json",
         "core.signup_alias",
         "core.affiliates_info",
         "core.affiliates_signup",
@@ -116,6 +117,7 @@ class RouteAccessConfig:
         "/recipes/library",
         "/health",
         "/ping",
+        "/meta.json",
     )
 
     # Passive crawler/browser assets should bypass auth/bot-trap middleware work.
@@ -126,6 +128,7 @@ class RouteAccessConfig:
         "/robots.txt",
         "/sitemap.xml",
         "/llms.txt",
+        "/meta.json",
         "/apple-touch-icon",
         "/site.webmanifest",
     )
