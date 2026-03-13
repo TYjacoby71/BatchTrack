@@ -83,6 +83,7 @@ from .permission import Permission
 from .public_bot_trap import BotTrapHit, BotTrapIdentityBlock, BotTrapIpState
 from .role import Role
 from .subscription_tier import SubscriptionTier
+from .tool_feedback_note import ToolFeedbackNote
 
 # OPTIONAL exports — don't crash if the module or names aren't present
 try:

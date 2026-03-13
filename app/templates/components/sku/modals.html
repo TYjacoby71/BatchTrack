@@ -21,7 +21,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Unit</label>
                             <select name="unit" class="form-select" required>
-                                {% for unit_option in get_global_unit_list() %}
+                                {% for unit_option in units %}
                                     {% set option_name = unit_option.name if unit_option.name else unit_option.symbol %}
                                     {% if option_name %}
                                         <option value="{{ option_name }}" {% if sku.unit == option_name %}selected{% endif %}>{{ option_name }}</option>

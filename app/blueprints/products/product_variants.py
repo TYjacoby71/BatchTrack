@@ -271,7 +271,7 @@ def view_variant(product_id, variant_name):
         variant_description=variant.description,
         size_groups=size_groups,
         available_containers=available_containers,
-        get_global_unit_list=get_global_unit_list,
+        units=get_global_unit_list(),
         product_breadcrumb_id=product_breadcrumb_id,
         breadcrumb_items=[
             {"label": "Product Dashboard", "url": url_for("products.list_products")},

@@ -142,7 +142,7 @@
                 <label for="initial_unit" class="form-label">Unit</label>
                 <select class="form-control" id="initial_unit" name="input_unit">
                   <option value="{{ item.unit }}">{{ item.unit or 'count' }}</option>
-                  {% for unit in get_global_unit_list() %}
+                  {% for unit in units %}
                     {% if unit.name != item.unit %}
                       <option value="{{ unit.name }}">{{ unit.name }}</option>
                     {% endif %}

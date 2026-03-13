@@ -239,6 +239,25 @@ def get_homepage_balanced_display_tools(
     return _center_pinned_tool(display_cards[:max_cards])
 
 
+def get_tools_index_cards(
+    *, tool_flags: Dict[str, bool] | None = None
+) -> List[Dict[str, Any]]:
+    """Return full tools-page card list with enabled/disabled states."""
+    resolved_flags = tool_flags if tool_flags is not None else get_public_tool_flags()
+    cards: List[Dict[str, Any]] = []
+    ranked_all: List[Dict[str, Any]] = [_with_tool_media(tool) for tool in PUBLIC_TOOL_CATALOG]
+    ranked_all.sort(key=_tool_sort_key)
+
+    for tool in ranked_all:
+        slug = str(tool.get("slug") or "")
+        default_enabled = bool(tool.get("default_enabled", True))
+        card = dict(tool)
+        card["is_enabled"] = bool(resolved_flags.get(slug, default_enabled))
+        cards.append(card)
+
+    return cards
+
+
 def build_public_tool_flag_signature(tool_flags: Dict[str, bool] | None = None) -> str:
     """Return a short deterministic signature suitable for cache keys."""
     resolved_flags = tool_flags if tool_flags is not None else get_public_tool_flags()

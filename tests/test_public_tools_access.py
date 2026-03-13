@@ -1,5 +1,6 @@
 import json
 import re
+import shutil
 
 import pytest
 
@@ -322,8 +323,9 @@ def test_public_soap_page_injects_backend_policy_config(app):
 def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(
     app, monkeypatch, tmp_path
 ):
-    """Feedback notes should persist into source/flow JSON buckets."""
+    """Feedback notes should persist into DB and compatibility JSON buckets."""
     from app.services.tools.feedback_note_service import ToolFeedbackNoteService
+    from app.models.tool_feedback_note import ToolFeedbackNote
 
     monkeypatch.setattr(
         ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes"
@@ -368,6 +370,16 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(
     assert second_response.status_code == 200
     third_response = client.post("/tools/api/feedback-notes", json=third_payload)
     assert third_response.status_code == 200
+
+    with app.app_context():
+        db_notes = (
+            ToolFeedbackNote.query.filter_by(source="batches_view_batch_in_progress")
+            .order_by(ToolFeedbackNote.submitted_at.desc())
+            .all()
+        )
+        assert len(db_notes) == 2
+        assert db_notes[0].flow in {"question", "glitch"}
+        assert db_notes[1].flow in {"question", "glitch"}
 
     batch_glitch_path = (
         tmp_path
@@ -414,6 +426,22 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(
     assert batch_index is not None
     batch_flows = [flow.get("flow") for flow in (batch_index.get("flows") or [])]
     assert batch_flows == ["question", "glitch"]
+
+    with app.app_context():
+        legacy_root = tmp_path / "tool_feedback_notes"
+        if legacy_root.exists():
+            shutil.rmtree(legacy_root)
+        db_index = ToolFeedbackNoteService.load_global_index(refresh=True)
+        db_sources = [row.get("source") for row in (db_index.get("sources") or [])]
+        assert "batches_view_batch_in_progress" in db_sources
+
+        db_bucket = ToolFeedbackNoteService.load_bucket(
+            source="batches_view_batch_in_progress",
+            flow="glitch",
+            limit=250,
+        )
+        assert db_bucket.get("count") == 1
+        assert (db_bucket.get("entries") or [])[0].get("message") == first_payload["message"]
 
 
 @pytest.mark.usefixtures("app")

@@ -753,12 +753,6 @@ def quick_signup():
             session["onboarding_welcome"] = True
             session.pop("onboarding_welcome_flash_shown", None)
             session.pop("onboarding_completion_required_notice", None)
-            if verification_enabled:
-                flash(
-                    "Account created. Please verify your email while you complete setup.",
-                    "info",
-                )
-
             return redirect(next_url)
         except Exception as exc:
             logger.warning("Suppressed exception fallback at app/blueprints/auth/login_routes.py:701", exc_info=True)

@@ -329,7 +329,7 @@
               <label class="form-label">Default Bulk SKU Unit</label>
               <select name="unit" class="form-select" required>
                 <option value="">Select unit...</option>
-                {% for unit_option in get_global_unit_list() %}
+                {% for unit_option in units %}
                   {% set option_name = unit_option.name if unit_option.name else unit_option.symbol %}
                   {% if option_name %}
                     <option value="{{ option_name }}">{{ option_name }}</option>

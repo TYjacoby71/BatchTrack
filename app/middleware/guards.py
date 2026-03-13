@@ -270,7 +270,4 @@ def enforce_customer_onboarding_completion():
             428,
         )
 
-    if not session.get("onboarding_completion_required_notice"):
-        flash("Please complete onboarding before continuing.", "warning")
-        session["onboarding_completion_required_notice"] = True
     return redirect(url_for("onboarding.welcome"))
