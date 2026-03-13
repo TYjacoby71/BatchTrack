@@ -647,7 +647,7 @@ def view_product(product_id):
         product=product,
         variants=variants,
         available_containers=available_containers,
-        get_global_unit_list=get_global_unit_list,
+        units=get_global_unit_list(),
         auto_create_bulk_sku_on_variant=auto_create_bulk_sku_on_variant,
         inventory_groups={},
         product_categories=product_categories,

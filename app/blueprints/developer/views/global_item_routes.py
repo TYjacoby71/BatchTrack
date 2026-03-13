@@ -27,6 +27,7 @@ from app.services.global_item_listing_service import (
 )
 from app.services.global_item_sync_service import GlobalItemSyncService
 from app.utils.seo import slugify_value
+from app.utils.unit_utils import get_global_unit_list
 
 from ..decorators import require_developer_permission
 from ..routes import developer_bp
@@ -395,6 +396,7 @@ def global_item_detail(item_id):
         "developer/global_item_detail.html",
         item=item,
         global_ingredient_categories=global_ingredient_categories,
+        units=get_global_unit_list(),
         physical_forms=physical_forms,
         selected_ingredient=selected_ingredient,
         selected_physical_form=selected_physical_form,
@@ -690,6 +692,7 @@ def create_global_item():
         return render_template(
             "developer/create_global_item.html",
             global_ingredient_categories=global_ingredient_categories,
+            units=get_global_unit_list(),
             physical_forms=physical_forms,
             selected_ingredient=selected_ingredient,
             selected_physical_form=selected_physical_form,

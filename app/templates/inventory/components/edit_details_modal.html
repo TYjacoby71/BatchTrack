@@ -100,7 +100,7 @@
             <label for="capacity_unit">Capacity Unit:</label>
             <select name="capacity_unit" class="form-select select2" data-unit-select required>
               <option value="">Select Unit</option>
-              {% for unit in get_global_unit_list() %}
+              {% for unit in units %}
                 <option value="{{ unit.name }}" {% if unit.name == item.capacity_unit %}selected{% endif %}>{{ unit.name }}</option>
               {% endfor %}
             </select>
@@ -130,7 +130,7 @@
           <div class="mb-3">
             <label for="unitSelect">Unit:</label>
             <select name="unit" class="form-select select2" data-unit-select id="unitSelect" required data-original-value="{{ item.unit }}">
-              {% for unit in get_global_unit_list() %}
+              {% for unit in units %}
                 <option value="{{ unit.name }}" {% if unit.name == item.unit %}selected{% endif %}>{{ unit.name }}</option>
               {% endfor %}
             </select>

@@ -152,7 +152,7 @@
 <!-- Multi-Adjust Packaging Form -->
 <div id="updatePackagingForm" style="display: none;"
   x-data="{
-    rows: [{id: '', quantity: '', unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "count" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}],
+    rows: [{id: '', quantity: '', unit: '{{ units[0].name if units else "count" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}],
     submitForm(e) {
       e.preventDefault();
       const promises = this.rows.map(row => {
@@ -176,7 +176,7 @@
         .catch(err => alert('Error updating inventory'));
     },
     resetPackagingRows() {
-      this.rows = [{id: '', quantity: '', unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "count" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}];
+      this.rows = [{id: '', quantity: '', unit: '{{ units[0].name if units else "count" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}];
     }
   }">
 
@@ -199,7 +199,7 @@
       <div class="col">
         <label class="form-label">Unit</label>
         <select x-model="row.unit" class="form-select" required>
-          {% for unit in get_global_unit_list() %}
+          {% for unit in units %}
             <option value="{{ unit.name }}">{{ unit.name }}</option>
           {% endfor %}
         </select>
@@ -226,7 +226,7 @@
   </template>
 
   <div class="mt-3">
-    <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({id: '', quantity: '', unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "count" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'})">Add Another Item</button>
+    <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({id: '', quantity: '', unit: '{{ units[0].name if units else "count" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'})">Add Another Item</button>
     <button type="submit" class="btn btn-success">Save Updates</button>
     <button type="button" class="btn btn-secondary" @click="resetPackagingRows(); togglePackagingUpdateForm()">Cancel</button>
   </div>

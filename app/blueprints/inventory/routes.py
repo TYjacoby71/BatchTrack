@@ -563,7 +563,6 @@ def list_inventory():
                 show_archived=show_archived,
                 show_zero_qty=show_zero_qty,
                 org_tracks_inventory_quantities=org_tracks_inventory_quantities,
-                get_global_unit_list=get_global_unit_list,
                 breadcrumb_items=[{"label": "Inventory"}],
             )
 
@@ -624,7 +623,6 @@ def list_inventory():
         show_archived=show_archived,
         show_zero_qty=show_zero_qty,
         org_tracks_inventory_quantities=org_tracks_inventory_quantities,
-        get_global_unit_list=get_global_unit_list,
         breadcrumb_items=[{"label": "Inventory"}],
     )
 
@@ -806,7 +804,6 @@ def view_inventory(id):
         expired_entries=expired_entries,
         expired_total=expired_total,
         units=get_global_unit_list(),
-        get_global_unit_list=get_global_unit_list,
         get_ingredient_categories=IngredientCategory.scoped().order_by(
             IngredientCategory.name
         ).all,
