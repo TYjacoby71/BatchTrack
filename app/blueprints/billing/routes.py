@@ -48,6 +48,16 @@ logger = logging.getLogger(__name__)
 billing_bp = Blueprint("billing", __name__, url_prefix="/billing")
 
 
+def _redact_session_id(session_id: str | None) -> str:
+    """Avoid emitting full Stripe checkout session IDs in application logs."""
+    raw = str(session_id or "").strip()
+    if not raw:
+        return "unknown"
+    if len(raw) <= 12:
+        return f"{raw[:4]}..."
+    return f"{raw[:8]}...{raw[-4:]}"
+
+
 # =========================================================
 # UPGRADE & CHECKOUT
 # =========================================================
@@ -387,14 +397,15 @@ def complete_signup_from_stripe():
         flash("Invalid checkout session", "error")
         return redirect(url_for("core.signup_alias"))
 
-    logger.info("Completing signup for checkout session %s", session_id)
+    safe_session_id = _redact_session_id(session_id)
+    logger.info("Completing signup for checkout session %s", safe_session_id)
 
     try:
         result = AccountProvisioningOrchestrator.finalize_signup_checkout_session(
             session_id
         )
     except Exception as exc:
-        logger.error("Stripe finalize failed for session %s: %s", session_id, exc)
+        logger.error("Stripe finalize failed for session %s: %s", safe_session_id, exc)
         if "already exists" in str(exc).lower():
             flash(str(exc), "error")
             return redirect(url_for("auth.login"))
@@ -443,7 +454,7 @@ def complete_signup_from_stripe():
     except Exception as exc:
         logger.warning(
             "Unable to enrich GA4 conversion payload for session %s: %s",
-            session_id,
+            safe_session_id,
             exc,
         )
     ga4_conversion_payload.update(

@@ -21,7 +21,7 @@ from ...services.affiliate_service import AffiliateService
 from ...services.billing.orchestrators.public_signup_orchestrator import (
     PublicSignupOrchestrator,
 )
-from ...services.signup_checkout_service import SignupCheckoutService  # compatibility
+from ...services.turnstile_service import TurnstileService
 from . import auth_bp
 
 
@@ -67,6 +67,20 @@ def _public_signup_allow_live_pricing_network() -> bool:
     )
 
 
+def _resolve_client_ip() -> str | None:
+    """Best-effort client IP extraction for bot checks."""
+    cf_ip = (request.headers.get("CF-Connecting-IP") or "").strip()
+    if cf_ip:
+        return cf_ip
+    forwarded_for = (request.headers.get("X-Forwarded-For") or "").split(",")
+    for candidate in forwarded_for:
+        ip = str(candidate or "").strip()
+        if ip:
+            return ip
+    remote = str(request.remote_addr or "").strip()
+    return remote or None
+
+
 @auth_bp.route("/signup-data")
 def signup_data():
     """API endpoint to get available tiers for signup modal."""
@@ -108,6 +122,25 @@ def signup_checkout():
     selected_promo = request.args.get("promo") or ""
     signup_source = request.args.get("source") or "pricing_direct_checkout"
     referral_code = request.args.get("ref")
+
+    if TurnstileService.is_enabled():
+        flash("Please complete the security check on signup before checkout.", "error")
+        fallback_url = _build_signup_fallback_url(
+            tier=selected_tier,
+            billing_mode=selected_mode,
+            billing_cycle=selected_cycle,
+            lifetime_tier=selected_lifetime_tier,
+            promo=selected_promo,
+            source=signup_source,
+            referral_code=referral_code,
+        )
+        response = redirect(fallback_url)
+        return AffiliateService.set_referral_cookie(
+            response,
+            referral_code,
+            secure=request.is_secure,
+        )
+
     allow_live_pricing_network = _public_signup_allow_live_pricing_network()
     signup_context = PublicSignupOrchestrator.build_request_context(
         request=request,
@@ -172,24 +205,72 @@ def signup():
     )
 
     if request.method == "POST":
-        result = PublicSignupOrchestrator.process_submission(
-            context=signup_context,
-            form_data=request.form,
-        )
-        if result.redirect_url:
-            response = redirect(result.redirect_url)
-            return AffiliateService.set_referral_cookie(
-                response,
-                signup_context.referral_code,
-                secure=request.is_secure,
-            )
+        if TurnstileService.is_enabled():
+            token = request.form.get("cf-turnstile-response")
+            if not TurnstileService.verify_response(token, _resolve_client_ip()):
+                flash("Please complete the security check and try again.", "error")
+                view_state = PublicSignupOrchestrator.build_initial_view_state(
+                    signup_context
+                )
+                view_state.selected_tier = (
+                    request.form.get("selected_tier") or view_state.selected_tier
+                )
+                view_state.selected_mode = (
+                    request.form.get("billing_mode") or view_state.selected_mode
+                )
+                view_state.selected_lifetime_key = (
+                    request.form.get("lifetime_tier")
+                    or view_state.selected_lifetime_key
+                )
+                view_state.selected_standard_cycle = (
+                    request.form.get("billing_cycle")
+                    or view_state.selected_standard_cycle
+                )
+                view_state.contact_email = (
+                    request.form.get("contact_email") or view_state.contact_email
+                )
+                view_state.contact_phone = (
+                    request.form.get("contact_phone") or view_state.contact_phone
+                )
+                view_state.promo = request.form.get("promo") or view_state.promo
+            else:
+                result = PublicSignupOrchestrator.process_submission(
+                    context=signup_context,
+                    form_data=request.form,
+                )
+                if result.redirect_url:
+                    response = redirect(result.redirect_url)
+                    return AffiliateService.set_referral_cookie(
+                        response,
+                        signup_context.referral_code,
+                        secure=request.is_secure,
+                    )
 
-        if result.flash_message:
-            flash(result.flash_message, result.flash_category)
-        view_state = (
-            result.view_state
-            or PublicSignupOrchestrator.build_initial_view_state(signup_context)
-        )
+                if result.flash_message:
+                    flash(result.flash_message, result.flash_category)
+                view_state = (
+                    result.view_state
+                    or PublicSignupOrchestrator.build_initial_view_state(signup_context)
+                )
+        else:
+            result = PublicSignupOrchestrator.process_submission(
+                context=signup_context,
+                form_data=request.form,
+            )
+            if result.redirect_url:
+                response = redirect(result.redirect_url)
+                return AffiliateService.set_referral_cookie(
+                    response,
+                    signup_context.referral_code,
+                    secure=request.is_secure,
+                )
+
+            if result.flash_message:
+                flash(result.flash_message, result.flash_category)
+            view_state = (
+                result.view_state
+                or PublicSignupOrchestrator.build_initial_view_state(signup_context)
+            )
     else:
         view_state = PublicSignupOrchestrator.build_initial_view_state(signup_context)
 
@@ -200,6 +281,12 @@ def signup():
         oauth_available=bool(any(oauth_providers.values())),
         oauth_providers=oauth_providers,
         canonical_url=url_for("core.signup_alias", _external=True),
+    )
+    template_context.update(
+        {
+            "turnstile_enabled": TurnstileService.is_enabled(),
+            "turnstile_site_key": TurnstileService.site_key(),
+        }
     )
     response = make_response(render_template("pages/auth/signup.html", **template_context))
     return AffiliateService.set_referral_cookie(
