@@ -376,11 +376,11 @@ async function archiveExpired() {
         }
         
         const data = await response.json();
-        alert(`Archived ${data.archived_count} expired items`);
+        window.showAlert(`Archived ${data.archived_count} expired items`);
         location.reload();
     } catch (error) {
         console.error('Archive error:', error);
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     }
 }
 
@@ -431,12 +431,12 @@ async function markAsExpired(type, id) {
         }
 
         const data = await response.json();
-        alert(`Marked ${data.expired_count} item as expired`);
+        window.showAlert(`Marked ${data.expired_count} item as expired`);
         // Stay on expiration page by reloading the current URL
         window.location.href = '/expiration/alerts';
     } catch (error) {
         console.error('Expiration error:', error);
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     }
 }
 </script>

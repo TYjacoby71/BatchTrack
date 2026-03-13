@@ -173,7 +173,7 @@
       });
       Promise.all(promises.filter(p => p !== null))
         .then(() => window.location.reload())
-        .catch(err => alert('Error updating inventory'));
+        .catch(err => window.showAlert('Error updating inventory'));
     },
     resetPackagingRows() {
       this.rows = [{id: '', quantity: '', unit: '{{ units[0].name if units else "count" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}];

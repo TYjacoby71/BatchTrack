@@ -92,7 +92,7 @@
           // Emit global success event
           window.dispatchEvent(new CustomEvent('globalLinking.completed', { detail: { global_item_id: globalItemId, updated: data.updated, skipped: data.skipped } }));
         } catch (e) {
-          alert(e.message || 'Failed to link items');
+          window.showAlert(e.message || 'Failed to link items');
         }
       });
     }

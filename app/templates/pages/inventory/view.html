@@ -230,14 +230,14 @@ async function markAsSpoiled(type, id) {
         const data = await response.json();
 
         if (response.ok) {
-            alert(`Marked ${data.spoiled_count} item as spoiled`);
+            window.showAlert(`Marked ${data.spoiled_count} item as spoiled`);
             location.reload();
         } else {
-            alert('Error marking item as spoiled: ' + (data.error || 'Unknown error'));
+            window.showAlert('Error marking item as spoiled: ' + (data.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error marking item as spoiled:', error);
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     }
 }
 
@@ -269,14 +269,14 @@ async function markAsExpired(type, id) {
         const data = await response.json();
 
         if (response.ok) {
-            alert(`Marked ${data.expired_count} item as expired`);
+            window.showAlert(`Marked ${data.expired_count} item as expired`);
             location.reload();
         } else {
-            alert(`Error: ${data.error}`);
+            window.showAlert(`Error: ${data.error}`);
         }
     } catch (error) {
         console.error('Expiration error:', error);
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     }
 }
 
@@ -385,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     await callGlobalLinkAction('unlink');
                                     window.location.reload();
                                 } catch (e) {
-                                    alert(e.message || 'Failed to unlink from global item');
+                                    window.showAlert(e.message || 'Failed to unlink from global item');
                                 }
                             };
                         }
@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     await callGlobalLinkAction('relink');
                                     window.location.reload();
                                 } catch (e) {
-                                    alert(e.message || 'Failed to relink to global item');
+                                    window.showAlert(e.message || 'Failed to relink to global item');
                                 }
                             };
                         }
@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     await callGlobalLinkAction('resync');
                                     window.location.reload();
                                 } catch (e) {
-                                    alert(e.message || 'Failed to re-sync global specs');
+                                    window.showAlert(e.message || 'Failed to re-sync global specs');
                                 }
                             };
                         }
@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('Error fetching item details:', error);
-                    alert('Failed to load item details for editing. Please try refreshing the page.');
+                    window.showAlert('Failed to load item details for editing. Please try refreshing the page.');
                 });
         });
     }

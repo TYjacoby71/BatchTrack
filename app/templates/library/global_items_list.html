@@ -461,7 +461,7 @@
     const forceDelete = document.getElementById('forceDelete').checked;
 
     if (!confirmName) {
-      alert('Please enter the item name to confirm deletion');
+      window.showAlert('Please enter the item name to confirm deletion');
       return;
     }
 
@@ -483,12 +483,12 @@
         document.getElementById('connectedItemsCount').textContent = result.connected_count;
         document.getElementById('affectedOrganizations').textContent = (result.organizations || []).join(', ');
       } else {
-        alert(result.error || 'Unknown error occurred');
+        window.showAlert(result.error || 'Unknown error occurred');
       }
     })
     .catch(error => {
       console.error('Error deleting global item:', error);
-      alert('Failed to delete global item');
+      window.showAlert('Failed to delete global item');
     });
   }
 </script>

@@ -382,11 +382,11 @@ function toggleOrgUserStatus(userId, currentStatus) {
         if (response.ok) {
             location.reload();
         } else {
-            alert('Error toggling user status');
+            window.showAlert('Error toggling user status');
         }
     })
     .catch(error => {
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     });
 }
 
@@ -401,17 +401,17 @@ async function deleteOrganization() {
 
     // Validation
     if (!password) {
-        alert('Developer password is required');
+        window.showAlert('Developer password is required');
         return;
     }
 
     if (confirmText !== expectedText) {
-        alert(`Confirmation text must match exactly: "${expectedText}"`);
+        window.showAlert(`Confirmation text must match exactly: "${expectedText}"`);
         return;
     }
 
     if (!understand || !confirmUsers) {
-        alert('You must check both confirmation boxes');
+        window.showAlert('You must check both confirmation boxes');
         return;
     }
 
@@ -448,10 +448,10 @@ async function deleteOrganization() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Organization deleted successfully');
+            window.showAlert('Organization deleted successfully');
             window.location.href = '/developer/dashboard';
         } else {
-            alert('Error: ' + (data.error || 'Failed to delete organization'));
+            window.showAlert('Error: ' + (data.error || 'Failed to delete organization'));
             // Re-enable button
             document.getElementById('confirmDeleteBtn').disabled = false;
             document.getElementById('confirmDeleteBtn').innerHTML = '<i class="fas fa-trash"></i> PERMANENTLY DELETE ORGANIZATION';
@@ -459,7 +459,7 @@ async function deleteOrganization() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while deleting the organization');
+        window.showAlert('An error occurred while deleting the organization');
         // Re-enable button
         document.getElementById('confirmDeleteBtn').disabled = false;
         document.getElementById('confirmDeleteBtn').innerHTML = '<i class="fas fa-trash"></i> PERMANENTLY DELETE ORGANIZATION';

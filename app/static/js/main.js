@@ -382,19 +382,6 @@ function bindDeclarativeConfirmations() {
   });
 }
 
-function installAlertCompatibilityShim() {
-  if (window.__btAlertShimInstalled) return;
-  window.__btAlertShimInstalled = true;
-  const nativeAlert = window.alert ? window.alert.bind(window) : null;
-  window.alert = (message) => {
-    if (typeof window.showAlert === 'function') {
-      window.showAlert('info', message);
-      return;
-    }
-    nativeAlert?.(message);
-  };
-}
-
 function openWindowOrNotify(url, target = '_blank', features = '', options = {}) {
   const popup = window.open(url, target, features);
   if (!popup) {
@@ -472,4 +459,3 @@ window.showToast = showToast;
 window.showConfirmDialog = showConfirmDialog;
 window.showPromptDialog = showPromptDialog;
 window.openWindowOrNotify = openWindowOrNotify;
-installAlertCompatibilityShim();

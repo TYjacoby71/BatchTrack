@@ -160,7 +160,7 @@ async function regenerateAffiliateLink() {
         if (input) input.value = payload.referral_link || '';
         if (codeLabel) codeLabel.textContent = payload.referral_code || 'N/A';
     } catch (error) {
-        alert(error.message || 'Unable to regenerate affiliate link.');
+        window.showAlert(error.message || 'Unable to regenerate affiliate link.');
     } finally {
         if (button) {
             button.disabled = false;

@@ -72,7 +72,7 @@ window.submitInventoryAdjustment = function() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error processing adjustment');
+        window.showAlert('Error processing adjustment');
     });
 };
 
@@ -125,15 +125,15 @@ async function markAsExpired(type, id) {
         const data = await response.json();
 
         if (response.ok) {
-            alert(`Marked ${data.expired_count} item as expired`);
+            window.showAlert(`Marked ${data.expired_count} item as expired`);
             // Reload the current page to refresh the SKU view
             location.reload();
         } else {
-            alert(`Error: ${data.error}`);
+            window.showAlert(`Error: ${data.error}`);
         }
     } catch (error) {
         console.error('Expiration error:', error);
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     }
 }
 </script>

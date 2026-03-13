@@ -113,7 +113,7 @@
     const f = document.getElementById('flForm');
     const waxG = parseFloat(f.wax_g.value||'0');
     const flPct = parseFloat(f.fl_pct.value||'0');
-    if (!(waxG>0) || !(flPct>=0)) { alert('Enter wax grams and fragrance %'); return; }
+    if (!(waxG>0) || !(flPct>=0)) { window.showAlert('Enter wax grams and fragrance %'); return; }
     const fragranceG = waxG * (flPct/100);
     const out = `Fragrance: ${round(fragranceG)} g for ${waxG} g wax at ${flPct}%`;
     document.getElementById('flNumbers').textContent = out;

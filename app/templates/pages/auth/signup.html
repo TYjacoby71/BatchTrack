@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const submitCheckout = () => {
         if (!checkoutForm || !selectedTierInput || !selectedTierInput.value) {
-            window.alert('Select a plan to continue.');
+            window.showAlert('Select a plan to continue.');
             return;
         }
         try {
@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const openCheckoutForTier = (tierId) => {
         if (!tierId) {
-            window.alert('Select a plan to continue.');
+            window.showAlert('Select a plan to continue.');
             return;
         }
         setSelectedTier(tierId);

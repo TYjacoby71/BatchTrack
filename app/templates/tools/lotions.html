@@ -126,7 +126,7 @@
     const batch = parseFloat(f.batch_g.value||'0');
     const emul = parseFloat(f.emulsifier_pct.value||'0');
     const pres = parseFloat(f.preservative_pct.value||'0');
-    if (!(batch>0)) { alert('Enter batch size in grams'); return; }
+    if (!(batch>0)) { window.showAlert('Enter batch size in grams'); return; }
     const emulG = batch * (emul/100);
     const presG = batch * (pres/100);
     const out = `Emulsifier: ${round(emulG)} g, Preservative: ${round(presG)} g`;

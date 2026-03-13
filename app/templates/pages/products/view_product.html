@@ -608,12 +608,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + (data.message || data.error));
+                window.showAlert('Error: ' + (data.message || data.error));
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An error occurred while adding variant');
+            window.showAlert('An error occurred while adding variant');
         });
     };
 

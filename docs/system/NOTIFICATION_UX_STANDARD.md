@@ -50,8 +50,9 @@ Use for recoverable, domain-specific errors requiring in-context fixes.
 ### 5) Native browser dialog (`alert`, `confirm`) (restricted)
 Do not use in standard feature paths.
 
-- Allowed only as emergency fallback when UI framework is unavailable.
+- Allowed only as emergency fallback for confirm/prompt when UI framework is unavailable.
 - Must include TODO for migration.
+- Legacy `alert(...)` compatibility shimming has been retired; source flows should call shared helpers directly.
 
 ### 6) System status response (HTTP/API/security)
 Use for request-level failures where the transport/status code is the primary signal (not a page-level toast).
@@ -114,4 +115,5 @@ Use for request-level failures where the transport/status code is the primary si
 - Phase 4 implemented: ALRT-041 through ALRT-050 verified and normalized backend auth/onboarding/library/bulk-stock flash callsites so all flash severity categories are explicit and consistently rendered.
 - Phase 5 implemented: ALRT-051 through ALRT-069 verified and normalized remaining backend inventory/developer/batches flash callsites so all checklist flash sources now use explicit severity categories.
 - Phase 6 implemented: ALRT-070 through ALRT-080 cataloged and normalized system-level notification surfaces (global error handlers/pages, shared verification/upgrade overlays, and API/security/rate-limit payload responses).
-- Phase 7 implemented: ALRT-081 through ALRT-087 normalized remaining native dialog usage through shared prompt/confirm infrastructure, enabled legacy alert compatibility shimming, and added a diff-based guard to prevent new raw native dialog primitives from being introduced.
+- Phase 7 implemented: ALRT-081 through ALRT-087 normalized remaining native dialog usage through shared prompt/confirm infrastructure and added a diff-based guard to prevent new raw native dialog primitives from being introduced.
+- Phase 8 implemented: ALRT-088 removed remaining source-template native `alert(...)` callsites, migrated those flows to `window.showAlert(...)`, and retired `main.js` alert-shim installation.

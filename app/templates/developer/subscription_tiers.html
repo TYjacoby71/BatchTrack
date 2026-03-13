@@ -372,12 +372,12 @@ function syncTier(tierKey) {
         if (data.success) {
             location.reload();
         } else {
-            alert('Sync failed: ' + data.message);
+            window.showAlert('Sync failed: ' + data.message);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Sync failed: Network error');
+        window.showAlert('Sync failed: Network error');
     });
 }
 </script>

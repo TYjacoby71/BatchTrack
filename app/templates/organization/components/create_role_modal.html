@@ -121,12 +121,12 @@ function createRole() {
         if (result.success) {
             location.reload();
         } else {
-            alert(result.error || 'Failed to create role');
+            window.showAlert(result.error || 'Failed to create role');
         }
     })
     .catch(error => {
         console.error('Error creating role:', error);
-        alert('Failed to create role');
+        window.showAlert('Failed to create role');
     });
 }
 

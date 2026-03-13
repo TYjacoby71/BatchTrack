@@ -288,7 +288,7 @@
             if (isCustomCategory) {
                 if (!density || density <= 0) {
                     console.error('🔧 DENSITY MODAL: Invalid density value');
-                    alert('Please enter a valid density greater than 0');
+                    window.showAlert('Please enter a valid density greater than 0');
                     return;
                 }
             }
@@ -359,7 +359,7 @@
             })
             .catch((error) => {
                 console.error('🚨 DENSITY MODAL: Save failed', error);
-                alert('Failed to save density. Please try again.');
+                window.showAlert('Failed to save density. Please try again.');
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Density';
             });

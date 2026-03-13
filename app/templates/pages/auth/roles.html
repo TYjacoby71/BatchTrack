@@ -166,7 +166,7 @@ function saveRole() {
         if (result.success) {
             location.reload();
         } else {
-            alert(result.error);
+            window.showAlert(result.error);
         }
     });
 }

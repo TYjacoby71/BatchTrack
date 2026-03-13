@@ -445,12 +445,12 @@ async function saveProfile() {
 
         const data = await response.json();
         if (data.success) {
-            alert('Profile updated successfully!');
+            window.showAlert('Profile updated successfully!');
         } else {
-            alert('Error updating profile: ' + data.error);
+            window.showAlert('Error updating profile: ' + data.error);
         }
     } catch (error) {
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     }
 }
 
@@ -460,7 +460,7 @@ async function changePassword() {
     const confirmPassword = document.getElementById('confirmPassword').value;
 
     if (newPassword !== confirmPassword) {
-        alert('New passwords do not match');
+        window.showAlert('New passwords do not match');
         return;
     }
 
@@ -480,14 +480,14 @@ async function changePassword() {
 
         const data = await response.json();
         if (data.success) {
-            alert('Password changed successfully!');
+            window.showAlert('Password changed successfully!');
             bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
             document.getElementById('changePasswordForm').reset();
         } else {
-            alert('Error changing password: ' + data.error);
+            window.showAlert('Error changing password: ' + data.error);
         }
     } catch (error) {
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     }
 }
 
@@ -512,10 +512,10 @@ async function toggleUserStatus(userId, isActive) {
         if (response.ok) {
             location.reload();
         } else {
-            alert('Error toggling user status');
+            window.showAlert('Error toggling user status');
         }
     } catch (error) {
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     }
 }
 

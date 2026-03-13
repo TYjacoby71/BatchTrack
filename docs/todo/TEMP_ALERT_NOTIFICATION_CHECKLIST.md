@@ -95,17 +95,18 @@ Audit current notification emitters, classify each source, assign priority, and 
 | ALRT-078 | `app/templates/errors/404.html`, `app/templates/errors/500.html`, `app/templates/errors/maintenance.html` | Dedicated status-page card UI (not toast/inline flash) | Dedicated status-page UX for hard navigation/server faults | done | P3 | Yes |
 | ALRT-079 | `app/templates/billing/upgrade.html` debug-only billing status banner | Inline informational alert (`alert-info`) | Inline informational debug callout (dev-only) | done | P3 | Yes |
 | ALRT-080 | `app/middleware/registry.py` security/bot blocked responses (`403`) | Plain `403` text or JSON error payload (non-toast) | Security response payload/page (not standard toast/modal) | done | P3 | Yes |
-| ALRT-081 | `app/static/js/main.js` native `alert()` compatibility shim | Legacy `alert(...)` calls routed through shared in-app alert helper | Shared notification helper for legacy alert callsites | done | P1 | Yes |
+| ALRT-081 | `app/static/js/main.js` native `alert()` compatibility shim retirement | Legacy `alert(...)` compatibility shim removed after source migration | No shim required; source paths call shared helpers directly | done | P1 | Yes |
 | ALRT-082 | `app/static/js/main.js` global prompt + declarative confirm infrastructure | Shared `showPromptDialog(...)` + `data-confirm-message` submit/click handling | Shared modal/prompt framework for blocking confirmations/input | done | P1 | Yes |
 | ALRT-083 | Inline confirm attributes migrated (`conversion/units`, inventory archive links, tier/addon/category delete forms, SKU merge form) | Declarative confirm attributes (`data-confirm-*`) | Shared modal confirmation pipeline (no inline native confirm) | done | P1 | Yes |
 | ALRT-084 | Scripted native confirm/prompt migrations (`admin/reservations`, `recipe_form`, inventory/product expiration flows, `system_roles`, `user_management_modal`, `timer_list`, `bulk_updates`) | Async shared `showConfirmDialog`/`showPromptDialog` usage with guarded fallbacks | Shared modal/prompt helpers in runtime JS flows | done | P1 | Yes |
 | ALRT-085 | Pop-up blocked coverage for `window.open(...)` callsites (`DrawerProtocol`, org dashboard exports, user support/session-open flows, density/global-item reference links) | Shared `openWindowOrNotify(...)` helper + warning alert fallback | Unified pop-up blocked notification behavior | done | P2 | Yes |
 | ALRT-086 | Lightweight public shell script loading (`scripts_primary.html`) | Loads shared notification runtime (`main.js`) in lightweight mode | Consistent global notification API availability across shells | done | P2 | Yes |
 | ALRT-087 | Notification primitive drift guard (`scripts/validate_notification_primitives.py` + workflow step) | Diff-based guard against new native dialog primitives | Prevent future notification-pattern regressions | done | P2 | Yes |
+| ALRT-088 | Template/native alert elimination pass (`app/templates/**`, source JS/HTML/Jinja) | Remaining direct native `alert(...)` callsites in source templates | Shared notification helper usage (`window.showAlert`) with shim no longer installed | done | P1 | Yes |
 
 ## Compiled priority queue (from checklist)
 ### P1 (highest)
-- ALRT-001, ALRT-002, ALRT-003, ALRT-004, ALRT-005, ALRT-006, ALRT-007, ALRT-081, ALRT-082, ALRT-083, ALRT-084
+- ALRT-001, ALRT-002, ALRT-003, ALRT-004, ALRT-005, ALRT-006, ALRT-007, ALRT-081, ALRT-082, ALRT-083, ALRT-084, ALRT-088
 
 ### P2
 - ALRT-008, ALRT-009, ALRT-010, ALRT-011, ALRT-012, ALRT-013, ALRT-014, ALRT-015, ALRT-017, ALRT-018, ALRT-019, ALRT-021, ALRT-072, ALRT-073, ALRT-074, ALRT-075, ALRT-076, ALRT-085, ALRT-086, ALRT-087
@@ -123,3 +124,4 @@ Audit current notification emitters, classify each source, assign priority, and 
 - Phase-5 implementation pass complete for ALRT-051 through ALRT-069.
 - Phase-6 inventory extension complete for ALRT-070 through ALRT-080 (system-level handlers, shared overlays, and API quota/error payload surfaces).
 - Phase-7 native-dialog normalization complete for ALRT-081 through ALRT-087 (shared alert/prompt compatibility layer, declarative confirms, migrated scripted confirm/prompt flows, pop-up blocked helper, and drift-prevention guard).
+- Phase-8 legacy alert elimination complete for ALRT-088 (source-template native `alert(...)` callsites migrated to `window.showAlert(...)` and `main.js` shim installation retired).

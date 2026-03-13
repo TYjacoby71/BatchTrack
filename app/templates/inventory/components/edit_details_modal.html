@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!name.value.trim()) {
                 e.preventDefault();
-                alert('Name is required');
+                window.showAlert('Name is required');
                 name.focus();
                 return false;
             }
@@ -311,14 +311,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (capAmount && !capAmount.value) {
                     e.preventDefault();
-                    alert('Capacity is required for containers');
+                    window.showAlert('Capacity is required for containers');
                     capAmount.focus();
                     return false;
                 }
 
                 if (capUnit && !capUnit.value) {
                     e.preventDefault();
-                    alert('Capacity unit is required for containers');
+                    window.showAlert('Capacity unit is required for containers');
                     capUnit.focus();
                     return false;
                 }
@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const unit = this.querySelector('select[name="unit"]');
                 if (!unit || !unit.value) {
                     e.preventDefault();
-                    alert('Unit is required');
+                    window.showAlert('Unit is required');
                     if (unit) unit.focus();
                     return false;
                 }

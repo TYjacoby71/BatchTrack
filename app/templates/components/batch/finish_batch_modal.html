@@ -562,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function(){
       var val = portionsEl && portionsEl.value ? parseInt(portionsEl.value, 10) : 0;
       if (!val || val <= 0){
         e.preventDefault();
-        alert('Please enter the final number of portions (must be greater than 0).');
+        window.showAlert('Please enter the final number of portions (must be greater than 0).');
         if (portionsEl) portionsEl.focus();
         return false;
       }
