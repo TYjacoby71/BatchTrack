@@ -17,6 +17,7 @@ from flask_login import current_user
 from app.extensions import limiter
 from app.services.public_bot_trap_service import PublicBotTrapService
 from app.services.public_tools_service import (
+    get_tools_index_cards,
     get_public_tool_flags,
     is_tool_flag_enabled,
 )
@@ -134,9 +135,10 @@ def tools_index():
     and quick draft Recipe Tool (category-aware) with Save CTA that invites sign-in.
     """
     flags = get_public_tool_flags()
+    tools_index_cards = get_tools_index_cards(tool_flags=flags)
     return render_template(
         "tools/index.html",
-        tool_flags=flags,
+        tools_index_cards=tools_index_cards,
         show_public_header=True,
         lightweight_public_shell=True,
         load_analytics=False,

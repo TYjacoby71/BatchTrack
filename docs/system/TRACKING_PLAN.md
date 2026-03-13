@@ -145,6 +145,10 @@ BatchTrack supports optional client-side analytics snippets in the shared layout
     - `purchase` (GA4 ecommerce standard)
     - `purchase_completed`
     - `account_created`
+- **Meta Pixel** via `META_PIXEL_ID`
+  - Best for Meta Ads web attribution and retargeting audiences.
+  - Captures browser `PageView` across analytics-enabled pages.
+  - Stripe signup success now emits one-time Meta `Purchase` on first onboarding load.
 - **PostHog** via `POSTHOG_PROJECT_API_KEY`
   - Best for product analytics and behavioral funnels.
   - Captures pageviews/pageleave events and now includes:
@@ -209,6 +213,7 @@ Recommended baseline:
 - `GOOGLE_ANALYTICS_MEASUREMENT_ID` (e.g., `G-XXXXXXXXXX`)
 - `GOOGLE_ADS_CONVERSION_ID` (e.g., `AW-XXXXXXXXXX`)
 - `GOOGLE_ADS_PURCHASE_CONVERSION_LABEL` (conversion label paired with `GOOGLE_ADS_CONVERSION_ID`)
+- `META_PIXEL_ID` (e.g., `1238893424513360`)
 - `POSTHOG_PROJECT_API_KEY`
 - `POSTHOG_HOST` (defaults to `https://us.i.posthog.com`)
 - `POSTHOG_CAPTURE_PAGEVIEW` (default `true`)

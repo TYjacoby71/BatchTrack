@@ -609,6 +609,12 @@
             padding: 0 !important;
         }
 
+        .placeholder-img.final-cta-media-slot.has-media {
+            min-height: clamp(300px, 42vw, 500px);
+            height: clamp(300px, 42vw, 500px);
+            overflow: hidden;
+        }
+
         .final-cta-media-slot .final-cta-media {
             position: absolute;
             inset: 0;
@@ -668,6 +674,11 @@
 
             .final-cta-media-slot {
                 min-height: 260px;
+            }
+
+            .placeholder-img.final-cta-media-slot.has-media {
+                min-height: 260px;
+                height: 260px;
             }
 
             #solution-quiz {
