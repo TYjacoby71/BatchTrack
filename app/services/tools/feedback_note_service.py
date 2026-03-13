@@ -11,20 +11,13 @@ Glossary:
 
 from __future__ import annotations
 
-import logging
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import func, inspect
-
-from app.extensions import db
-from app.models.tool_feedback_note import ToolFeedbackNote
 from app.utils.json_store import read_json_file, write_json_file
-
-logger = logging.getLogger(__name__)
 
 
 class ToolFeedbackNoteService:
@@ -154,206 +147,6 @@ class ToolFeedbackNoteService:
     @classmethod
     def _bucket_path(cls, source: str, flow: str) -> Path:
         return cls.BASE_DIR / source / f"{flow}.json"
-
-    @classmethod
-    def _db_is_ready(cls) -> bool:
-        try:
-            return inspect(db.engine).has_table(ToolFeedbackNote.__tablename__)
-        except Exception:
-            return False
-
-    @staticmethod
-    def _coerce_datetime(value: Any) -> datetime:
-        if isinstance(value, datetime):
-            return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-        if isinstance(value, str):
-            try:
-                parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-            except ValueError:
-                pass
-        return datetime.now(timezone.utc)
-
-    @classmethod
-    def _entry_from_db_note(cls, note: ToolFeedbackNote) -> dict[str, Any]:
-        entry: dict[str, Any] = {
-            "id": note.id,
-            "submitted_at": (
-                note.submitted_at.isoformat() if note.submitted_at else None
-            ),
-            "source": note.source,
-            "flow": note.flow,
-            "flow_label": note.flow_label,
-            "title": note.title,
-            "message": note.message,
-            "context": note.context,
-            "page_path": note.page_path,
-            "page_url": note.page_url,
-            "contact_email": note.contact_email,
-        }
-        if isinstance(note.metadata_json, dict) and note.metadata_json:
-            entry["metadata"] = note.metadata_json
-        if isinstance(note.request_json, dict) and note.request_json:
-            entry["request"] = note.request_json
-        if isinstance(note.user_json, dict) and note.user_json:
-            entry["user"] = note.user_json
-        return entry
-
-    @classmethod
-    def _save_note_to_db(cls, entry: dict[str, Any]) -> int | None:
-        if not cls._db_is_ready():
-            return None
-        try:
-            source = cls.normalize_source(entry.get("source"))
-            flow = cls.normalize_flow(entry.get("flow"))
-            if not flow:
-                return None
-
-            note = ToolFeedbackNote(
-                id=str(entry.get("id") or uuid4().hex),
-                submitted_at=cls._coerce_datetime(entry.get("submitted_at")),
-                source=source,
-                flow=flow,
-                flow_label=cls.FLOW_LABELS.get(flow, flow.replace("_", " ").title()),
-                title=cls._clean_text(entry.get("title"), max_len=160),
-                message=cls._clean_text(entry.get("message"), max_len=4000) or "",
-                context=cls._clean_text(entry.get("context"), max_len=120),
-                page_path=cls._clean_text(entry.get("page_path"), max_len=240),
-                page_url=cls._clean_text(entry.get("page_url"), max_len=512),
-                contact_email=cls._clean_email(entry.get("contact_email")),
-                metadata_json=(
-                    entry.get("metadata")
-                    if isinstance(entry.get("metadata"), dict)
-                    else None
-                ),
-                request_json=(
-                    entry.get("request")
-                    if isinstance(entry.get("request"), dict)
-                    else None
-                ),
-                user_json=entry.get("user") if isinstance(entry.get("user"), dict) else None,
-            )
-            db.session.add(note)
-            db.session.commit()
-
-            bucket_count = (
-                db.session.query(func.count(ToolFeedbackNote.id))
-                .filter(
-                    ToolFeedbackNote.source == source,
-                    ToolFeedbackNote.flow == flow,
-                )
-                .scalar()
-                or 0
-            )
-            return int(bucket_count)
-        except Exception:
-            db.session.rollback()
-            logger.warning(
-                "Unable to persist support note to DB; falling back to JSON",
-                exc_info=True,
-            )
-            return None
-
-    @classmethod
-    def _load_global_index_from_db(cls) -> dict[str, Any] | None:
-        if not cls._db_is_ready():
-            return None
-        try:
-            grouped_rows = (
-                db.session.query(
-                    ToolFeedbackNote.source,
-                    ToolFeedbackNote.flow,
-                    func.count(ToolFeedbackNote.id),
-                )
-                .group_by(ToolFeedbackNote.source, ToolFeedbackNote.flow)
-                .all()
-            )
-            latest_ts = db.session.query(func.max(ToolFeedbackNote.submitted_at)).scalar()
-
-            source_map: dict[str, dict[str, int]] = {}
-            for source, flow, count in grouped_rows:
-                source_key = cls.normalize_source(source)
-                flow_key = cls.normalize_flow(flow)
-                if not source_key or not flow_key:
-                    continue
-                flow_counts = source_map.setdefault(source_key, {})
-                flow_counts[flow_key] = int(count or 0)
-
-            sources: list[dict[str, Any]] = []
-            for source_key in sorted(source_map.keys()):
-                flow_counts = source_map.get(source_key, {})
-                ordered_flows: list[dict[str, Any]] = []
-                for flow in cls.FLOW_ORDER:
-                    count = int(flow_counts.get(flow) or 0)
-                    if count <= 0:
-                        continue
-                    ordered_flows.append(
-                        {
-                            "flow": flow,
-                            "flow_label": cls.FLOW_LABELS.get(
-                                flow, flow.replace("_", " ").title()
-                            ),
-                            "count": count,
-                            "path": f"{source_key}/{flow}.json",
-                        }
-                    )
-                if ordered_flows:
-                    sources.append({"source": source_key, "flows": ordered_flows})
-
-            return {
-                "updated_at": (
-                    latest_ts.isoformat()
-                    if isinstance(latest_ts, datetime)
-                    else datetime.now(timezone.utc).isoformat()
-                ),
-                "sources": sources,
-            }
-        except Exception:
-            db.session.rollback()
-            logger.warning(
-                "Unable to load support-note global index from DB",
-                exc_info=True,
-            )
-            return None
-
-    @classmethod
-    def _load_bucket_from_db(
-        cls, *, source: str, flow: str, limit: int | None = None
-    ) -> dict[str, Any] | None:
-        if not cls._db_is_ready():
-            return None
-        try:
-            base_query = ToolFeedbackNote.query.filter(
-                ToolFeedbackNote.source == source,
-                ToolFeedbackNote.flow == flow,
-            )
-            count = int(base_query.count() or 0)
-            latest_ts = base_query.with_entities(func.max(ToolFeedbackNote.submitted_at)).scalar()
-
-            rows_query = base_query.order_by(
-                ToolFeedbackNote.submitted_at.desc(),
-                ToolFeedbackNote.id.desc(),
-            )
-            if isinstance(limit, int) and limit > 0:
-                rows_query = rows_query.limit(limit)
-            rows = rows_query.all()
-            entries = [cls._entry_from_db_note(row) for row in rows]
-
-            return {
-                "source": source,
-                "flow": flow,
-                "flow_label": cls.FLOW_LABELS.get(flow, flow.replace("_", " ").title()),
-                "count": count,
-                "entries": entries,
-                "bucket_path": f"{source}/{flow}.json",
-                "updated_at": (
-                    latest_ts.isoformat() if isinstance(latest_ts, datetime) else None
-                ),
-            }
-        except Exception:
-            db.session.rollback()
-            logger.warning("Unable to load support-note bucket from DB", exc_info=True)
-            return None
 
     @classmethod
     def _entry_payload(
@@ -521,36 +314,26 @@ class ToolFeedbackNoteService:
         flow = entry["flow"]
         bucket_path = cls._bucket_path(source, flow)
 
-        db_bucket_count = cls._save_note_to_db(entry)
+        current_bucket = read_json_file(bucket_path, default={}) or {}
+        entries = (
+            current_bucket.get("entries") if isinstance(current_bucket, dict) else []
+        )
+        if not isinstance(entries, list):
+            entries = []
+        entries.append(entry)
+        entries.sort(key=lambda row: str(row.get("submitted_at") or ""), reverse=True)
 
-        legacy_bucket_count: int | None = None
-        try:
-            current_bucket = read_json_file(bucket_path, default={}) or {}
-            entries = (
-                current_bucket.get("entries") if isinstance(current_bucket, dict) else []
-            )
-            if not isinstance(entries, list):
-                entries = []
-            entries.append(entry)
-            entries.sort(key=lambda row: str(row.get("submitted_at") or ""), reverse=True)
-
-            bucket_payload = {
-                "source": source,
-                "flow": flow,
-                "flow_label": cls.FLOW_LABELS[flow],
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-                "count": len(entries),
-                "entries": entries,
-            }
-            write_json_file(bucket_path, bucket_payload)
-            cls._write_source_index(source)
-            cls._write_global_index()
-            legacy_bucket_count = len(entries)
-        except Exception:
-            logger.warning(
-                "Unable to persist legacy JSON feedback note bucket",
-                exc_info=True,
-            )
+        bucket_payload = {
+            "source": source,
+            "flow": flow,
+            "flow_label": cls.FLOW_LABELS[flow],
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "count": len(entries),
+            "entries": entries,
+        }
+        write_json_file(bucket_path, bucket_payload)
+        cls._write_source_index(source)
+        cls._write_global_index()
 
         return {
             "id": entry["id"],
@@ -558,21 +341,12 @@ class ToolFeedbackNoteService:
             "flow": flow,
             "flow_label": cls.FLOW_LABELS[flow],
             "bucket_path": f"{source}/{flow}.json",
-            "bucket_count": int(
-                db_bucket_count
-                if db_bucket_count is not None
-                else (legacy_bucket_count if legacy_bucket_count is not None else 1)
-            ),
+            "bucket_count": len(entries),
         }
 
     @classmethod
     def load_global_index(cls, *, refresh: bool = False) -> dict[str, Any]:
         """Return the global source/flow index for support dashboards."""
-        db_payload = cls._load_global_index_from_db()
-        if isinstance(db_payload, dict) and isinstance(db_payload.get("sources"), list):
-            if db_payload["sources"]:
-                return db_payload
-
         if refresh:
             return cls._write_global_index()
 
@@ -593,14 +367,6 @@ class ToolFeedbackNoteService:
             raise ValueError(
                 "Choose one type: question, missing feature, glitch, or bad preset data."
             )
-
-        db_bucket = cls._load_bucket_from_db(
-            source=normalized_source,
-            flow=normalized_flow,
-            limit=limit,
-        )
-        if isinstance(db_bucket, dict) and int(db_bucket.get("count") or 0) > 0:
-            return db_bucket
 
         bucket_path = cls._bucket_path(normalized_source, normalized_flow)
         bucket = read_json_file(bucket_path, default={}) or {}

@@ -280,7 +280,7 @@
               <span class="fw-semibold text-uppercase text-muted">
                 {% if note.event_type in ['EDIT', 'EDIT_OVERRIDE'] %}Edit{% else %}Note{% endif %}
               </span>
-              <small class="text-muted">{{ note.created_at | user_timezone('%b %d, %Y %H:%M') if note.created_at else '—' }}</small>
+              <small class="text-muted">{{ note.created_at.strftime('%b %d, %Y %H:%M') if note.created_at else '—' }}</small>
             </div>
             {% if note.notes %}
             <div class="small mt-1">{{ note.notes|nl2br }}</div>

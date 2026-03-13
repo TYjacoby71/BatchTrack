@@ -39,13 +39,6 @@ FIELDS = [
         "recommended": "your_purchase_conversion_label",
     },
     {
-        "key": "META_PIXEL_ID",
-        "cast": "str",
-        "default": None,
-        "description": "Meta Pixel id used for browser-side pageview and purchase tracking.",
-        "recommended": "1234567890123456",
-    },
-    {
         "key": "POSTHOG_PROJECT_API_KEY",
         "cast": "str",
         "default": None,

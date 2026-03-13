@@ -5,7 +5,7 @@ Formats and appends timestamped note entries for audit trails.
 
 Glossary:
 - Note entry: A single note with a saved timestamp prefix.
-- Timestamp prefix: "[YYYY-MM-DD HH:MM:SS TZ]" header.
+- Timestamp prefix: "[YYYY-MM-DD HH:MM:SS UTC]" header.
 """
 
 from __future__ import annotations
@@ -15,17 +15,14 @@ from datetime import datetime
 
 from .timezone_utils import TimezoneUtils
 
-_TIMESTAMP_RE = re.compile(
-    r"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?: [A-Za-z0-9_+\-:/]+)?\]"
-)
+_TIMESTAMP_RE = re.compile(r"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC\]")
 
 
 # --- Format timestamp ---
-# Purpose: Build a user-local timestamp string for notes.
+# Purpose: Build a UTC timestamp string for notes.
 def _format_timestamp(now: datetime | None = None) -> str:
     stamp = now or TimezoneUtils.utc_now()
-    localized = TimezoneUtils.format_for_user(stamp, "%Y-%m-%d %H:%M:%S %Z").strip()
-    return localized or stamp.strftime("%Y-%m-%d %H:%M:%S UTC")
+    return stamp.strftime("%Y-%m-%d %H:%M:%S UTC")
 
 
 # --- Append timestamped note ---
