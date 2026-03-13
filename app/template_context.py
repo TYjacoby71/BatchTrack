@@ -399,7 +399,15 @@ def register_template_context(app: Flask) -> None:
             "marketing_settings": marketing_settings,
         }
 
-    app.jinja_env.globals.update({"get_global_unit_list": get_global_unit_list})
+    app.jinja_env.globals.update(
+        {
+            "get_global_unit_list": get_global_unit_list,
+            # Imported macros do not inherit caller context processors unless
+            # explicitly imported "with context", so expose static_asset as a
+            # true Jinja global for cross-template macro safety.
+            "static_asset": static_asset_url,
+        }
+    )
     app.add_template_filter(static_file_exists_filter, "static_file_exists")
 
 
