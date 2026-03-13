@@ -8,6 +8,14 @@ const logger = {
 
 const BLOCKING_STATUSES = new Set(['NEEDED', 'OUT_OF_STOCK', 'DENSITY_MISSING', 'ERROR']);
 
+function notify(type, message) {
+    if (typeof window.showAlert === 'function') {
+        window.showAlert(type, message);
+        return;
+    }
+    console[type === 'danger' ? 'error' : 'warn'](message);
+}
+
 // Stock Check Management Module
 export class StockCheckManager {
     constructor(mainManager) {
@@ -40,7 +48,7 @@ export class StockCheckManager {
 
         if (!this.main.recipe) {
             logger.warn('No recipe available');
-            alert('No recipe loaded');
+            notify('warning', 'No recipe loaded.');
             return;
         }
 
@@ -298,7 +306,7 @@ export class StockCheckManager {
 
         const needed = this.processedResults.filter(item => item.status === 'NEEDED');
         if (!needed.length) {
-            alert('No items need restocking!');
+            notify('info', 'No items need restocking.');
             return;
         }
 

@@ -153,63 +153,88 @@ function updateExpirationTimes() {
     });
 }
 
-function confirmSale(orderId) {
-    if (confirm(`Confirm sale for order ${orderId}? This will convert the reservation to a completed sale.`)) {
-        fetch(`/reservations/api/reservations/${orderId}/confirm_sale`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                notes: 'Manual confirmation from admin panel'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                refreshReservations();
-            } else {
-                alert('Error: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error confirming sale');
-        });
+async function requestConfirmation(options) {
+    if (typeof window.showConfirmDialog === 'function') {
+        return window.showConfirmDialog(options);
+    }
+    return window.confirm(options.message || 'Are you sure?');
+}
+
+function notify(type, message) {
+    if (typeof window.showAlert === 'function') {
+        window.showAlert(type, message);
+    } else {
+        console[type === 'danger' ? 'error' : 'log'](message);
     }
 }
 
-function releaseReservation(orderId) {
-    if (confirm(`Release reservation for order ${orderId}? This will return the inventory to available stock.`)) {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-        fetch(`/reservations/api/reservations/${orderId}/release`, {
-            method: 'POST',
-			headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken  // Include CSRF token in headers
-            },
+async function confirmSale(orderId) {
+    const confirmed = await requestConfirmation({
+        title: 'Confirm sale',
+        message: `Confirm sale for order ${orderId}? This will convert the reservation to a completed sale.`,
+        confirmText: 'Confirm sale',
+        confirmVariant: 'danger'
+    });
+    if (!confirmed) return;
+    fetch(`/reservations/api/reservations/${orderId}/confirm_sale`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            notes: 'Manual confirmation from admin panel'
         })
-        .then(response => {
-			if (!response.ok) {
-                console.error('Release failed:', response);
-                return response.json().then(err => {throw err;});
-            }
-			return response.json();
-		})
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                refreshReservations();
-            } else {
-                alert('Error: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error releasing reservation: ' + error);
-        });
-    }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            notify('success', data.message);
+            refreshReservations();
+        } else {
+            notify('danger', 'Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        notify('danger', 'Error confirming sale');
+    });
+}
+
+async function releaseReservation(orderId) {
+    const confirmed = await requestConfirmation({
+        title: 'Release reservation',
+        message: `Release reservation for order ${orderId}? This will return the inventory to available stock.`,
+        confirmText: 'Release reservation',
+        confirmVariant: 'warning'
+    });
+    if (!confirmed) return;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    fetch(`/reservations/api/reservations/${orderId}/release`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            console.error('Release failed:', response);
+            return response.json().then(err => {throw err;});
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            notify('success', data.message);
+            refreshReservations();
+        } else {
+            notify('danger', 'Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        notify('danger', 'Error releasing reservation: ' + error);
+    });
 }
 
 // Update expiration times every 30 seconds

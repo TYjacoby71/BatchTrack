@@ -1,0 +1,119 @@
+# Notification UX Standard
+
+## Synopsis
+This standard defines which notification type to use in BatchTrack, when to use it, and how to implement notifications consistently across backend routes, frontend modules, and drawer workflows.
+
+## Goals
+- Remove inconsistent browser-native dialogs (`alert`, `confirm`) from primary flows.
+- Keep messaging predictable across pages and features.
+- Ensure severity, timing, and user actions are handled consistently.
+
+## Notification Types
+
+### 1) Inline alert (default)
+Use for most success, warning, and error messages that do not require a decision.
+
+- UI: Bootstrap alert in page context.
+- Behavior: dismissible and optionally auto-hide.
+- Typical source:
+  - Server redirect/postback: Flask `flash(...)` rendered in `content_chrome.html`.
+  - Client async actions: shared JS notification helper (`window.showAlert`).
+
+### 2) Toast (ephemeral feedback)
+Use for short-lived, non-critical confirmations.
+
+- UI: bootstrap toast.
+- Behavior: auto-hide quickly; no blocking.
+- Examples:
+  - "Copied to clipboard"
+  - "Autosaved"
+- Shared helper: `window.showToast(...)`
+
+### 3) Modal (blocking decision)
+Use when user must confirm, choose, or acknowledge a high-impact action.
+
+- UI: bootstrap modal.
+- Behavior: blocks flow until explicit choice.
+- Examples:
+  - Destructive confirms (cancel batch, archive/expire inventory)
+  - Force-start with shortages
+  - Multi-step decisions
+- Shared helper: `window.showConfirmDialog(...)`
+- Optional shared input helper: `window.showPromptDialog(...)`
+
+### 4) Drawer modal (guided recovery)
+Use for recoverable, domain-specific errors requiring in-context fixes.
+
+- Contract: `drawer_payload` + `DrawerInterceptor` + `DrawerProtocol`.
+- See `WALL_OF_DRAWERS_PROTOCOL.md`.
+
+### 5) Native browser dialog (`alert`, `confirm`) (restricted)
+Do not use in standard feature paths.
+
+- Allowed only as emergency fallback for confirm/prompt when UI framework is unavailable.
+- Must include TODO for migration.
+- Legacy `alert(...)` compatibility shimming has been retired; source flows should call shared helpers directly.
+
+### 6) System status response (HTTP/API/security)
+Use for request-level failures where the transport/status code is the primary signal (not a page-level toast).
+
+- UI/API:
+  - Full-page status templates for direct navigation failures (`404`/`500`/`503`).
+  - JSON payloads for API/XHR limit/error/security cases (`403`/`429`/`5xx`).
+- Behavior: deterministic status code + concise user-safe message; client may map JSON errors to inline alerts/modals.
+- Examples:
+  - Rate-limit/quota exhausted payloads
+  - Bot/security blocked responses
+  - BatchBot quota and upstream failure responses
+
+## Decision Matrix
+- Need a user decision before continuing? -> **Modal**.
+- Informational/success/error with no decision? -> **Inline alert**.
+- Very short "completed" feedback? -> **Toast**.
+- Recoverable domain error with guided fix? -> **Drawer modal**.
+- Is this a request/transport status failure (`403`/`404`/`429`/`5xx`)? -> **System status response** first, then map to UI if needed.
+- Never choose native dialogs unless hard fallback is required.
+
+## Implementation Process for New Work
+1. Classify message intent (info/success/warn/error/decision/recovery).
+2. Choose type from Decision Matrix.
+3. Use existing shared pathway:
+   - Server -> `flash(...)` + global flash renderer.
+   - Client -> shared notification helper.
+   - Recovery flow -> drawer protocol.
+4. Set severity copy:
+   - `success`: completion and next state.
+   - `warning`: user can continue with caution.
+   - `error`: failed action + clear next step.
+5. Avoid adding module-specific one-off helpers unless justified.
+6. If a module needs custom behavior, document rationale in the module and in system docs.
+
+## Migration Priorities
+- **P1:** Replace native `alert()` and `confirm()` in production-planning, batch, drawer fallback, and destructive inventory flows.
+- **P2:** Consolidate duplicated module-local helpers into one shared client helper.
+- **P3:** Keep server flash sources; standardize copy and categories over time.
+
+## Review Checklist (for PRs)
+- No new native `alert()` or `confirm()` calls added.
+- Correct type chosen (inline alert/toast/modal/drawer).
+- Error messages include actionable next step.
+- If backend uses `flash`, category is explicit and mapped to Bootstrap class.
+- Documentation updated when adding a new notification pattern.
+- Run `python3 scripts/validate_notification_primitives.py --base-ref <base_ref>` in finalization to block new raw dialog primitives.
+
+## Reference Implementation Points
+- Global flash renderer: `app/templates/components/layout/content_chrome.html`
+- Global helper baseline: `app/static/js/main.js` (`window.showAlert`, `window.showToast`, `window.showConfirmDialog`)
+- Extended global helpers: `app/static/js/main.js` (`window.showPromptDialog`, `window.openWindowOrNotify`, declarative `data-confirm-message` handling)
+- Drawer protocol: `app/static/js/core/DrawerProtocol.js`
+- Drawer UX spec: `docs/system/WALL_OF_DRAWERS_PROTOCOL.md`
+
+## Current Migration Status
+- Phase 1 implemented: ALRT-001 through ALRT-010 converted to shared in-app notifications/confirmations and removed direct native `alert()`/`confirm()` calls in those source paths.
+- Phase 2 implemented: ALRT-011 through ALRT-030 converted to shared in-app notifications/confirmations, local notification helpers were routed to shared global helpers, and duplicate local flash renderers were removed from login/units templates.
+- Phase 3 implemented: ALRT-031 through ALRT-040 verified server-side flash usage in backend route modules and normalized implicit/default-category flashes to explicit categories where needed.
+- Phase 4 implemented: ALRT-041 through ALRT-050 verified and normalized backend auth/onboarding/library/bulk-stock flash callsites so all flash severity categories are explicit and consistently rendered.
+- Phase 5 implemented: ALRT-051 through ALRT-069 verified and normalized remaining backend inventory/developer/batches flash callsites so all checklist flash sources now use explicit severity categories.
+- Phase 6 implemented: ALRT-070 through ALRT-080 cataloged and normalized system-level notification surfaces (global error handlers/pages, shared verification/upgrade overlays, and API/security/rate-limit payload responses).
+- Phase 7 implemented: ALRT-081 through ALRT-087 normalized remaining native dialog usage through shared prompt/confirm infrastructure and added a diff-based guard to prevent new raw native dialog primitives from being introduced.
+- Phase 8 implemented: ALRT-088 removed remaining source-template native `alert(...)` callsites, migrated those flows to `window.showAlert(...)`, and retired `main.js` alert-shim installation.

@@ -54,10 +54,10 @@ document.getElementById('acknowledgeBtn').addEventListener('click', async functi
       if (modal) modal.hide();
       window.dispatchEvent(new CustomEvent('retention.acknowledged', { detail: { queued: data.queued } }));
     } else {
-      alert('Error: ' + (data.error || 'Failed to acknowledge'));
+      window.showAlert('Error: ' + (data.error || 'Failed to acknowledge'));
     }
   } catch (e) {
-    alert('Network error');
+    window.showAlert('Network error');
   }
 });
 setTimeout(() => {

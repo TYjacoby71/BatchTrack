@@ -17,7 +17,7 @@
   async createTimer() {
     const totalSeconds = this.calculateTotalSeconds();
     if (totalSeconds < 1) {
-      alert('Please enter a valid duration');
+      window.showAlert('Please enter a valid duration');
       return;
     }
 

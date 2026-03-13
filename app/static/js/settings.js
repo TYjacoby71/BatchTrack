@@ -1,6 +1,14 @@
 // Settings functionality moved to Alpine.js in the template
 // This file is no longer needed
 
+function notify(type, message) {
+    if (typeof window.showAlert === 'function') {
+        window.showAlert(type, message);
+        return;
+    }
+    console.log(`[${type}] ${message}`);
+}
+
 // Bulk save all containers
     async function saveAllContainers() {
         const containers = [];
@@ -25,7 +33,7 @@
         });
 
         if (containers.length === 0) {
-            alert('No containers to update');
+            notify('warning', 'No containers to update.');
             return;
         }
 
@@ -42,14 +50,14 @@
             const result = await response.json();
 
             if (response.ok) {
-                alert(`Successfully updated ${result.updated_count} containers`);
+                notify('success', `Successfully updated ${result.updated_count} containers.`);
                 location.reload(); // Refresh to show updated data
             } else {
                 throw new Error(result.error || 'Update failed');
             }
         } catch (error) {
             console.error('Container save error:', error);
-            alert('Failed to update containers: ' + error.message);
+            notify('danger', `Failed to update containers: ${error.message}`);
         }
     }
 

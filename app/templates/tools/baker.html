@@ -126,7 +126,7 @@
     const flour = parseFloat(f.flour_g.value||'0');
     const water = parseFloat(f.water_pct.value||'0');
     const salt = parseFloat(f.salt_pct.value||'0');
-    if (!(flour>0)) { alert('Enter flour grams'); return; }
+    if (!(flour>0)) { window.showAlert('Enter flour grams'); return; }
     const waterG = flour * (water/100);
     const saltG = flour * (salt/100);
     const out = `Water: ${round(waterG)} g, Salt: ${round(saltG)} g`;

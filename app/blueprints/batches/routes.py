@@ -228,7 +228,7 @@ def set_column_visibility():
         logger.warning("Suppressed exception fallback at app/blueprints/batches/routes.py:227", exc_info=True)
         db.session.rollback()
         logger.exception("Failed to persist batch column visibility preferences")
-    flash("Column preferences updated")
+    flash("Column preferences updated.", "success")
     return redirect(url_for("batches.list_batches"))
 
 

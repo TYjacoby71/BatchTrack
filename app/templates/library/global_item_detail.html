@@ -245,7 +245,7 @@ function submitVendorSignup() {
   
   // Validate required fields
   if (!data.company_name || !data.contact_name || !data.email) {
-    alert('Please fill in all required fields.');
+    window.showAlert('Please fill in all required fields.');
     return;
   }
   
@@ -260,16 +260,16 @@ function submitVendorSignup() {
   .then(response => response.json())
   .then(result => {
     if (result.success) {
-      alert('Thank you for your interest! We\'ll be in touch soon.');
+      window.showAlert('Thank you for your interest! We\'ll be in touch soon.');
       bootstrap.Modal.getInstance(document.getElementById('vendorSignupModal')).hide();
       form.reset();
     } else {
-      alert('Something went wrong. Please try again.');
+      window.showAlert('Something went wrong. Please try again.');
     }
   })
   .catch(error => {
     console.error('Error:', error);
-    alert('Something went wrong. Please try again.');
+    window.showAlert('Something went wrong. Please try again.');
   });
 }
 </script>

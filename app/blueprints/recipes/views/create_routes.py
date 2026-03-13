@@ -244,7 +244,8 @@ def new_recipe():
                         flash(
                             "Added {} new inventory item(s) from this recipe: {}".format(
                                 len(created_names), ", ".join(created_names)
-                            )
+                            ),
+                            "info",
                         )
                 except Exception:
                     logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:248", exc_info=True)
@@ -429,7 +430,7 @@ def create_variation(recipe_id):
                 if target_status == "draft":
                     flash("Variation saved as a draft.", "info")
                 else:
-                    flash("Recipe variation created successfully.")
+                    flash("Recipe variation created successfully.", "success")
                 return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
 
             error_message, missing_fields = parse_service_error(result)
@@ -684,7 +685,7 @@ def edit_recipe(recipe_id):
                 if target_status == "draft":
                     flash("Recipe saved as a draft.", "info")
                 else:
-                    flash("Recipe updated successfully.")
+                    flash("Recipe updated successfully.", "success")
                 return redirect(url_for("recipes.view_recipe", recipe_id=recipe.id))
             else:
                 error_message, missing_fields = parse_service_error(result)

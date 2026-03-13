@@ -225,7 +225,7 @@ def login():
     except Exception as exc:
         logger.exception("Login form validation failed: %s", exc)
         _log_loadtest_login_context("form_validation_error", {"error": str(exc)})
-        flash("Unable to process login right now. Please try again.")
+        flash("Unable to process login right now. Please try again.", "error")
         return _render_login_page(503)
 
     if form_is_valid:
@@ -233,7 +233,7 @@ def login():
         password = request.form.get("password")
 
         if not login_identifier or not password:
-            flash("Please provide both email/username and password")
+            flash("Please provide both email/username and password.", "error")
             return _render_login_page()
 
         try:
@@ -254,7 +254,7 @@ def login():
             _log_loadtest_login_context(
                 "db_query_error", {"identifier": login_identifier}
             )
-            flash("Login temporarily unavailable. Please try again.")
+            flash("Login temporarily unavailable. Please try again.", "error")
             return _render_login_page(503)
 
         if login_identifier and login_identifier.startswith("[REDACTED]"):
@@ -284,7 +284,7 @@ def login():
             _log_loadtest_login_context(
                 "password_check_error", {"identifier": login_identifier}
             )
-            flash("Login temporarily unavailable. Please try again.")
+            flash("Login temporarily unavailable. Please try again.", "error")
             return _render_login_page(503)
 
         lockout_state = LoginLockoutService.is_locked(
@@ -305,7 +305,7 @@ def login():
                 _log_loadtest_login_context(
                     "inactive_user", {"identifier": login_identifier}
                 )
-                flash("Account is inactive. Please contact administrator.")
+                flash("Account is inactive. Please contact administrator.", "error")
                 return _render_login_page()
 
             if user.user_type != "developer":
@@ -330,7 +330,7 @@ def login():
                             "billing_reason": billing_decision.reason,
                         },
                     )
-                    flash(billing_decision.message)
+                    flash(billing_decision.message, "error")
                     return _render_login_page()
 
             if user.user_type != "developer" and user.email and not user.email_verified:
@@ -404,7 +404,7 @@ def login():
                 _log_loadtest_login_context(
                     "db_commit_error", {"identifier": login_identifier}
                 )
-                flash("Login temporarily unavailable. Please try again.")
+                flash("Login temporarily unavailable. Please try again.", "error")
                 return _render_login_page(503)
 
             AnalyticsTrackingService.track_user_login_succeeded(
@@ -455,7 +455,7 @@ def login():
             )
             return redirect(url_for("auth.forgot_password"))
         else:
-            flash("Invalid email/username or password")
+            flash("Invalid email/username or password.", "error")
         return _render_login_page()
 
     return _render_login_page()

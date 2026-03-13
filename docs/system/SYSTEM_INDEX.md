@@ -27,6 +27,7 @@ This directory is the curated reference library for every master document that e
 ## Developer Workflow & Operations
 
 - **[DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)** – How to build and extend features safely
+- **[NOTIFICATION_UX_STANDARD.md](NOTIFICATION_UX_STANDARD.md)** – Notification type taxonomy, decision matrix, and implementation process
 - **[OPERATIONS_AND_FAQ.md](OPERATIONS_AND_FAQ.md)** – Operations companion and commonly asked questions
 - **[deploy_migration_guide.md](deploy_migration_guide.md)** – Production deployment and migration checklist
 - **[WALL_OF_DRAWERS_PROTOCOL.md](WALL_OF_DRAWERS_PROTOCOL.md)** – Error handling UX pattern for recoverable issues

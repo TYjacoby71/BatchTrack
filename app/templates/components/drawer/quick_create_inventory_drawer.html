@@ -274,7 +274,7 @@
                     const instance = bootstrap.Modal.getInstance(modalEl);
                     if (instance) instance.hide();
                 } catch (e) {
-                    alert(e.message || 'Failed to create');
+                    window.showAlert(e.message || 'Failed to create');
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<i class="fas fa-save"></i> Create';

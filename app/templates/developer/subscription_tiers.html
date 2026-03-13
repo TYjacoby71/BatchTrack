@@ -341,13 +341,22 @@ function confirmDelete(tierKey, tierName) {
         const modal = new bootstrap.Modal(deleteModal);
         modal.show();
     } else {
-        // Fallback to simple confirm
-        if (confirm(`Are you sure you want to delete the "${tierName}" tier? This cannot be undone.`)) {
+        const fallbackMessage = `Are you sure you want to delete the "${tierName}" tier? This cannot be undone.`;
+        const request = (typeof window.showConfirmDialog === 'function')
+            ? window.showConfirmDialog({
+                title: 'Delete tier',
+                message: fallbackMessage,
+                confirmText: 'Delete tier',
+                confirmVariant: 'danger'
+            })
+            : Promise.resolve(true);
+        request.then((confirmed) => {
+            if (!confirmed) return;
             const form = document.getElementById('deleteForm' + tierKey);
             if (form) {
                 form.submit();
             }
-        }
+        });
     }
 }
 
@@ -363,12 +372,12 @@ function syncTier(tierKey) {
         if (data.success) {
             location.reload();
         } else {
-            alert('Sync failed: ' + data.message);
+            window.showAlert('Sync failed: ' + data.message);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Sync failed: Network error');
+        window.showAlert('Sync failed: Network error');
     });
 }
 </script>

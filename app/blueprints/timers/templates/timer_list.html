@@ -232,7 +232,7 @@ document.addEventListener('alpine:init', () => {
                           parseInt(this.seconds || 0);
 
       if (totalSeconds < 1) {
-        alert('Please enter a valid duration');
+        window.showAlert('Please enter a valid duration');
         return;
       }
 
@@ -254,15 +254,23 @@ document.addEventListener('alpine:init', () => {
         if (result.status === 'success') {
           location.reload();
         } else {
-          alert('Failed to create timer');
+          window.showAlert('Failed to create timer');
         }
       } catch (error) {
-        alert('Error creating timer: ' + error.message);
+        window.showAlert('Error creating timer: ' + error.message);
       }
     },
 
     async deleteTimer(timerId) {
-      if (!confirm('Are you sure you want to delete this timer?')) return;
+      const confirmed = (typeof window.showConfirmDialog === 'function')
+        ? await window.showConfirmDialog({
+            title: 'Delete timer',
+            message: 'Are you sure you want to delete this timer?',
+            confirmText: 'Delete timer',
+            confirmVariant: 'danger'
+          })
+        : window.confirm('Are you sure you want to delete this timer?');
+      if (!confirmed) return;
 
       try {
         const response = await fetch(`/timers/delete/${timerId}`, {
@@ -278,7 +286,7 @@ document.addEventListener('alpine:init', () => {
           this.timer_summary.active_count--;
         }
       } catch (error) {
-        alert('Error deleting timer: ' + error.message);
+        window.showAlert('Error deleting timer: ' + error.message);
       }
     },
 
@@ -304,7 +312,7 @@ document.addEventListener('alpine:init', () => {
           this.timer_summary.completed_count++;
         }
       } catch (error) {
-        alert('Error completing timer: ' + error.message);
+        window.showAlert('Error completing timer: ' + error.message);
       }
     }
   }));

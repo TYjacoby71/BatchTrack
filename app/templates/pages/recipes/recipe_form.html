@@ -859,9 +859,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.querySelectorAll('[data-nav-warning="true"]').forEach(function(el) {
-        el.addEventListener('click', function(event) {
+        el.addEventListener('click', async function(event) {
             if (formDirty) {
-                const confirmLeave = confirm('You have unsaved changes. Save before leaving or data may be lost.');
+                const confirmLeave = (typeof window.showConfirmDialog === 'function')
+                    ? await window.showConfirmDialog({
+                        title: 'Unsaved changes',
+                        message: 'You have unsaved changes. Save before leaving or data may be lost.',
+                        confirmText: 'Leave page',
+                        confirmVariant: 'warning'
+                    })
+                    : window.confirm('You have unsaved changes. Save before leaving or data may be lost.');
                 if (!confirmLeave) {
                     event.preventDefault();
                 }
@@ -1130,7 +1137,7 @@ function openQuickCreateUnit() {
     window.dispatchEvent(new CustomEvent('openDrawer', { detail: detail }));
 }
 
-function confirmDelete(recipeId, isVariation, variationCount) {
+async function confirmDelete(recipeId, isVariation, variationCount) {
     let msg;
     if (isVariation) {
         msg = 'Are you sure you want to delete this variation?';
@@ -1140,7 +1147,15 @@ function confirmDelete(recipeId, isVariation, variationCount) {
         msg = 'Are you sure you want to delete this recipe?';
     }
 
-    if (confirm(msg)) {
+    const confirmed = (typeof window.showConfirmDialog === 'function')
+        ? await window.showConfirmDialog({
+            title: 'Delete recipe',
+            message: msg,
+            confirmText: 'Delete',
+            confirmVariant: 'danger'
+        })
+        : window.confirm(msg);
+    if (confirmed) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/recipes/${recipeId}/delete`;

@@ -8,7 +8,7 @@
             <h1>Configure SKU Merge</h1>
             <p class="text-muted">Choose which attributes to keep from each SKU. History and reservations will be merged automatically.</p>
             
-            <form method="POST" action="{{ url_for('sku.execute_merge') }}" id="merge-execute-form">
+            <form method="POST" action="{{ url_for('sku.execute_merge') }}" id="merge-execute-form" data-confirm-message="Are you sure you want to merge these SKUs? This action cannot be undone." data-confirm-title="Execute SKU merge" data-confirm-variant="danger">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <!-- Hidden inputs for SKU IDs -->
                 {% for sku in skus %}
@@ -102,7 +102,7 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to merge these SKUs? This action cannot be undone.')">
+                        <button type="submit" class="btn btn-danger">
                             Execute Merge
                         </button>
                         <a href="{{ url_for('sku.select_skus_to_merge') }}" class="btn btn-secondary">Back</a>

@@ -137,11 +137,11 @@ function getCSRFToken() {
 
 // Utility function to show notifications
 function showNotification(message, type = 'info') {
-    // Try to use existing notification system, fallback to alert
-    if (typeof showAlert === 'function') {
-        showAlert(message, type);
-    } else if (typeof alert === 'function') {
-        alert(message);
+    // Try to use shared notification system.
+    if (typeof window.showToast === 'function') {
+        window.showToast(message, { type });
+    } else if (typeof window.showAlert === 'function') {
+        window.showAlert(type, message);
     } else {
         console.log(`${type.toUpperCase()}: ${message}`);
     }
