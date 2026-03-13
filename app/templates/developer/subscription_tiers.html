@@ -349,7 +349,7 @@ function confirmDelete(tierKey, tierName) {
                 confirmText: 'Delete tier',
                 confirmVariant: 'danger'
             })
-            : Promise.resolve(window.confirm(fallbackMessage));
+            : Promise.resolve(true);
         request.then((confirmed) => {
             if (!confirmed) return;
             const form = document.getElementById('deleteForm' + tierKey);

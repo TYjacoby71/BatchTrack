@@ -117,6 +117,9 @@ def main() -> int:
     violations: list[str] = []
 
     for path, line_no, line in added_lines:
+        if path.startswith("app/static/dist/"):
+            # Dist assets are generated output and mirror source behavior.
+            continue
         stripped = line.strip()
         if stripped.startswith("//"):
             continue

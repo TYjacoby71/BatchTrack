@@ -160,6 +160,14 @@ async function requestConfirmation(options) {
     return window.confirm(options.message || 'Are you sure?');
 }
 
+function notify(type, message) {
+    if (typeof window.showAlert === 'function') {
+        window.showAlert(type, message);
+    } else {
+        console[type === 'danger' ? 'error' : 'log'](message);
+    }
+}
+
 async function confirmSale(orderId) {
     const confirmed = await requestConfirmation({
         title: 'Confirm sale',
@@ -180,15 +188,15 @@ async function confirmSale(orderId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
+            notify('success', data.message);
             refreshReservations();
         } else {
-            alert('Error: ' + data.error);
+            notify('danger', 'Error: ' + data.error);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error confirming sale');
+        notify('danger', 'Error confirming sale');
     });
 }
 
@@ -217,15 +225,15 @@ async function releaseReservation(orderId) {
     })
     .then(data => {
         if (data.success) {
-            alert(data.message);
+            notify('success', data.message);
             refreshReservations();
         } else {
-            alert('Error: ' + data.error);
+            notify('danger', 'Error: ' + data.error);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error releasing reservation: ' + error);
+        notify('danger', 'Error releasing reservation: ' + error);
     });
 }
 
