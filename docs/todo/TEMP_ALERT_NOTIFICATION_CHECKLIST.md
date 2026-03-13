@@ -84,16 +84,27 @@ Audit current notification emitters, classify each source, assign priority, and 
 | ALRT-067 | Flask `flash()` sources in `app/blueprints/developer/views/masquerade_routes.py` (3) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
 | ALRT-068 | Flask `flash()` sources in `app/blueprints/developer/decorators.py` (1) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
 | ALRT-069 | Flask `flash()` sources in `app/blueprints/developer/addons.py` (8) | Server flash message (explicit categories validated) | Correct post-redirect messaging | done | P3 | Yes |
+| ALRT-070 | `app/resilience.py` global HTTP error handlers (`404`, `500`, DB `503`) | Structured HTTP error responses (HTML pages + JSON payloads) | Dedicated full-page/system error responses by status code | done | P3 | Yes |
+| ALRT-071 | `app/resilience.py` CSRF failure flow (`400` JSON or flash + redirect) | Context-aware API JSON error or server flash + 303 redirect | Same (API payload for XHR/API; flash+redirect for browser form flow) | done | P3 | Yes |
+| ALRT-072 | `app/templates/components/layout/content_chrome.html` global unverified-email reminder banner | Shared inline warning alert with CTA actions | Shared inline warning alert in layout chrome | done | P2 | Yes |
+| ALRT-073 | `app/templates/components/layout/overlay_modals.html` feature-gate upgrade modal | Shared blocking Bootstrap modal | Shared blocking modal for plan-gated actions | done | P2 | Yes |
+| ALRT-074 | `app/templates/components/layout/overlay_modals.html` verification-required modal | Shared blocking Bootstrap modal (`static` backdrop) | Shared blocking modal for account-verification lock flow | done | P2 | Yes |
+| ALRT-075 | `app/blueprints/tools/routes.py` tools draft quota-limit response (`429`, `limit_reached`) | Structured API quota/rate-limit JSON payload | Structured API quota payload consumed by client notifications | done | P2 | Yes |
+| ALRT-076 | `app/blueprints/api/routes.py` BatchBot quota/service errors (`429`, `502`, `500`) | Structured API error JSON payloads | Structured API error payloads mapped to in-app UI messaging | done | P2 | Yes |
+| ALRT-077 | `app/static/js/tools/soaps/soap_tool_events_exports.js` pop-up-blocked print warning | Feature-local inline alert stack (`showSoapAlert`) | Inline warning alert for blocked browser pop-up action | done | P3 | Yes |
+| ALRT-078 | `app/templates/errors/404.html`, `app/templates/errors/500.html`, `app/templates/errors/maintenance.html` | Dedicated status-page card UI (not toast/inline flash) | Dedicated status-page UX for hard navigation/server faults | done | P3 | Yes |
+| ALRT-079 | `app/templates/billing/upgrade.html` debug-only billing status banner | Inline informational alert (`alert-info`) | Inline informational debug callout (dev-only) | done | P3 | Yes |
+| ALRT-080 | `app/middleware/registry.py` security/bot blocked responses (`403`) | Plain `403` text or JSON error payload (non-toast) | Security response payload/page (not standard toast/modal) | done | P3 | Yes |
 
 ## Compiled priority queue (from checklist)
 ### P1 (highest)
 - ALRT-001, ALRT-002, ALRT-003, ALRT-004, ALRT-005, ALRT-006, ALRT-007
 
 ### P2
-- ALRT-008, ALRT-009, ALRT-010, ALRT-011, ALRT-012, ALRT-013, ALRT-014, ALRT-015, ALRT-017, ALRT-018, ALRT-019, ALRT-021
+- ALRT-008, ALRT-009, ALRT-010, ALRT-011, ALRT-012, ALRT-013, ALRT-014, ALRT-015, ALRT-017, ALRT-018, ALRT-019, ALRT-021, ALRT-072, ALRT-073, ALRT-074, ALRT-075, ALRT-076
 
 ### P3
-- ALRT-016, ALRT-020, ALRT-022, ALRT-023, ALRT-024, ALRT-025, ALRT-026 through ALRT-069
+- ALRT-016, ALRT-020, ALRT-022, ALRT-023, ALRT-024, ALRT-025, ALRT-026 through ALRT-071, ALRT-077 through ALRT-080
 
 ## Notes
 - This list is generated from current source emitters (JS `alert`/`confirm`, JS notification helpers, and Python `flash` callsites).
@@ -103,3 +114,4 @@ Audit current notification emitters, classify each source, assign priority, and 
 - Phase-3 implementation pass complete for ALRT-031 through ALRT-040.
 - Phase-4 implementation pass complete for ALRT-041 through ALRT-050.
 - Phase-5 implementation pass complete for ALRT-051 through ALRT-069.
+- Phase-6 inventory extension complete for ALRT-070 through ALRT-080 (system-level handlers, shared overlays, and API quota/error payload surfaces).

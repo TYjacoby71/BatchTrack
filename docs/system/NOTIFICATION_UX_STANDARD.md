@@ -52,11 +52,24 @@ Do not use in standard feature paths.
 - Allowed only as emergency fallback when UI framework is unavailable.
 - Must include TODO for migration.
 
+### 6) System status response (HTTP/API/security)
+Use for request-level failures where the transport/status code is the primary signal (not a page-level toast).
+
+- UI/API:
+  - Full-page status templates for direct navigation failures (`404`/`500`/`503`).
+  - JSON payloads for API/XHR limit/error/security cases (`403`/`429`/`5xx`).
+- Behavior: deterministic status code + concise user-safe message; client may map JSON errors to inline alerts/modals.
+- Examples:
+  - Rate-limit/quota exhausted payloads
+  - Bot/security blocked responses
+  - BatchBot quota and upstream failure responses
+
 ## Decision Matrix
 - Need a user decision before continuing? -> **Modal**.
 - Informational/success/error with no decision? -> **Inline alert**.
 - Very short "completed" feedback? -> **Toast**.
 - Recoverable domain error with guided fix? -> **Drawer modal**.
+- Is this a request/transport status failure (`403`/`404`/`429`/`5xx`)? -> **System status response** first, then map to UI if needed.
 - Never choose native dialogs unless hard fallback is required.
 
 ## Implementation Process for New Work
@@ -97,3 +110,4 @@ Do not use in standard feature paths.
 - Phase 3 implemented: ALRT-031 through ALRT-040 verified server-side flash usage in backend route modules and normalized implicit/default-category flashes to explicit categories where needed.
 - Phase 4 implemented: ALRT-041 through ALRT-050 verified and normalized backend auth/onboarding/library/bulk-stock flash callsites so all flash severity categories are explicit and consistently rendered.
 - Phase 5 implemented: ALRT-051 through ALRT-069 verified and normalized remaining backend inventory/developer/batches flash callsites so all checklist flash sources now use explicit severity categories.
+- Phase 6 implemented: ALRT-070 through ALRT-080 cataloged and normalized system-level notification surfaces (global error handlers/pages, shared verification/upgrade overlays, and API/security/rate-limit payload responses).
