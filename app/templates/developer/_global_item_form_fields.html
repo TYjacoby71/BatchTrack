@@ -299,7 +299,7 @@
         <label class="form-label">Default Unit</label>
         <select name="default_unit" class="form-select">
           <option value="">Select Unit</option>
-          {% for unit in get_global_unit_list() %}
+          {% for unit in units %}
             <option value="{{ unit.name }}" {% if default_unit_value == unit.name %}selected{% endif %}>{{ unit.name }}</option>
           {% endfor %}
         </select>
@@ -326,7 +326,7 @@
         <label class="form-label">Capacity Unit</label>
         <select name="capacity_unit" class="form-select">
           <option value="">Select Unit</option>
-          {% for unit in get_global_unit_list() %}
+          {% for unit in units %}
             <option value="{{ unit.name }}" {% if capacity_unit_value == unit.name %}selected{% endif %}>
               {{ unit.name }}
             </option>
