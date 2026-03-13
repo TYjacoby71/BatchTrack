@@ -1,5 +1,3 @@
-{% from 'components/tools/_tool_feature_card.html' import render_tool_feature_card %}
-
 <!-- Free Tools Section -->
 <section id="free-tools" class="py-5 border-bottom">
     <div class="container">
@@ -14,8 +12,45 @@
         <div class="d-none d-md-block">
             <div class="row justify-content-center">
                 {% for tool in desktop_cards %}
+                {% set tool_is_enabled = (tool.is_enabled if tool.is_enabled is defined else true) %}
+                {% set tool_href = (url_for(tool.route_endpoint) if tool_is_enabled else url_for('waitlist.waitlist_landing', waitlist_key='tools.' ~ tool.slug, source='homepage_tool_card')) %}
                 <div class="col-lg-4 col-md-6 mb-4 homepage-card-col">
-                    {{ render_tool_feature_card(tool, 'homepage_tool_card') }}
+                    <a class="tool-feature-card-shell tool-feature-card-link{% if not tool_is_enabled %} is-fallback{% endif %}" href="{{ tool_href }}">
+                        <div class="card feature-card h-100">
+                            <div class="card-body text-center">
+                                <h3 class="card-title h5 mb-3">{{ tool.name }}</h3>
+                                <div class="placeholder-img tool-slot-media mb-3{% if tool.media %} has-media{% endif %}">
+                                    {% if tool.media %}
+                                        {% if tool.media.kind == 'video' %}
+                                    <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
+                                        <source src="{{ static_asset(tool.media.path) }}">
+                                    </video>
+                                        {% elif tool.media.kind == 'youtube' and tool.media.embed_url %}
+                                    <iframe
+                                        class="tool-slot-video media-embed-frame"
+                                        src="{{ tool.media.embed_url }}"
+                                        title="{{ tool.name }} preview video"
+                                        loading="lazy"
+                                        referrerpolicy="strict-origin-when-cross-origin"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowfullscreen
+                                    ></iframe>
+                                        {% else %}
+                                    <img src="{{ static_asset(tool.media.path) }}" class="tool-slot-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
+                                    {% endif %}
+                                </div>
+                                <p class="card-text">{{ tool.summary }}</p>
+                                {% if tool_is_enabled %}
+                                <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
+                                {% else %}
+                                <span class="tool-feature-card-cta">Join Waitlist <span aria-hidden="true">&rarr;</span></span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
                 </div>
                 {% endfor %}
             </div>
@@ -32,7 +67,38 @@
                 <div class="carousel-inner">
                     {% for tool in homepage_tool_cards %}
                     <div class="carousel-item {% if loop.first %}active{% endif %}">
-                        {{ render_tool_feature_card(tool, 'homepage_tool_card') }}
+                        <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(tool.route_endpoint) }}">
+                            <div class="card feature-card h-100">
+                                <div class="card-body text-center">
+                                    <h3 class="card-title h5 mb-3">{{ tool.name }}</h3>
+                                    <div class="placeholder-img tool-slot-media mb-3{% if tool.media %} has-media{% endif %}">
+                                        {% if tool.media %}
+                                            {% if tool.media.kind == 'video' %}
+                                        <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ tool.name }} preview">
+                                            <source src="{{ static_asset(tool.media.path) }}">
+                                        </video>
+                                            {% elif tool.media.kind == 'youtube' and tool.media.embed_url %}
+                                        <iframe
+                                            class="tool-slot-video media-embed-frame"
+                                            src="{{ tool.media.embed_url }}"
+                                            title="{{ tool.name }} preview video"
+                                            loading="lazy"
+                                            referrerpolicy="strict-origin-when-cross-origin"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                            allowfullscreen
+                                        ></iframe>
+                                            {% else %}
+                                        <img src="{{ static_asset(tool.media.path) }}" class="tool-slot-image" alt="{{ tool.name }}" loading="lazy" decoding="async">
+                                            {% endif %}
+                                        {% else %}
+                                        <span class="feature-icon" aria-hidden="true">{{ tool.icon }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="card-text">{{ tool.summary }}</p>
+                                    <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
+                                </div>
+                            </div>
+                        </a>
                     </div>
                     {% endfor %}
                 </div>
@@ -45,7 +111,38 @@
             </div>
             {% else %}
             {% set single_tool = homepage_tool_cards[0] %}
-            {{ render_tool_feature_card(single_tool, 'homepage_tool_card') }}
+            <a class="tool-feature-card-shell tool-feature-card-link" href="{{ url_for(single_tool.route_endpoint) }}">
+                <div class="card feature-card h-100 mb-4">
+                    <div class="card-body text-center">
+                        <h3 class="card-title h5 mb-3">{{ single_tool.name }}</h3>
+                        <div class="placeholder-img tool-slot-media mb-3{% if single_tool.media %} has-media{% endif %}">
+                            {% if single_tool.media %}
+                                {% if single_tool.media.kind == 'video' %}
+                            <video class="tool-slot-video" autoplay muted loop playsinline preload="metadata" aria-label="{{ single_tool.name }} preview">
+                                <source src="{{ static_asset(single_tool.media.path) }}">
+                            </video>
+                                {% elif single_tool.media.kind == 'youtube' and single_tool.media.embed_url %}
+                            <iframe
+                                class="tool-slot-video media-embed-frame"
+                                src="{{ single_tool.media.embed_url }}"
+                                title="{{ single_tool.name }} preview video"
+                                loading="lazy"
+                                referrerpolicy="strict-origin-when-cross-origin"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen
+                            ></iframe>
+                                {% else %}
+                            <img src="{{ static_asset(single_tool.media.path) }}" class="tool-slot-image" alt="{{ single_tool.name }}" loading="lazy" decoding="async">
+                                {% endif %}
+                            {% else %}
+                            <span class="feature-icon" aria-hidden="true">{{ single_tool.icon }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="card-text">{{ single_tool.summary }}</p>
+                        <span class="tool-feature-card-cta">Open Tool <span aria-hidden="true">&rarr;</span></span>
+                    </div>
+                </div>
+            </a>
             {% endif %}
         </div>
         {% else %}

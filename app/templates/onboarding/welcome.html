@@ -153,7 +153,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ) ? window.BTAnalyticsEvents : null;
     const googleAdsConversionId = {{ (google_ads_conversion_id or '')|tojson }};
     const googleAdsPurchaseConversionLabel = {{ (google_ads_purchase_conversion_label or '')|tojson }};
-    const metaPixelId = {{ (meta_pixel_id or '')|tojson }};
     const googleAdsSendTo = (googleAdsConversionId && googleAdsPurchaseConversionLabel)
         ? `${googleAdsConversionId}/${googleAdsPurchaseConversionLabel}`
         : null;
@@ -249,24 +248,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             runOncePerTransaction('google_ads_conversion', function() {
                 window.gtag('event', 'conversion', adsConversionPayload);
-            });
-        }
-        if (metaPixelId && typeof window.fbq === 'function') {
-            const metaPurchasePayload = {
-                currency: normalizedCurrency
-            };
-            if (hasValue) {
-                metaPurchasePayload.value = normalizedValue;
-            }
-            if (transactionId) {
-                metaPurchasePayload.order_id = transactionId;
-            }
-            if (tierId) {
-                metaPurchasePayload.content_ids = [String(tierId)];
-                metaPurchasePayload.content_type = 'product';
-            }
-            runOncePerTransaction('meta_pixel_purchase', function() {
-                window.fbq('track', 'Purchase', metaPurchasePayload);
             });
         }
 

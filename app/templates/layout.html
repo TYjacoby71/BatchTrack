@@ -34,7 +34,6 @@ Glossary:
       {% set ga_measurement_id = (config.get('GOOGLE_ANALYTICS_MEASUREMENT_ID') or '').strip() %}
       {% set google_ads_conversion_id = (config.get('GOOGLE_ADS_CONVERSION_ID') or '').strip() %}
       {% set google_ads_purchase_conversion_label = (config.get('GOOGLE_ADS_PURCHASE_CONVERSION_LABEL') or '').strip() %}
-      {% set meta_pixel_id = (config.get('META_PIXEL_ID') or '').strip() %}
       {% set posthog_api_key = (config.get('POSTHOG_PROJECT_API_KEY') or '').strip() %}
       {% set posthog_host = (config.get('POSTHOG_HOST') or 'https://us.i.posthog.com').rstrip('/') %}
       {% set posthog_capture_pageview = config.get('POSTHOG_CAPTURE_PAGEVIEW', true) %}
@@ -43,7 +42,6 @@ Glossary:
       {% set ga_measurement_id = '' %}
       {% set google_ads_conversion_id = '' %}
       {% set google_ads_purchase_conversion_label = '' %}
-      {% set meta_pixel_id = '' %}
       {% set posthog_api_key = '' %}
       {% endif %}
       <title>{{ resolved_title }}</title>

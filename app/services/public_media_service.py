@@ -436,15 +436,11 @@ def get_homepage_media_slots() -> Dict[str, Dict[str, str] | None]:
                 allow_videos=True,
             )
         else:
-            resolved_slot = resolve_first_media_from_folder(
+            slots[slot_key] = resolve_first_media_from_folder(
                 folder,
                 allow_images=True,
                 allow_videos=True,
             )
-            # Keep the final CTA populated even when its folder is empty.
-            if slot_key == "final-cta-primary" and resolved_slot is None:
-                resolved_slot = slots.get("hero-primary")
-            slots[slot_key] = resolved_slot
     return slots
 
 

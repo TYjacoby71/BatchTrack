@@ -1,13 +1,34 @@
 {#
 Synopsis:
-Public maker-tools landing page with shared homepage-style tool cards.
+Public maker-tools landing page with live and upcoming tool tiles.
+
+Glossary:
+- Tool tile: A single launch card inside a category block.
+- Waitlist CTA: Email capture form for not-yet-released tools.
 #}
 {% extends 'layout.html' %}
-{% from 'components/tools/_tool_feature_card.html' import render_tool_feature_card %}
 {% set page_title = "BatchTrack.com | Free Maker Tools & Calculators" %}
 {% set page_description = "Free batch tools for makers: soap formulator live now, candle, cosmetic, and fermentation tools coming soon. Batch-first and neurodivergent-friendly." %}
 {% set canonical_url = url_for('tools_bp.tools_index', _external=True) %}
 
+{% macro waitlist_cta(waitlist_key, label) %}
+<div class="mt-3 pt-3 border-top">
+  <form class="tool-waitlist-form" data-waitlist-key="{{ waitlist_key }}">
+    <label class="form-label small mb-1 text-muted">{{ label }}</label>
+    <input type="text" class="bot-trap-field" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div class="input-group input-group-sm">
+      <input type="email" class="form-control" name="email" placeholder="you@example.com" required>
+      <button class="btn btn-outline-secondary" type="submit">
+        <span class="label-default">Notify me</span>
+        <span class="label-loading d-none">Sending...</span>
+      </button>
+    </div>
+    <div class="small text-muted mt-1" data-role="helper">No spam. We'll email when this tool opens.</div>
+    <div class="small text-success mt-1 d-none" data-role="success">You're on the list!</div>
+    <div class="small text-danger mt-1 d-none" data-role="error">Something went wrong. Try again?</div>
+  </form>
+</div>
+{% endmacro %}
 {% block content %}
 <div class="py-1 tools-index">
   <div class="tools-hero mb-4">
@@ -23,17 +44,183 @@ Public maker-tools landing page with shared homepage-style tool cards.
     </div>
   </div>
 
-  {% if tools_index_cards and tools_index_cards|length > 0 %}
-  <div class="row g-4 justify-content-center">
-    {% for tool in tools_index_cards %}
-    <div class="col-lg-4 col-md-6 homepage-card-col">
-      {{ render_tool_feature_card(tool, 'tools_index_card') }}
+  <div class="row g-3">
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100 tool-category-card">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h2 class="card-title h5 mb-1">Soap Tools</h2>
+              <p class="card-text small text-muted">Lye calculator, superfat, water %, oil profiles.</p>
+            </div>
+            {% if not tool_flags.soap %}
+            <span class="badge bg-secondary">Coming Soon</span>
+            {% endif %}
+          </div>
+          <div class="tool-tiles">
+            {% if tool_flags.soap %}
+            <a class="tool-tile" href="/tools/soap" aria-label="Open Soap Formulator">
+              <div class="tool-tile-body">
+                <div class="tool-tile-title">Soap Formulator</div>
+                <div class="tool-tile-meta small text-muted">Build formulas, review quality, and export recipes.</div>
+              </div>
+              <div class="tool-tile-icon text-muted" aria-hidden="true">&rarr;</div>
+            </a>
+            {% else %}
+            <div class="tool-tile tool-tile--disabled" aria-disabled="true">
+              <div class="tool-tile-body">
+                <div class="tool-tile-title">Soap Formulator</div>
+                <div class="tool-tile-meta small text-muted">Preview the calculator layout and join the waitlist.</div>
+              </div>
+              <span class="badge bg-light text-dark border">Coming Soon</span>
+            </div>
+            {{ waitlist_cta('tools.soap', 'Soap tools waitlist') }}
+            {% endif %}
+          </div>
+        </div>
+      </div>
     </div>
-    {% endfor %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100 tool-category-card">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h2 class="card-title h5 mb-1">Candle Tools</h2>
+              <p class="card-text small text-muted">Fragrance load, wax blend %, vessel sizing.</p>
+            </div>
+            {% if not tool_flags.candles %}
+            <span class="badge bg-secondary">Coming Soon</span>
+            {% endif %}
+          </div>
+          <div class="tool-tiles">
+            {% if tool_flags.candles %}
+            <a class="tool-tile" href="/tools/candles" aria-label="Open Candle Formulator">
+              <div class="tool-tile-body">
+                <div class="tool-tile-title">Candle Formulator</div>
+                <div class="tool-tile-meta small text-muted">Set wax ratios, fragrance load, and vessel math.</div>
+              </div>
+              <div class="tool-tile-icon text-muted" aria-hidden="true">&rarr;</div>
+            </a>
+            {% else %}
+            <div class="tool-tile tool-tile--disabled" aria-disabled="true">
+              <div class="tool-tile-body">
+                <div class="tool-tile-title">Candle Formulator</div>
+                <div class="tool-tile-meta small text-muted">See what’s shipping next—calculators land soon.</div>
+              </div>
+              <span class="badge bg-light text-dark border">Coming Soon</span>
+            </div>
+            {{ waitlist_cta('tools.candles', 'Candle tools waitlist') }}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100 tool-category-card">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h2 class="card-title h5 mb-1">Lotion & Cosmetic Tools</h2>
+              <p class="card-text small text-muted">Phase % calculator, preservative %, temps.</p>
+            </div>
+            {% if not tool_flags.lotions %}
+            <span class="badge bg-secondary">Coming Soon</span>
+            {% endif %}
+          </div>
+          <div class="tool-tiles">
+            {% if tool_flags.lotions %}
+            <a class="tool-tile" href="/tools/lotions" aria-label="Open Lotion Formulator">
+              <div class="tool-tile-body">
+                <div class="tool-tile-title">Lotion Formulator</div>
+                <div class="tool-tile-meta small text-muted">Plan phases, preservative targets, and temps.</div>
+              </div>
+              <div class="tool-tile-icon text-muted" aria-hidden="true">&rarr;</div>
+            </a>
+            {% else %}
+            <div class="tool-tile tool-tile--disabled" aria-disabled="true">
+              <div class="tool-tile-body">
+                <div class="tool-tile-title">Lotion Formulator</div>
+                <div class="tool-tile-meta small text-muted">Phase calculators and preservative planners arrive shortly.</div>
+              </div>
+              <span class="badge bg-light text-dark border">Coming Soon</span>
+            </div>
+            {{ waitlist_cta('tools.lotions', 'Lotion & cosmetics waitlist') }}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100 tool-category-card">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h2 class="card-title h5 mb-1">Herbalist Tools</h2>
+              <p class="card-text small text-muted">Tincture ratios, oil infusions, dilutions.</p>
+            </div>
+            {% if not tool_flags.herbal %}
+            <span class="badge bg-secondary">Coming Soon</span>
+            {% endif %}
+          </div>
+          <div class="tool-tiles">
+            {% if tool_flags.herbal %}
+            <a class="tool-tile" href="/tools/herbal" aria-label="Open Herbalist Formulator">
+              <div class="tool-tile-body">
+                <div class="tool-tile-title">Herbalist Formulator</div>
+                <div class="tool-tile-meta small text-muted">Plan tinctures, infusions, and dilutions.</div>
+              </div>
+              <div class="tool-tile-icon text-muted" aria-hidden="true">&rarr;</div>
+            </a>
+            {% else %}
+            <div class="tool-tile tool-tile--disabled" aria-disabled="true">
+              <div class="tool-tile-body">
+                <div class="tool-tile-title">Herbalist Formulator</div>
+                <div class="tool-tile-meta small text-muted">Tincture ratios and infusion helpers are in preview.</div>
+              </div>
+              <span class="badge bg-light text-dark border">Coming Soon</span>
+            </div>
+            {{ waitlist_cta('tools.herbal', 'Herbal tools waitlist') }}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100 tool-category-card">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h2 class="card-title h5 mb-1">Baker Tools</h2>
+              <p class="card-text small text-muted">Baker’s %, hydration, preferments, scaling.</p>
+            </div>
+            {% if not tool_flags.baker %}
+            <span class="badge bg-secondary">Coming Soon</span>
+            {% endif %}
+          </div>
+          <div class="tool-tiles">
+            {% if tool_flags.baker %}
+            <a class="tool-tile" href="/tools/baker" aria-label="Open Baker Formulator">
+              <div class="tool-tile-body">
+                <div class="tool-tile-title">Baker Formulator</div>
+                <div class="tool-tile-meta small text-muted">Scale dough, hydration, and preferments fast.</div>
+              </div>
+              <div class="tool-tile-icon text-muted" aria-hidden="true">&rarr;</div>
+            </a>
+            {% else %}
+            <div class="tool-tile tool-tile--disabled" aria-disabled="true">
+              <div class="tool-tile-body">
+                <div class="tool-tile-title">Baker Formulator</div>
+                <div class="tool-tile-meta small text-muted">Formula scaling and hydration helpers launch soon.</div>
+              </div>
+              <span class="badge bg-light text-dark border">Coming Soon</span>
+            </div>
+            {{ waitlist_cta('tools.baker', 'Baker tools waitlist') }}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  {% else %}
-  <p class="text-center text-muted mb-4">Free tools are not enabled right now. Check back soon.</p>
-  {% endif %}
 </div>
 <style>
 .tools-index {
@@ -79,118 +266,157 @@ Public maker-tools landing page with shared homepage-style tool cards.
   box-shadow: var(--shadow-1);
 }
 
-.feature-card {
-  border: none;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  transition: transform 0.3s;
-  margin-bottom: 30px;
+.tool-category-card {
+  border: 1px solid var(--color-border, #e6e9ef);
+  box-shadow: var(--shadow-1);
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface);
 }
 
-.feature-card:hover {
-  transform: translateY(-5px);
-}
-
-.tool-feature-card-shell {
-  display: block;
-  color: inherit;
-  text-decoration: none;
-  height: 100%;
-}
-
-.tool-feature-card-link:hover,
-.tool-feature-card-link:focus {
-  color: inherit;
-  text-decoration: none;
-}
-
-.tool-feature-card-shell .feature-card {
-  margin-bottom: 0;
-}
-
-.homepage-card-col {
-  display: flex;
-}
-
-.homepage-card-col > .tool-feature-card-shell {
+.tool-category-card::before {
+  content: '';
+  position: absolute;
+  top: var(--theme-ext-space-da36f4b27f);
+  left: var(--theme-ext-space-51c807580e);
+  height: 4px;
   width: 100%;
+  background: var(--color-border);
 }
 
-.tool-feature-card-shell.is-fallback .feature-card {
-  border: 1px solid rgba(108, 117, 125, 0.25);
+.tool-tiles {
+  display: grid;
+  gap: var(--theme-ext-space-ac314870d0);
 }
 
-.tool-feature-card-cta {
-  display: inline-flex;
+.tool-tile {
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
-  color: #0d6efd;
+  justify-content: space-between;
+  gap: var(--theme-ext-space-ac314870d0);
+  padding: var(--theme-ext-space-16c0d9f312);
+  border-radius: var(--theme-ext-radius-ef4e416e4e);
+  border: 1px solid var(--color-border, #e6e9ef);
+  background: var(--color-surface);
+  color: var(--theme-ext-color-cb5d7279ca);
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease;
+  border-left: 4px solid var(--color-primary);
+}
+
+.tool-tile:hover,
+.tool-tile:focus {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  text-decoration: none;
+}
+
+.tool-tile-title {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--theme-ext-size-ad1cdf8362);
 }
 
-.tool-feature-card-shell.is-fallback .tool-feature-card-cta {
-  color: #495057;
+.tool-tile-meta {
+  margin-top: var(--theme-ext-space-6166d0e813);
+  line-height: var(--theme-ext-size-cc5c27a52a);
 }
 
-.feature-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 3.25rem;
-  height: 3.25rem;
-  padding: 0 0.6rem;
-  border-radius: 999px;
-  border: 1px solid rgba(22, 32, 61, 0.2);
-  background: rgba(13, 110, 253, 0.08);
-  color: #0b2f6b;
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  line-height: 1;
+.tool-tile-icon {
+  color: var(--color-primary);
 }
 
-.placeholder-img {
-  background: var(--color-table-header-bg);
-  border: 2px dashed var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-muted);
-  min-height: 200px;
+.tool-tile--disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  border-left-color: var(--color-border);
 }
 
-.placeholder-img.has-media {
-  border: 1px solid rgba(22, 32, 61, 0.12);
-  background: #ffffff;
-  padding: 0;
-  min-height: 0;
-  height: auto;
-  overflow: visible;
-}
-
-.media-embed-frame {
-  border: 0;
-  display: block;
-}
-
-.tool-slot-media {
-  min-height: 0;
-  height: auto;
-  padding: 0 !important;
-  overflow: visible;
-}
-
-.tool-slot-image,
-.tool-slot-video {
-  width: 100%;
-  height: auto;
-  min-height: 0;
-  max-height: none;
-  object-fit: contain;
-  object-position: center center;
-  display: block;
-  margin: 0 auto;
-  border-radius: 0;
+.tool-tile--disabled:hover,
+.tool-tile--disabled:focus {
+  transform: none;
+  box-shadow: var(--theme-ext-shadow-e49af3bb5b);
+  border-color: var(--color-border, #e6e9ef);
+  background: var(--color-breadcrumb-bg, #f8f9fb);
 }
 </style>
+<script>
+(function(){
+  function toggleState(form, state){
+    const btn = form.querySelector('button[type="submit"]');
+    const helper = form.querySelector('[data-role="helper"]');
+    const success = form.querySelector('[data-role="success"]');
+    const error = form.querySelector('[data-role="error"]');
+    const defaultLabel = form.querySelector('.label-default');
+    const loadingLabel = form.querySelector('.label-loading');
+
+    if (state === 'loading'){
+      btn.disabled = true;
+      defaultLabel.classList.add('d-none');
+      loadingLabel.classList.remove('d-none');
+      success.classList.add('d-none');
+      error.classList.add('d-none');
+      helper.classList.remove('d-none');
+    } else {
+      btn.disabled = false;
+      defaultLabel.classList.remove('d-none');
+      loadingLabel.classList.add('d-none');
+    }
+
+    if (state === 'success'){
+      helper.classList.add('d-none');
+      success.classList.remove('d-none');
+      error.classList.add('d-none');
+    } else if (state === 'error'){
+      helper.classList.add('d-none');
+      success.classList.add('d-none');
+      error.classList.remove('d-none');
+    } else if (state === 'idle'){
+      helper.classList.remove('d-none');
+      success.classList.add('d-none');
+      error.classList.add('d-none');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.tool-waitlist-form').forEach(function(form){
+      form.addEventListener('submit', async function(ev){
+        ev.preventDefault();
+        const emailInput = form.querySelector('input[name="email"]');
+        const trapInput = form.querySelector('input[name="website"]');
+        const waitlistKey = form.dataset.waitlistKey || 'public_tools';
+        if (!emailInput.value){
+          return;
+        }
+        toggleState(form, 'loading');
+        try{
+          const response = await fetch('/api/waitlist', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              email: emailInput.value,
+              website: trapInput ? trapInput.value : '',
+              waitlist_key: waitlistKey,
+              source: waitlistKey,
+              context: 'tools_page',
+              notes: `tools_index:${waitlistKey}`
+            })
+          });
+          if (!response.ok){
+            throw new Error('Failed request');
+          }
+          toggleState(form, 'success');
+          emailInput.value = '';
+        }catch(err){
+          console.error('Waitlist error', err);
+          toggleState(form, 'error');
+        }finally{
+          setTimeout(() => toggleState(form, 'idle'), 1500);
+        }
+      });
+    });
+  });
+})();
+</script>
 {% endblock %}
