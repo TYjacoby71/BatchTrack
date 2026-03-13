@@ -246,7 +246,7 @@
                                 <div class="d-flex justify-content-between">
                                     {% set event_label = 'Promoted' if event.event_type == 'PROMOTE_TEST' else event.event_type %}
                                     <span class="fw-semibold text-uppercase text-muted">{{ event_label }}</span>
-                                    <small class="text-muted">{{ event.created_at.strftime('%b %d, %Y %H:%M') if event.created_at else '—' }}</small>
+                                    <small class="text-muted">{{ event.created_at | user_timezone('%b %d, %Y %H:%M') if event.created_at else '—' }}</small>
                                 </div>
                                 {% if event.source_recipe %}
                                     <div class="text-muted small mt-1">
