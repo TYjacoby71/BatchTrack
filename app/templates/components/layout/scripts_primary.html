@@ -4,6 +4,7 @@ Primary script bundle selection for lightweight vs full app shell.
 #}
 {% if lightweight_public_shell %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module" src="{{ static_asset('js/main.js') }}"></script>
 {% else %}
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

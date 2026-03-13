@@ -348,6 +348,13 @@
 </div>
 
 <script>
+async function requestConfirmation(options) {
+    if (typeof window.showConfirmDialog === 'function') {
+        return window.showConfirmDialog(options);
+    }
+    return window.confirm(options.message || 'Are you sure?');
+}
+
 // System Role Functions
 function showCreateRoleModal() {
     document.getElementById('systemRoleModalTitle').textContent = 'Create System Role';
@@ -378,27 +385,32 @@ function editSystemRole(roleId) {
         });
 }
 
-function deleteSystemRole(roleId, roleName) {
-    if (confirm(`Are you sure you want to delete the system role "${roleName}"? This will affect all organizations.`)) {
-        fetch(`/developer/system-roles/${roleId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCSRFToken()
-            }
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                location.reload();
-            } else {
-                alert(result.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting role:', error);
-            alert('Failed to delete role');
-        });
-    }
+async function deleteSystemRole(roleId, roleName) {
+    const confirmed = await requestConfirmation({
+        title: 'Delete system role',
+        message: `Are you sure you want to delete the system role "${roleName}"? This will affect all organizations.`,
+        confirmText: 'Delete role',
+        confirmVariant: 'danger'
+    });
+    if (!confirmed) return;
+    fetch(`/developer/system-roles/${roleId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting role:', error);
+        alert('Failed to delete role');
+    });
 }
 
 function saveSystemRole() {
@@ -512,27 +524,32 @@ function editDeveloperRole(roleId) {
         });
 }
 
-function deleteDeveloperRole(roleId, roleName) {
-    if (confirm(`Are you sure you want to delete the developer role "${roleName}"?`)) {
-        fetch(`/developer/developer-roles/${roleId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCSRFToken()
-            }
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                location.reload();
-            } else {
-                alert(result.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting developer role:', error);
-            alert('Failed to delete developer role');
-        });
-    }
+async function deleteDeveloperRole(roleId, roleName) {
+    const confirmed = await requestConfirmation({
+        title: 'Delete developer role',
+        message: `Are you sure you want to delete the developer role "${roleName}"?`,
+        confirmText: 'Delete role',
+        confirmVariant: 'danger'
+    });
+    if (!confirmed) return;
+    fetch(`/developer/developer-roles/${roleId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting developer role:', error);
+        alert('Failed to delete developer role');
+    });
 }
 
 function saveDeveloperRole() {
@@ -705,27 +722,32 @@ function saveDeveloperUserRole() {
     });
 }
 
-function deleteDeveloperUser(userId, username) {
-    if (confirm(`Are you sure you want to delete the developer user "${username}"?`)) {
-        fetch(`/developer/developer-users/${userId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCSRFToken()
-            }
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                location.reload();
-            } else {
-                alert(result.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting developer user:', error);
-            alert('Failed to delete developer user');
-        });
-    }
+async function deleteDeveloperUser(userId, username) {
+    const confirmed = await requestConfirmation({
+        title: 'Delete developer user',
+        message: `Are you sure you want to delete the developer user "${username}"?`,
+        confirmText: 'Delete user',
+        confirmVariant: 'danger'
+    });
+    if (!confirmed) return;
+    fetch(`/developer/developer-users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting developer user:', error);
+        alert('Failed to delete developer user');
+    });
 }
 
 // Utility Functions

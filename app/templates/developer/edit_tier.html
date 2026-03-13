@@ -290,7 +290,9 @@
                         <form
                             method="POST"
                             action="{{ url_for('developer.subscription_tiers.delete_tier', tier_id=tier.id) }}"
-                            onsubmit="return confirm('Delete this tier? This action cannot be undone.');"
+                            data-confirm-message="Delete this tier? This action cannot be undone."
+                            data-confirm-title="Delete subscription tier"
+                            data-confirm-variant="danger"
                             class="mb-0"
                         >
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

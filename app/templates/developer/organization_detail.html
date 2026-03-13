@@ -349,9 +349,23 @@ async function editOrgUser(userId) {
     await openUserManagementModal(userId, 'organization', organizationData);
 }
 
-function loginAsOrgUser(userId = null) {
+async function loginAsOrgUser(userId = null) {
     if (userId) {
-        if (confirm('Login as this user? This will open a new tab with their session.')) {
+        const confirmMessage = 'Login as this user? This will open a new tab with their session.';
+        const confirmed = (typeof window.showConfirmDialog === 'function')
+            ? await window.showConfirmDialog({
+                title: 'Login as user',
+                message: confirmMessage,
+                confirmText: 'Open session',
+                confirmVariant: 'warning'
+            })
+            : window.confirm(confirmMessage);
+        if (!confirmed) return;
+        if (typeof window.openWindowOrNotify === 'function') {
+            window.openWindowOrNotify(`/developer/login-as/${userId}`, '_blank', '', {
+                blockedMessage: 'Pop-up blocked. Allow pop-ups to open the user session.'
+            });
+        } else {
             window.open(`/developer/login-as/${userId}`, '_blank');
         }
     }
@@ -377,7 +391,7 @@ function toggleOrgUserStatus(userId, currentStatus) {
 }
 
 // Organization deletion function
-function deleteOrganization() {
+async function deleteOrganization() {
     const form = document.getElementById('deleteOrgForm');
     const password = document.getElementById('developerPassword').value;
     const confirmText = document.getElementById('confirmText').value;
@@ -402,7 +416,16 @@ function deleteOrganization() {
     }
 
     // Final confirmation
-    if (!confirm('FINAL CONFIRMATION: Are you absolutely certain you want to permanently delete this organization and all its data? This cannot be undone.')) {
+    const finalConfirmMessage = 'FINAL CONFIRMATION: Are you absolutely certain you want to permanently delete this organization and all its data? This cannot be undone.';
+    const finalConfirmed = (typeof window.showConfirmDialog === 'function')
+        ? await window.showConfirmDialog({
+            title: 'Permanent delete organization',
+            message: finalConfirmMessage,
+            confirmText: 'Permanently delete',
+            confirmVariant: 'danger'
+        })
+        : window.confirm(finalConfirmMessage);
+    if (!finalConfirmed) {
         return;
     }
 

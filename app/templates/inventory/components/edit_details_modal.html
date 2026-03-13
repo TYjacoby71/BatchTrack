@@ -220,13 +220,27 @@
 <script>
 // Function to open density reference in new window
 function openDensityReference() {
-    window.open('/density-reference', '_blank', 'width=1000,height=700,scrollbars=yes,resizable=yes');
+    const features = 'width=1000,height=700,scrollbars=yes,resizable=yes';
+    if (typeof window.openWindowOrNotify === 'function') {
+        window.openWindowOrNotify('/density-reference', '_blank', features, {
+            blockedMessage: 'Pop-up blocked. Allow pop-ups to open the density reference.'
+        });
+        return;
+    }
+    window.open('/density-reference', '_blank', features);
 }
 
 function openGlobalLibraryForIngredients() {
     const url = new URL(window.location.origin + '/global-items');
     url.searchParams.set('type', 'ingredient');
-    window.open(url.toString(), '_blank', 'width=1000,height=700,scrollbars=yes,resizable=yes');
+    const features = 'width=1000,height=700,scrollbars=yes,resizable=yes';
+    if (typeof window.openWindowOrNotify === 'function') {
+        window.openWindowOrNotify(url.toString(), '_blank', features, {
+            blockedMessage: 'Pop-up blocked. Allow pop-ups to open global ingredients.'
+        });
+        return;
+    }
+    window.open(url.toString(), '_blank', features);
 }
 
 document.addEventListener('DOMContentLoaded', function() {

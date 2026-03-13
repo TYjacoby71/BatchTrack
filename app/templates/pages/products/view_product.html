@@ -622,24 +622,32 @@ document.addEventListener('DOMContentLoaded', function() {
         location.reload();
     };
 
-    window.confirmDeleteProduct = function(productId, displayName) {
-        if (confirm(`Are you sure you want to delete "${displayName}"? This cannot be undone.`)) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/products/${productId}/delete`;
+    window.confirmDeleteProduct = async function(productId, displayName) {
+        const message = `Are you sure you want to delete "${displayName}"? This cannot be undone.`;
+        const confirmed = (typeof window.showConfirmDialog === 'function')
+            ? await window.showConfirmDialog({
+                title: 'Delete product',
+                message,
+                confirmText: 'Delete',
+                confirmVariant: 'danger'
+            })
+            : window.confirm(message);
+        if (!confirmed) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/products/${productId}/delete`;
 
-            const csrfToken = document.querySelector('input[name="csrf_token"]');
-            if (csrfToken) {
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = 'csrf_token';
-                csrfInput.value = csrfToken.value;
-                form.appendChild(csrfInput);
-            }
-
-            document.body.appendChild(form);
-            form.submit();
+        const csrfToken = document.querySelector('input[name="csrf_token"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
         }
+
+        document.body.appendChild(form);
+        form.submit();
     };
 
     window.scrollVariants = function(direction) {

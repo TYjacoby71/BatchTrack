@@ -39,6 +39,7 @@ Use when user must confirm, choose, or acknowledge a high-impact action.
   - Force-start with shortages
   - Multi-step decisions
 - Shared helper: `window.showConfirmDialog(...)`
+- Optional shared input helper: `window.showPromptDialog(...)`
 
 ### 4) Drawer modal (guided recovery)
 Use for recoverable, domain-specific errors requiring in-context fixes.
@@ -97,10 +98,12 @@ Use for request-level failures where the transport/status code is the primary si
 - Error messages include actionable next step.
 - If backend uses `flash`, category is explicit and mapped to Bootstrap class.
 - Documentation updated when adding a new notification pattern.
+- Run `python3 scripts/validate_notification_primitives.py --base-ref <base_ref>` in finalization to block new raw dialog primitives.
 
 ## Reference Implementation Points
 - Global flash renderer: `app/templates/components/layout/content_chrome.html`
 - Global helper baseline: `app/static/js/main.js` (`window.showAlert`, `window.showToast`, `window.showConfirmDialog`)
+- Extended global helpers: `app/static/js/main.js` (`window.showPromptDialog`, `window.openWindowOrNotify`, declarative `data-confirm-message` handling)
 - Drawer protocol: `app/static/js/core/DrawerProtocol.js`
 - Drawer UX spec: `docs/system/WALL_OF_DRAWERS_PROTOCOL.md`
 
@@ -111,3 +114,4 @@ Use for request-level failures where the transport/status code is the primary si
 - Phase 4 implemented: ALRT-041 through ALRT-050 verified and normalized backend auth/onboarding/library/bulk-stock flash callsites so all flash severity categories are explicit and consistently rendered.
 - Phase 5 implemented: ALRT-051 through ALRT-069 verified and normalized remaining backend inventory/developer/batches flash callsites so all checklist flash sources now use explicit severity categories.
 - Phase 6 implemented: ALRT-070 through ALRT-080 cataloged and normalized system-level notification surfaces (global error handlers/pages, shared verification/upgrade overlays, and API/security/rate-limit payload responses).
+- Phase 7 implemented: ALRT-081 through ALRT-087 normalized remaining native dialog usage through shared prompt/confirm infrastructure, enabled legacy alert compatibility shimming, and added a diff-based guard to prevent new raw native dialog primitives from being introduced.

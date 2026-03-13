@@ -138,7 +138,16 @@ function getCSRFToken() {
 }
 
 async function deleteCategory(categoryName) {
-  if (!confirm(`Are you sure you want to delete the category "${categoryName}"? This action cannot be undone.`)) {
+  const deleteMessage = `Are you sure you want to delete the category "${categoryName}"? This action cannot be undone.`;
+  const confirmed = (typeof window.showConfirmDialog === 'function')
+    ? await window.showConfirmDialog({
+        title: 'Delete reference category',
+        message: deleteMessage,
+        confirmText: 'Delete category',
+        confirmVariant: 'danger'
+      })
+    : window.confirm(deleteMessage);
+  if (!confirmed) {
     return;
   }
 

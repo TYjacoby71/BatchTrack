@@ -33,7 +33,13 @@ class DrawerProtocol {
         this.storeRetry(detail);
 
         if (detail.redirect_url) {
-            window.open(detail.redirect_url, '_blank');
+            if (typeof window.openWindowOrNotify === 'function') {
+                window.openWindowOrNotify(detail.redirect_url, '_blank', '', {
+                    blockedMessage: 'Pop-up blocked. Allow pop-ups to continue this flow.',
+                });
+            } else {
+                window.open(detail.redirect_url, '_blank');
+            }
             return;
         }
 

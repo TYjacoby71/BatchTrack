@@ -374,7 +374,9 @@
                   {% if not item.is_archived %}
                     <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
                        class="dropdown-item text-warning" 
-                       onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+                       data-confirm-message="Are you sure you want to archive this item?"
+                       data-confirm-title="Archive inventory item"
+                       data-confirm-variant="danger">Archive</a>
                   {% else %}
                     <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}" 
                        class="dropdown-item text-success">Restore</a>

@@ -134,6 +134,20 @@
 let currentModalUser = null;
 let modalContext = 'general'; // 'general', 'organization', 'developer'
 
+async function requestConfirmation(options) {
+    if (typeof window.showConfirmDialog === 'function') {
+        return window.showConfirmDialog(options);
+    }
+    return window.confirm(options.message || 'Are you sure?');
+}
+
+async function requestPrompt(options) {
+    if (typeof window.showPromptDialog === 'function') {
+        return window.showPromptDialog(options);
+    }
+    return window.prompt(options.message || 'Enter a value:', options.defaultValue ?? '');
+}
+
 async function openUserManagementModal(userId, context = 'general', organizationData = null) {
     modalContext = context;
 
@@ -243,7 +257,13 @@ async function saveModalUser() {
         });
 
         if (currentOwners.length > 0) {
-            if (!confirm('Making this user an organization owner will remove owner status and role from the current owner and transfer it to this user. Continue?')) {
+            const transferConfirmed = await requestConfirmation({
+                title: 'Transfer organization owner',
+                message: 'Making this user an organization owner will remove owner status and role from the current owner and transfer it to this user. Continue?',
+                confirmText: 'Transfer ownership',
+                confirmVariant: 'warning'
+            });
+            if (!transferConfirmed) {
                 return;
             }
         }
@@ -298,7 +318,13 @@ async function saveModalUser() {
 async function resetModalUserPassword() {
     if (!currentModalUser) return;
 
-    const newPassword = prompt('Enter new password for user:');
+    const newPassword = await requestPrompt({
+        title: 'Reset user password',
+        message: 'Enter new password for user:',
+        defaultValue: '',
+        confirmText: 'Reset password',
+        required: true
+    });
     if (!newPassword) return;
 
     try {
@@ -327,10 +353,21 @@ async function resetModalUserPassword() {
     }
 }
 
-function loginAsModalUser() {
+async function loginAsModalUser() {
     if (!currentModalUser) return;
 
-    if (confirm('Login as this user? This will open a new tab with their session.')) {
+    const confirmed = await requestConfirmation({
+        title: 'Login as user',
+        message: 'Login as this user? This will open a new tab with their session.',
+        confirmText: 'Open session',
+        confirmVariant: 'warning'
+    });
+    if (!confirmed) return;
+    if (typeof window.openWindowOrNotify === 'function') {
+        window.openWindowOrNotify(`/developer/login-as/${currentModalUser.id}`, '_blank', '', {
+            blockedMessage: 'Pop-up blocked. Allow pop-ups to open the support session.'
+        });
+    } else {
         window.open(`/developer/login-as/${currentModalUser.id}`, '_blank');
     }
 }
@@ -339,13 +376,26 @@ function viewAsCustomerSupport() {
     if (!currentModalUser || !currentModalUser.organization) return;
 
     // Switch to customer support view for this organization
-    window.open(`/developer/select-org/${currentModalUser.organization.id}`, '_blank');
+    if (typeof window.openWindowOrNotify === 'function') {
+        window.openWindowOrNotify(`/developer/select-org/${currentModalUser.organization.id}`, '_blank', '', {
+            blockedMessage: 'Pop-up blocked. Allow pop-ups to open customer support view.'
+        });
+    } else {
+        window.open(`/developer/select-org/${currentModalUser.organization.id}`, '_blank');
+    }
 }
 
 async function softDeleteModalUser() {
     if (!currentModalUser) return;
 
-    if (!confirm(`Soft delete user ${currentModalUser.username}? This will deactivate their account and remove access while preserving data.`)) {
+    const softDeleteMessage = `Soft delete user ${currentModalUser.username}? This will deactivate their account and remove access while preserving data.`;
+    const softDeleteConfirmed = await requestConfirmation({
+        title: 'Soft delete user',
+        message: softDeleteMessage,
+        confirmText: 'Soft delete',
+        confirmVariant: 'danger'
+    });
+    if (!softDeleteConfirmed) {
         return;
     }
 
@@ -380,15 +430,25 @@ async function hardDeleteModalUser() {
     if (!currentModalUser) return;
 
     const confirmationPhrase = `HARD DELETE ${currentModalUser.username}`;
-    const typed = prompt(
-        `This permanently deletes ${currentModalUser.username}.\nType "${confirmationPhrase}" to continue:`
-    );
+    const typed = await requestPrompt({
+        title: 'Hard delete confirmation',
+        message: `This permanently deletes ${currentModalUser.username}.\nType "${confirmationPhrase}" to continue:`,
+        defaultValue: '',
+        confirmText: 'Continue',
+        required: true
+    });
     if (typed !== confirmationPhrase) {
         alert(`Confirmation failed. You must type: ${confirmationPhrase}`);
         return;
     }
 
-    if (!confirm('FINAL CONFIRMATION: Permanently delete this user account now? This cannot be undone.')) {
+    const hardDeleteConfirmed = await requestConfirmation({
+        title: 'Permanently delete user',
+        message: 'FINAL CONFIRMATION: Permanently delete this user account now? This cannot be undone.',
+        confirmText: 'Permanently delete',
+        confirmVariant: 'danger'
+    });
+    if (!hardDeleteConfirmed) {
         return;
     }
 

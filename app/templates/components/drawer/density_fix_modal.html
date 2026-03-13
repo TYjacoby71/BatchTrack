@@ -378,6 +378,12 @@
 })();
 
 function openDensityReference() {
+    if (typeof window.openWindowOrNotify === 'function') {
+        window.openWindowOrNotify('/global-items?type=ingredient', '_blank', '', {
+            blockedMessage: 'Pop-up blocked. Allow pop-ups to open the density reference.'
+        });
+        return;
+    }
     window.open('/global-items?type=ingredient', '_blank');
 }
 </script>

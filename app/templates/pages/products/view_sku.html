@@ -99,7 +99,16 @@ function getCSRFToken() {
 }
 
 async function markAsExpired(type, id) {
-    if (!confirm('Mark this item as expired and remove it from inventory?\n\nThis action targets the specific expired lot and cannot be undone.\n\nProceed?')) return;
+    const confirmMessage = 'Mark this item as expired and remove it from inventory?\n\nThis action targets the specific expired lot and cannot be undone.\n\nProceed?';
+    const confirmed = (typeof window.showConfirmDialog === 'function')
+        ? await window.showConfirmDialog({
+            title: 'Mark item expired',
+            message: confirmMessage,
+            confirmText: 'Mark expired',
+            confirmVariant: 'danger'
+        })
+        : window.confirm(confirmMessage);
+    if (!confirmed) return;
 
     console.log('Mark expired called with:', { type, id });
 

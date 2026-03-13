@@ -471,6 +471,12 @@ function updateCategoryCheckbox(category) {
 
 // Utility functions
 function exportReport(type) {
+    if (typeof window.openWindowOrNotify === 'function') {
+        window.openWindowOrNotify(`/organization/export/${type}`, '_blank', '', {
+            blockedMessage: 'Pop-up blocked. Allow pop-ups to export this report.'
+        });
+        return;
+    }
     window.open(`/organization/export/${type}`, '_blank');
 }
 
