@@ -757,6 +757,7 @@ def view_inventory(id):
             joinedload(UnifiedInventoryHistory.batch),
             joinedload(UnifiedInventoryHistory.used_for_batch),
             joinedload(UnifiedInventoryHistory.affected_lot),
+            joinedload(UnifiedInventoryHistory.user),
         )
     )
 
@@ -831,7 +832,6 @@ def view_inventory(id):
         get_ingredient_categories=IngredientCategory.scoped()
         .order_by(IngredientCategory.name)
         .all,
-        User=User,
         UnifiedInventoryHistory=UnifiedInventoryHistory,
         now=datetime.now(timezone.utc),
         int_to_base36=int_to_base36,
