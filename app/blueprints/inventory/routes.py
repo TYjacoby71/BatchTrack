@@ -33,7 +33,6 @@ from app.models import (
     InventoryItem,
     UnifiedInventoryHistory,
     Unit,
-    User,
     UserPreferences,
     db,
 )
