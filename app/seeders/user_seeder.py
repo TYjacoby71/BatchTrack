@@ -1,11 +1,11 @@
 import logging
+
 from werkzeug.security import generate_password_hash
 
 from ..extensions import db
 from ..models import Organization, User
 
 logger = logging.getLogger(__name__)
-
 
 
 def seed_users_and_organization():
@@ -112,7 +112,10 @@ def seed_users_and_organization():
                         "✅ Created developer user: dev/dev123 with system_admin role"
                     )
                 except Exception as role_error:
-                    logger.warning("Suppressed exception fallback at app/seeders/user_seeder.py:110", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/seeders/user_seeder.py:110",
+                        exc_info=True,
+                    )
                     print(f"⚠️  Developer role assignment failed: {role_error}")
                     print(
                         "✅ Created developer user: dev/dev123 (role assignment failed)"
@@ -123,7 +126,10 @@ def seed_users_and_organization():
                     "✅ Created developer user: dev/dev123 (no system_admin role found)"
                 )
         except Exception as user_error:
-            logger.warning("Suppressed exception fallback at app/seeders/user_seeder.py:120", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/user_seeder.py:120",
+                exc_info=True,
+            )
             print(f"❌ Failed to create developer user: {user_error}")
             db.session.rollback()
     else:

@@ -7,8 +7,8 @@ Glossary:
 - InventoryItem: Stocked ingredient or material.
 - InventoryHistory: Audit log of inventory changes.
 """
-import logging
 
+import logging
 from datetime import datetime, timezone
 
 from flask_login import current_user
@@ -25,7 +25,6 @@ from ..utils.timezone_utils import TimezoneUtils
 from .mixins import ScopedModelMixin
 
 logger = logging.getLogger(__name__)
-
 
 
 class InventoryItem(ScopedModelMixin, db.Model):
@@ -144,7 +143,10 @@ class InventoryItem(ScopedModelMixin, db.Model):
             assembled = " ".join([p for p in parts if p]).strip()
             return assembled or self.name
         except Exception:
-            logger.warning("Suppressed exception fallback at app/models/inventory.py:142", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/models/inventory.py:142",
+                exc_info=True,
+            )
             return self.name
 
     def belongs_to_user(self):
@@ -237,7 +239,10 @@ def _derive_ownership_before_insert(mapper, connection, target):
             target.ownership = "org"
     except Exception:
         # Best-effort; do not block insert on ownership derivation
-        logger.warning("Suppressed exception fallback at app/models/inventory.py:233", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/models/inventory.py:233",
+            exc_info=True,
+        )
         pass
 
 
@@ -257,7 +262,10 @@ def _derive_ownership_before_update(mapper, connection, target):
             target.ownership = "org"
     except Exception:
         # Best-effort; do not block update on ownership derivation
-        logger.warning("Suppressed exception fallback at app/models/inventory.py:252", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/models/inventory.py:252",
+            exc_info=True,
+        )
         pass
 
 

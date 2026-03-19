@@ -53,7 +53,10 @@ def analyze_container_options(
                 if vfp is not None:
                     recipe_fill_pct = float(vfp)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/production_planning/_container_management.py:55", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/production_planning/_container_management.py:55",
+                exc_info=True,
+            )
             recipe_fill_pct = None
 
         if total_yield <= 0:
@@ -135,7 +138,10 @@ def analyze_container_options(
             try:
                 effective_fill_pct = float(for_candidate)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/production_planning/_container_management.py:136", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/production_planning/_container_management.py:136",
+                    exc_info=True,
+                )
                 effective_fill_pct = None
 
         strategy = _create_greedy_strategy(
@@ -174,7 +180,10 @@ def analyze_container_options(
             return strategy, []
         raise
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/services/production_planning/_container_management.py:174", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/production_planning/_container_management.py:174",
+            exc_info=True,
+        )
         rid = getattr(recipe, "id", "unknown")
         logger.error(f"Container analysis failed for recipe {rid}: {e}")
         if api_format:

@@ -229,7 +229,10 @@ def create_product_from_data(data):
         }
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:227", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/products.py:227",
+            exc_info=True,
+        )
         db.session.rollback()
         return {"success": False, "error": str(e)}
 
@@ -263,7 +266,10 @@ def list_products():
                 )
                 db.session.commit()
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:260", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/products/products.py:260",
+                exc_info=True,
+            )
             db.session.rollback()
     org_id = getattr(current_user, "organization_id", None) or 0
     cache_key = product_list_cache_key(org_id, sort_type)
@@ -290,7 +296,10 @@ def list_products():
             try:
                 cache.set(page_cache_key, rendered, timeout=cache_ttl)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:286", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/products/products.py:286",
+                    exc_info=True,
+                )
                 pass
             return rendered
 
@@ -311,16 +320,22 @@ def list_products():
             if self.id:
                 from ...models.product import Product, ProductSKU, ProductVariant
 
-                product = Product.scoped().filter_by(
-                    name=self.name, organization_id=current_user.organization_id
-                ).first()
+                product = (
+                    Product.scoped()
+                    .filter_by(
+                        name=self.name, organization_id=current_user.organization_id
+                    )
+                    .first()
+                )
 
                 if product:
                     self.id = product.id
 
-                    actual_variants = ProductVariant.scoped().filter_by(
-                        product_id=product.id, is_active=True
-                    ).all()
+                    actual_variants = (
+                        ProductVariant.scoped()
+                        .filter_by(product_id=product.id, is_active=True)
+                        .all()
+                    )
 
                     self.variations = []
                     variant_map = {}
@@ -341,11 +356,15 @@ def list_products():
 
                     self.variant_count = len(actual_variants)
 
-                    product_skus = ProductSKU.scoped().filter_by(
-                        product_id=product.id,
-                        organization_id=current_user.organization_id,
-                        is_active=True,
-                    ).all()
+                    product_skus = (
+                        ProductSKU.scoped()
+                        .filter_by(
+                            product_id=product.id,
+                            organization_id=current_user.organization_id,
+                            is_active=True,
+                        )
+                        .all()
+                    )
 
                     for sku in product_skus:
                         size_label = sku.size_label if sku.size_label else "Bulk"
@@ -419,9 +438,8 @@ def list_products():
     for data in product_data:
         # Get the actual product ID instead of SKU inventory_item_id
         first_sku = (
-            ProductSKU.scoped().filter_by(
-                organization_id=current_user.organization_id, is_active=True
-            )
+            ProductSKU.scoped()
+            .filter_by(organization_id=current_user.organization_id, is_active=True)
             .join(ProductSKU.product)
             .filter(Product.name == data["product_name"])
             .first()
@@ -458,7 +476,10 @@ def list_products():
     try:
         cache.set(page_cache_key, rendered, timeout=cache_ttl)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:453", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/products.py:453",
+            exc_info=True,
+        )
         pass
     return rendered
 
@@ -482,14 +503,18 @@ def new_product():
         # Check if product already exists (check both new Product model and legacy ProductSKU)
         from ...models.product import Product
 
-        existing_product = Product.scoped().filter_by(
-            name=name, organization_id=current_user.organization_id
-        ).first()
+        existing_product = (
+            Product.scoped()
+            .filter_by(name=name, organization_id=current_user.organization_id)
+            .first()
+        )
 
         # Also check legacy ProductSKU table
-        existing_sku = ProductSKU.scoped().filter_by(
-            product_name=name, organization_id=current_user.organization_id
-        ).first()
+        existing_sku = (
+            ProductSKU.scoped()
+            .filter_by(product_name=name, organization_id=current_user.organization_id)
+            .first()
+        )
 
         if existing_product or existing_sku:
             flash("Product with this name already exists", "error")
@@ -525,7 +550,10 @@ def new_product():
             )
 
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:519", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/products/products.py:519",
+                exc_info=True,
+            )
             db.session.rollback()
             flash(f"Error creating product: {str(e)}", "error")
             return redirect(url_for("products.new_product"))
@@ -536,7 +564,10 @@ def new_product():
 
         categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:529", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/products.py:529",
+            exc_info=True,
+        )
         categories = []
     return render_template(
         "pages/products/new_product.html", product_categories=categories
@@ -551,15 +582,22 @@ def view_product(product_id):
     from ...models.product import Product
 
     # First try to find the product directly by ID
-    product = Product.scoped().filter_by(
-        id=product_id, organization_id=current_user.organization_id
-    ).first()
+    product = (
+        Product.scoped()
+        .filter_by(id=product_id, organization_id=current_user.organization_id)
+        .first()
+    )
 
     if not product:
         # If not found by product ID, try to find by inventory_item_id (legacy support)
-        base_sku = ProductSKU.scoped().filter_by(
-            inventory_item_id=product_id, organization_id=current_user.organization_id
-        ).first()
+        base_sku = (
+            ProductSKU.scoped()
+            .filter_by(
+                inventory_item_id=product_id,
+                organization_id=current_user.organization_id,
+            )
+            .first()
+        )
 
         if not base_sku:
             flash("Product not found", "error")
@@ -568,11 +606,15 @@ def view_product(product_id):
         product = base_sku.product
 
     # Get all SKUs for this product - with org scoping
-    skus = ProductSKU.scoped().filter_by(
-        product_id=product.id,
-        is_active=True,
-        organization_id=current_user.organization_id,
-    ).all()
+    skus = (
+        ProductSKU.scoped()
+        .filter_by(
+            product_id=product.id,
+            is_active=True,
+            organization_id=current_user.organization_id,
+        )
+        .all()
+    )
 
     # Group SKUs by variant, including variants without SKUs
     variants = {}
@@ -597,7 +639,8 @@ def view_product(product_id):
 
     # Get available containers for manual stock addition
     available_containers = (
-        InventoryItem.scoped().filter_by(type="container", is_archived=False)
+        InventoryItem.scoped()
+        .filter_by(type="container", is_archived=False)
         .filter(InventoryItem.quantity > 0)
         .all()
     )
@@ -635,7 +678,10 @@ def view_product(product_id):
             ProductCategory.name.asc()
         ).all()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:627", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/products.py:627",
+            exc_info=True,
+        )
         product_categories = []
 
     auto_create_bulk_sku_on_variant = is_feature_enabled(
@@ -665,7 +711,9 @@ def view_product(product_id):
 def view_product_by_name(product_name):
     """Redirect to product by ID for backward compatibility"""
     # Find the first SKU for this product to get the ID
-    sku = ProductSKU.scoped().filter_by(product_name=product_name, is_active=True).first()
+    sku = (
+        ProductSKU.scoped().filter_by(product_name=product_name, is_active=True).first()
+    )
 
     if not sku:
         flash("Product not found", "error")
@@ -682,9 +730,11 @@ def edit_product(product_id):
     from ...models.product import Product
 
     # First try to find the product directly by ID
-    product = Product.scoped().filter_by(
-        id=product_id, organization_id=current_user.organization_id
-    ).first()
+    product = (
+        Product.scoped()
+        .filter_by(id=product_id, organization_id=current_user.organization_id)
+        .first()
+    )
 
     if not product:
         flash("Product not found", "error")
@@ -699,11 +749,15 @@ def edit_product(product_id):
         return redirect(url_for("products.view_product", product_id=product_id))
 
     # Check if another product has this name
-    existing = Product.scoped().filter(
-        Product.name == name,
-        Product.id != product.id,
-        Product.organization_id == current_user.organization_id,
-    ).first()
+    existing = (
+        Product.scoped()
+        .filter(
+            Product.name == name,
+            Product.id != product.id,
+            Product.organization_id == current_user.organization_id,
+        )
+        .first()
+    )
     if existing:
         flash("Another product with this name already exists", "error")
         return redirect(url_for("products.view_product", product_id=product_id))
@@ -717,7 +771,10 @@ def edit_product(product_id):
     try:
         product.category_id = int(category_id)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:708", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/products.py:708",
+            exc_info=True,
+        )
         pass
 
     db.session.commit()
@@ -732,9 +789,14 @@ def delete_product(product_id):
     """Delete a product and all its related data by product ID"""
     try:
         # Get the base SKU to find the product - with org scoping
-        base_sku = ProductSKU.scoped().filter_by(
-            inventory_item_id=product_id, organization_id=current_user.organization_id
-        ).first()
+        base_sku = (
+            ProductSKU.scoped()
+            .filter_by(
+                inventory_item_id=product_id,
+                organization_id=current_user.organization_id,
+            )
+            .first()
+        )
 
         if not base_sku:
             flash("Product not found", "error")
@@ -743,9 +805,13 @@ def delete_product(product_id):
         product = base_sku.product
 
         # Get all SKUs for this product - with org scoping
-        skus = ProductSKU.scoped().filter_by(
-            product_id=product.id, organization_id=current_user.organization_id
-        ).all()
+        skus = (
+            ProductSKU.scoped()
+            .filter_by(
+                product_id=product.id, organization_id=current_user.organization_id
+            )
+            .all()
+        )
 
         if not skus:
             flash("Product not found", "error")
@@ -783,7 +849,10 @@ def delete_product(product_id):
         return redirect(url_for("products.list_products"))
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/products.py:773", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/products.py:773",
+            exc_info=True,
+        )
         db.session.rollback()
         flash(f"Error deleting product: {str(e)}", "error")
         return redirect(url_for("products.view_product", product_id=product_id))

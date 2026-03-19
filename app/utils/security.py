@@ -6,7 +6,6 @@ from flask import abort, request
 logger = logging.getLogger(__name__)
 
 
-
 class SecurityUtils:
     @staticmethod
     def rate_limit_check(key: str, limit: int = 100, window: int = 3600):
@@ -48,7 +47,10 @@ class SecurityUtils:
             validate_csrf(token)
             return True
         except Exception:
-            logger.warning("Suppressed exception fallback at app/utils/security.py:46", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/utils/security.py:46",
+                exc_info=True,
+            )
             return False
 
 

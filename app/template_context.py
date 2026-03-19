@@ -9,9 +9,9 @@ Glossary:
 """
 
 from __future__ import annotations
-import logging
 
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict
 
@@ -131,7 +131,10 @@ def register_template_context(app: Flask) -> None:
             try:
                 units = get_global_unit_list()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/template_context.py:112", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/template_context.py:112",
+                    exc_info=True,
+                )
                 units = []
             app_cache.set(units_cache_key, units, ttl=3600)
 
@@ -149,7 +152,10 @@ def register_template_context(app: Flask) -> None:
                     .all()
                 )
             except Exception:
-                logger.warning("Suppressed exception fallback at app/template_context.py:129", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/template_context.py:129",
+                    exc_info=True,
+                )
                 raw_categories = []
             categories = _normalize_cached_categories(raw_categories)
             app_cache.set("template:ingredient_categories", categories, ttl=3600)
@@ -221,7 +227,10 @@ def register_template_context(app: Flask) -> None:
 
                 prefs = UserPreferences.query.filter_by(user_id=current_user.id).first()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/template_context.py:200", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/template_context.py:200",
+                    exc_info=True,
+                )
                 prefs = None
             if prefs:
                 theme_preference_scoped = True
@@ -240,7 +249,10 @@ def register_template_context(app: Flask) -> None:
 
             prompts_enabled = EmailService.should_issue_verification_tokens()
         except Exception:
-            logger.warning("Suppressed exception fallback at app/template_context.py:218", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/template_context.py:218",
+                exc_info=True,
+            )
             prompts_enabled = False
         return {"email_verification_prompts_enabled": bool(prompts_enabled)}
 
@@ -259,7 +271,10 @@ def register_template_context(app: Flask) -> None:
             )
             return {"list_preferences_payload": payload}
         except Exception:
-            logger.warning("Suppressed exception fallback at app/template_context.py:236", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/template_context.py:236",
+                exc_info=True,
+            )
             return {"list_preferences_payload": {}}
 
     @app.context_processor
@@ -272,7 +287,10 @@ def register_template_context(app: Flask) -> None:
             try:
                 return app.extensions["sqlalchemy"].session.get(Organization, org_id)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/template_context.py:248", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/template_context.py:248",
+                    exc_info=True,
+                )
                 return db.session.get(Organization, org_id)
 
         def get_current_organization():
@@ -308,7 +326,10 @@ def register_template_context(app: Flask) -> None:
             from .models import Organization, User
             from .models.subscription_tier import SubscriptionTier
         except Exception:
-            logger.warning("Suppressed exception fallback at app/template_context.py:283", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/template_context.py:283",
+                exc_info=True,
+            )
             Organization = User = SubscriptionTier = None
 
         reviews = MarketingContentService.get_reviews()
@@ -355,7 +376,10 @@ def register_template_context(app: Flask) -> None:
                 else:
                     lifetime_offers = cached_lifetime_offers
             except Exception:
-                logger.warning("Suppressed exception fallback at app/template_context.py:329", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/template_context.py:329",
+                    exc_info=True,
+                )
                 pass
 
         if lifetime_offers:
@@ -416,7 +440,10 @@ def static_file_exists_filter(relative_path: str) -> bool:
         static_folder = Path(getattr(current_app, "static_folder", None) or "static")
         return (static_folder / relative_path).exists()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/template_context.py:382", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/template_context.py:382",
+            exc_info=True,
+        )
         return False
 
 
@@ -460,7 +487,10 @@ def _load_asset_manifest() -> Dict[str, str]:
         _ASSET_MANIFEST_CACHE["data"] = data
         return data
     except Exception:
-        logger.warning("Suppressed exception fallback at app/template_context.py:425", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/template_context.py:425",
+            exc_info=True,
+        )
         return {}
 
 
@@ -498,7 +528,10 @@ def static_asset_url(relative_path: str, *, include_version: bool = True) -> str
         static_folder = Path(getattr(current_app, "static_folder", None) or "static")
         version = int((static_folder / selected_path).stat().st_mtime)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/template_context.py:462", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/template_context.py:462",
+            exc_info=True,
+        )
         return url_for("static", filename=selected_path)
 
     return url_for("static", filename=selected_path, v=version)

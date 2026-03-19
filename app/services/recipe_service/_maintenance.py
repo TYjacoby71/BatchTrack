@@ -15,7 +15,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from sqlalchemy.orm import selectinload
 
@@ -39,7 +39,9 @@ def _variation_bucket_name(recipe: Recipe) -> str:
     parent = getattr(recipe, "parent", None)
     if parent:
         parent_candidate = (
-            getattr(parent, "variation_name", None) or getattr(parent, "name", None) or ""
+            getattr(parent, "variation_name", None)
+            or getattr(parent, "name", None)
+            or ""
         ).strip()
         if parent_candidate:
             return parent_candidate.lower()
@@ -54,7 +56,13 @@ def _test_scope_key(recipe: Recipe) -> Tuple[Any, ...]:
     version_number = int(getattr(recipe, "version_number", 0) or 0)
     if getattr(recipe, "is_master", False):
         return ("master", group_id, root_id, version_number)
-    return ("variation", group_id, root_id, _variation_bucket_name(recipe), version_number)
+    return (
+        "variation",
+        group_id,
+        root_id,
+        _variation_bucket_name(recipe),
+        version_number,
+    )
 
 
 def _base_test_name(recipe: Recipe) -> str:

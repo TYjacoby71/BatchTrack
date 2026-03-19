@@ -10,8 +10,8 @@ Glossary:
 """
 
 from __future__ import annotations
-import logging
 
+import logging
 import re
 from datetime import datetime, timezone
 from typing import Dict, Tuple
@@ -22,7 +22,6 @@ from app.extensions import db
 from app.models import User
 
 logger = logging.getLogger(__name__)
-
 
 
 # --- User service class ---
@@ -113,7 +112,10 @@ class UserService:
             db.session.commit()
             return True, "Profile updated successfully"
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Suppressed exception fallback at app/services/developer/user_service.py:111", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/developer/user_service.py:111",
+                exc_info=True,
+            )
             db.session.rollback()
             return False, str(exc)
 
@@ -145,7 +147,10 @@ class UserService:
             db.session.commit()
             return True, "Password changed successfully"
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Suppressed exception fallback at app/services/developer/user_service.py:142", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/developer/user_service.py:142",
+                exc_info=True,
+            )
             db.session.rollback()
             return False, str(exc)
 
@@ -233,7 +238,10 @@ class UserService:
             db.session.commit()
             return True, "User updated successfully"
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Suppressed exception fallback at app/services/developer/user_service.py:229", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/developer/user_service.py:229",
+                exc_info=True,
+            )
             db.session.rollback()
             return False, str(exc)
 
@@ -285,7 +293,10 @@ class UserService:
             db.session.commit()
             return True, "Developer user updated successfully"
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Suppressed exception fallback at app/services/developer/user_service.py:280", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/developer/user_service.py:280",
+                exc_info=True,
+            )
             db.session.rollback()
             return False, str(exc)
 
@@ -354,6 +365,9 @@ class UserService:
                 message += " Stripe subscription canceled."
             return True, message
         except Exception as exc:  # pragma: no cover - defensive
-            logger.warning("Suppressed exception fallback at app/services/developer/user_service.py:348", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/developer/user_service.py:348",
+                exc_info=True,
+            )
             db.session.rollback()
             return False, str(exc)

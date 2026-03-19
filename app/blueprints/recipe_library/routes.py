@@ -9,8 +9,8 @@ Glossary:
 """
 
 from __future__ import annotations
-import logging
 
+import logging
 from datetime import datetime, timedelta, timezone
 
 from flask import (
@@ -57,7 +57,10 @@ def _org_allows_permission(org: Organization | None, permission_name: str) -> bo
     try:
         return _org_tier_includes_permission(org, permission_name)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipe_library/routes.py:55", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipe_library/routes.py:55",
+            exc_info=True,
+        )
         return False
 
 
@@ -76,7 +79,10 @@ def _advance_public_counter(key: str, limit: int) -> tuple[bool, int]:
             if now - last_dt > timedelta(hours=PUBLIC_RECIPE_WINDOW_HOURS):
                 record = {}
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipe_library/routes.py:73", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipe_library/routes.py:73",
+            exc_info=True,
+        )
         record = {}
     count = int(record.get("count") or 0)
     if count >= limit:
@@ -100,7 +106,10 @@ def _remaining_public_counter(key: str, limit: int) -> int:
             ):
                 return limit
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipe_library/routes.py:96", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipe_library/routes.py:96",
+            exc_info=True,
+        )
         return limit
     count = int(record.get("count") or 0)
     return max(0, limit - count)

@@ -41,7 +41,9 @@ def get_first_landing_epoch_ms(request) -> int | None:
 # Purpose: Return elapsed whole seconds from first landing cookie to now.
 # Inputs: Flask request object and optional current datetime for testability.
 # Outputs: Non-negative elapsed seconds or None when no usable landing timestamp exists.
-def seconds_since_first_landing(request, *, now_utc: datetime | None = None) -> int | None:
+def seconds_since_first_landing(
+    request, *, now_utc: datetime | None = None
+) -> int | None:
     first_landing_ms = get_first_landing_epoch_ms(request)
     if first_landing_ms is None:
         return None
@@ -58,4 +60,3 @@ def seconds_since_first_landing(request, *, now_utc: datetime | None = None) -> 
     if elapsed < 0:
         return 0
     return int(elapsed)
-

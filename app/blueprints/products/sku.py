@@ -47,11 +47,16 @@ def _merge_skus_enabled() -> bool:
 @require_permission("products.view")
 def view_sku(inventory_item_id):
     """View individual SKU details"""
-    sku = ProductSKU.scoped().filter_by(inventory_item_id=inventory_item_id).first_or_404()
+    sku = (
+        ProductSKU.scoped()
+        .filter_by(inventory_item_id=inventory_item_id)
+        .first_or_404()
+    )
 
     # Get SKU history for this specific SKU using inventory_item_id
     history = (
-        UnifiedInventoryHistory.scoped().filter_by(
+        UnifiedInventoryHistory.scoped()
+        .filter_by(
             inventory_item_id=sku.inventory_item_id,
             organization_id=current_user.organization_id,
         )
@@ -108,10 +113,14 @@ def view_sku(inventory_item_id):
 @require_permission("products.manage_variants")
 def edit_sku(inventory_item_id):
     """Edit SKU details"""
-    sku = ProductSKU.scoped().filter_by(
-        inventory_item_id=inventory_item_id,
-        organization_id=current_user.organization_id,
-    ).first_or_404()
+    sku = (
+        ProductSKU.scoped()
+        .filter_by(
+            inventory_item_id=inventory_item_id,
+            organization_id=current_user.organization_id,
+        )
+        .first_or_404()
+    )
 
     try:
         # Update basic fields
@@ -163,9 +172,11 @@ def edit_sku(inventory_item_id):
                     from ...blueprints.expiration.services import ExpirationService
                     from ...models.inventory_lot import InventoryLot
 
-                    lots = InventoryLot.scoped().filter(
-                        InventoryLot.inventory_item_id == sku.inventory_item_id
-                    ).all()
+                    lots = (
+                        InventoryLot.scoped()
+                        .filter(InventoryLot.inventory_item_id == sku.inventory_item_id)
+                        .all()
+                    )
 
                     for lot in lots:
                         lot.shelf_life_days = int(shelf_life_days)
@@ -176,9 +187,11 @@ def edit_sku(inventory_item_id):
                                 )
                             )
 
-                        history_entries = UnifiedInventoryHistory.scoped().filter(
-                            UnifiedInventoryHistory.affected_lot_id == lot.id
-                        ).all()
+                        history_entries = (
+                            UnifiedInventoryHistory.scoped()
+                            .filter(UnifiedInventoryHistory.affected_lot_id == lot.id)
+                            .all()
+                        )
                         for entry in history_entries:
                             entry.is_perishable = True
                             entry.shelf_life_days = int(shelf_life_days)
@@ -192,9 +205,14 @@ def edit_sku(inventory_item_id):
                 sku.inventory_item.shelf_life_days = None
 
                 # Clear expiration data from FIFO entries when marking as non-perishable
-                fifo_entries = UnifiedInventoryHistory.scoped().filter(
-                    UnifiedInventoryHistory.inventory_item_id == sku.inventory_item_id
-                ).all()
+                fifo_entries = (
+                    UnifiedInventoryHistory.scoped()
+                    .filter(
+                        UnifiedInventoryHistory.inventory_item_id
+                        == sku.inventory_item_id
+                    )
+                    .all()
+                )
 
                 for entry in fifo_entries:
                     entry.is_perishable = False
@@ -209,7 +227,10 @@ def edit_sku(inventory_item_id):
         db.session.commit()
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/sku.py:211", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/sku.py:211",
+            exc_info=True,
+        )
         db.session.rollback()
         flash(f"Error updating SKU: {str(e)}", "error")
 
@@ -234,9 +255,8 @@ def select_skus_to_merge():
         flash("SKU merge is not enabled for your plan.", "warning")
         return redirect(url_for("products.list_products"))
     skus = (
-        ProductSKU.scoped().join(
-            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
-        )
+        ProductSKU.scoped()
+        .join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id)
         .filter(
             ProductSKU.organization_id == current_user.organization_id,
             ProductSKU.is_active,
@@ -265,10 +285,14 @@ def configure_merge():
         return redirect(url_for("sku.select_skus_to_merge"))
 
     # Get selected SKUs
-    skus = ProductSKU.scoped().filter(
-        ProductSKU.inventory_item_id.in_(sku_ids),
-        ProductSKU.organization_id == current_user.organization_id,
-    ).all()
+    skus = (
+        ProductSKU.scoped()
+        .filter(
+            ProductSKU.inventory_item_id.in_(sku_ids),
+            ProductSKU.organization_id == current_user.organization_id,
+        )
+        .all()
+    )
 
     # Validate all SKUs have same product and variant
     if len(set((sku.product_id, sku.variant_id) for sku in skus)) > 1:
@@ -326,10 +350,14 @@ def execute_merge():
             return redirect(url_for("sku.select_skus_to_merge"))
 
         # Get all SKUs
-        skus = ProductSKU.scoped().filter(
-            ProductSKU.inventory_item_id.in_(sku_ids),
-            ProductSKU.organization_id == current_user.organization_id,
-        ).all()
+        skus = (
+            ProductSKU.scoped()
+            .filter(
+                ProductSKU.inventory_item_id.in_(sku_ids),
+                ProductSKU.organization_id == current_user.organization_id,
+            )
+            .all()
+        )
 
         target_sku = next(
             (sku for sku in skus if str(sku.inventory_item_id) == target_sku_id), None
@@ -458,7 +486,10 @@ def execute_merge():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/sku.py:459", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/sku.py:459",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error merging SKUs: {str(e)}")
         flash(f"Error merging SKUs: {str(e)}", "error")
@@ -472,19 +503,23 @@ def execute_merge():
 @require_permission("products.manage_variants")
 def get_merge_preview(sku_id):
     """Get preview data for SKU merge"""
-    sku = ProductSKU.scoped().filter_by(
-        inventory_item_id=sku_id, organization_id=current_user.organization_id
-    ).first_or_404()
+    sku = (
+        ProductSKU.scoped()
+        .filter_by(
+            inventory_item_id=sku_id, organization_id=current_user.organization_id
+        )
+        .first_or_404()
+    )
 
     # Get history count
-    history_count = UnifiedInventoryHistory.scoped().filter_by(
-        inventory_item_id=sku_id
-    ).count()
+    history_count = (
+        UnifiedInventoryHistory.scoped().filter_by(inventory_item_id=sku_id).count()
+    )
 
     # Get reservations count
-    reservations_count = Reservation.scoped().filter_by(
-        product_item_id=sku_id, status="active"
-    ).count()
+    reservations_count = (
+        Reservation.scoped().filter_by(product_item_id=sku_id, status="active").count()
+    )
 
     return jsonify(
         {

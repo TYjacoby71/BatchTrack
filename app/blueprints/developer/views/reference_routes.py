@@ -9,6 +9,7 @@ Glossary:
 """
 
 from __future__ import annotations
+
 import logging
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
@@ -30,7 +31,6 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 logger = logging.getLogger(__name__)
-
 
 
 # --- Generate Unique Slug ---
@@ -134,7 +134,10 @@ def add_reference_category():
         )
 
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:132", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:132",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(exc)})
 
@@ -186,7 +189,10 @@ def delete_reference_category():
         )
 
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:183", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:183",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(exc)})
 
@@ -242,7 +248,10 @@ def update_reference_category_density():
         )
 
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:238", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:238",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(exc)})
 
@@ -297,7 +306,10 @@ def calculate_category_density():
         )
 
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:292", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:292",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(exc)})
 
 
@@ -341,7 +353,10 @@ def save_curated_container_lists():
         ReferenceDataService.save_curated_container_lists(curated_lists)
         return jsonify({"success": True, "message": "Curated lists saved successfully"})
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:335", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:335",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(exc)})
 
 
@@ -357,7 +372,10 @@ def api_container_options():
         curated_lists = ReferenceDataService.load_curated_container_lists()
         return jsonify({"success": True, "options": curated_lists})
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:350", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:350",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(exc)})
 
 

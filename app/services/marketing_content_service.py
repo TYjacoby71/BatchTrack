@@ -84,9 +84,7 @@ class MarketingContentService:
             isinstance(entry, dict)
             and (entry.get("email") or "").strip().lower() == normalized_email
             and (
-                (entry.get("waitlist_key") or entry.get("source") or "")
-                .strip()
-                .lower()
+                (entry.get("waitlist_key") or entry.get("source") or "").strip().lower()
                 == normalized_waitlist_key
             )
             for entry in cls.get_waitlist_entries()
@@ -98,7 +96,9 @@ class MarketingContentService:
             return False
 
         email = (entry.get("email") or "").strip().lower()
-        waitlist_key = (entry.get("waitlist_key") or entry.get("source") or "").strip().lower()
+        waitlist_key = (
+            (entry.get("waitlist_key") or entry.get("source") or "").strip().lower()
+        )
         if email and waitlist_key and cls.has_waitlist_entry(email, waitlist_key):
             return False
 

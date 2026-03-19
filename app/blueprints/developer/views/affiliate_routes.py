@@ -38,7 +38,10 @@ def affiliate_ecosystem():
         **context,
         breadcrumb_items=[
             {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
-            {"label": "Billing Integration", "url": url_for("developer.billing_integration")},
+            {
+                "label": "Billing Integration",
+                "url": url_for("developer.billing_integration"),
+            },
             {"label": "Affiliate Ecosystem"},
         ],
     )
@@ -60,8 +63,14 @@ def affiliate_ecosystem_organization(org_id):
         affiliate_analytics=affiliate_analytics,
         breadcrumb_items=[
             {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
-            {"label": "Billing Integration", "url": url_for("developer.billing_integration")},
-            {"label": "Affiliate Ecosystem", "url": url_for("developer.affiliate_ecosystem")},
+            {
+                "label": "Billing Integration",
+                "url": url_for("developer.billing_integration"),
+            },
+            {
+                "label": "Affiliate Ecosystem",
+                "url": url_for("developer.affiliate_ecosystem"),
+            },
             {"label": org.name},
         ],
     )
@@ -87,7 +96,10 @@ def affiliate_payouts():
         **context,
         breadcrumb_items=[
             {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
-            {"label": "Billing Integration", "url": url_for("developer.billing_integration")},
+            {
+                "label": "Billing Integration",
+                "url": url_for("developer.billing_integration"),
+            },
             {"label": "Affiliate Payout Operations"},
         ],
     )
@@ -123,7 +135,9 @@ def _payout_update_error_message(reason: str | None) -> str:
     if reason == "organization_not_found":
         return "The selected organization no longer exists."
     if reason == "unsupported_payout_provider":
-        return "Only Stripe payout destinations are supported for affiliate payout pushes."
+        return (
+            "Only Stripe payout destinations are supported for affiliate payout pushes."
+        )
     if reason == "payout_account_not_ready":
         return "Stripe payout destination is not configured for this organization."
     if reason == "not_eligible":
@@ -135,7 +149,9 @@ def _payout_update_error_message(reason: str | None) -> str:
     if reason == "stripe_not_configured":
         return "Stripe is not configured on this environment."
     if reason == "stripe_transfer_failed":
-        return "Stripe payout push failed. Check payout destination and platform balance."
+        return (
+            "Stripe payout push failed. Check payout destination and platform balance."
+        )
     return "Unable to update payout status due to an unexpected error."
 
 
@@ -177,7 +193,9 @@ def affiliate_payout_update_status():
 
     status_changed_rows = int(result.get("status_changed_rows", 0) or 0)
     updated_rows = int(result.get("updated_rows", 0) or 0)
-    changed_commission_cents = int(result.get("status_changed_commission_cents", 0) or 0)
+    changed_commission_cents = int(
+        result.get("status_changed_commission_cents", 0) or 0
+    )
     status_label = result.get("target_status_label") or "Updated"
     if status_changed_rows > 0:
         flash(
@@ -209,10 +227,16 @@ def affiliate_payout_update_status():
                 f"Payout status updated, but only {sent}/{attempted} notification emails were sent from noreply.",
                 "warning",
             )
-    elif updated_rows > 0 and target_status in {PAYOUT_STATUS_SENT, PAYOUT_STATUS_COMPLETE}:
+    elif updated_rows > 0 and target_status in {
+        PAYOUT_STATUS_SENT,
+        PAYOUT_STATUS_COMPLETE,
+    }:
         flash("Payout reference updated for the selected payout batch.", "success")
     else:
-        flash("No payout rows changed. The selected batch is already in that status.", "info")
+        flash(
+            "No payout rows changed. The selected batch is already in that status.",
+            "info",
+        )
     return _affiliate_payout_redirect()
 
 
@@ -305,7 +329,9 @@ def affiliate_payout_run_auto():
         )
         return _affiliate_payout_redirect()
 
-    result = AffiliateService.run_automatic_stripe_payouts(limit_batches=50, auto_commit=True)
+    result = AffiliateService.run_automatic_stripe_payouts(
+        limit_batches=50, auto_commit=True
+    )
     if not result.get("ok"):
         flash(_payout_update_error_message(result.get("reason")), "error")
         return _affiliate_payout_redirect()

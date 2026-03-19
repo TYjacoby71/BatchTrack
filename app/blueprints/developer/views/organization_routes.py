@@ -91,11 +91,7 @@ def support_submissions():
     """View customer feedback-note submissions grouped by source and type."""
     refresh = (request.args.get("refresh") or "").lower() in ("1", "true", "yes")
     global_index = ToolFeedbackNoteService.load_global_index(refresh=refresh)
-    raw_sources = (
-        global_index.get("sources")
-        if isinstance(global_index, dict)
-        else []
-    )
+    raw_sources = global_index.get("sources") if isinstance(global_index, dict) else []
     if not isinstance(raw_sources, list):
         raw_sources = []
 
@@ -172,7 +168,9 @@ def support_submissions():
 
     requested_flow = request.args.get("flow")
     selected_flow_key = (
-        ToolFeedbackNoteService.normalize_flow(requested_flow) if requested_flow else None
+        ToolFeedbackNoteService.normalize_flow(requested_flow)
+        if requested_flow
+        else None
     )
     if selected_source:
         available_flows = [flow["flow"] for flow in selected_source["flows"]]

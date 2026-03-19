@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Seed the consolidated permissions system"""
-import logging
 
 import json
+import logging
 import os
 
 from flask import current_app
@@ -11,7 +11,6 @@ from ..models import DeveloperPermission, Permission, Role, db
 from ..models.developer_role import DeveloperRole
 
 logger = logging.getLogger(__name__)
-
 
 
 def load_consolidated_permissions():
@@ -89,7 +88,10 @@ def seed_organization_permissions():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/seeders/consolidated_permission_seeder.py:87", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/seeders/consolidated_permission_seeder.py:87",
+            exc_info=True,
+        )
         db.session.rollback()
         print(f"❌ Error seeding organization permissions: {e}")
         raise
@@ -144,7 +146,10 @@ def seed_developer_permissions():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/seeders/consolidated_permission_seeder.py:141", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/seeders/consolidated_permission_seeder.py:141",
+            exc_info=True,
+        )
         db.session.rollback()
         print(f"❌ Error seeding developer permissions: {e}")
         raise
@@ -262,7 +267,10 @@ def cleanup_old_permissions():
             for tier in perm.tiers.all():
                 perm.tiers.remove(tier)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/seeders/consolidated_permission_seeder.py:258", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/consolidated_permission_seeder.py:258",
+                exc_info=True,
+            )
             pass
         db.session.delete(perm)
         print(f"Removed old organization permission: {perm.name}")

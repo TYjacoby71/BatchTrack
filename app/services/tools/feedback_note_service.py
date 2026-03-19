@@ -231,7 +231,9 @@ class ToolFeedbackNoteService:
                     if isinstance(entry.get("request"), dict)
                     else None
                 ),
-                user_json=entry.get("user") if isinstance(entry.get("user"), dict) else None,
+                user_json=(
+                    entry.get("user") if isinstance(entry.get("user"), dict) else None
+                ),
             )
             db.session.add(note)
             db.session.commit()
@@ -268,7 +270,9 @@ class ToolFeedbackNoteService:
                 .group_by(ToolFeedbackNote.source, ToolFeedbackNote.flow)
                 .all()
             )
-            latest_ts = db.session.query(func.max(ToolFeedbackNote.submitted_at)).scalar()
+            latest_ts = db.session.query(
+                func.max(ToolFeedbackNote.submitted_at)
+            ).scalar()
 
             source_map: dict[str, dict[str, int]] = {}
             for source, flow, count in grouped_rows:
@@ -328,7 +332,9 @@ class ToolFeedbackNoteService:
                 ToolFeedbackNote.flow == flow,
             )
             count = int(base_query.count() or 0)
-            latest_ts = base_query.with_entities(func.max(ToolFeedbackNote.submitted_at)).scalar()
+            latest_ts = base_query.with_entities(
+                func.max(ToolFeedbackNote.submitted_at)
+            ).scalar()
 
             rows_query = base_query.order_by(
                 ToolFeedbackNote.submitted_at.desc(),
@@ -527,12 +533,16 @@ class ToolFeedbackNoteService:
         try:
             current_bucket = read_json_file(bucket_path, default={}) or {}
             entries = (
-                current_bucket.get("entries") if isinstance(current_bucket, dict) else []
+                current_bucket.get("entries")
+                if isinstance(current_bucket, dict)
+                else []
             )
             if not isinstance(entries, list):
                 entries = []
             entries.append(entry)
-            entries.sort(key=lambda row: str(row.get("submitted_at") or ""), reverse=True)
+            entries.sort(
+                key=lambda row: str(row.get("submitted_at") or ""), reverse=True
+            )
 
             bucket_payload = {
                 "source": source,
@@ -612,9 +622,7 @@ class ToolFeedbackNoteService:
             entries = entries[:limit]
 
         count = (
-            int(bucket.get("count") or 0)
-            if isinstance(bucket, dict)
-            else len(entries)
+            int(bucket.get("count") or 0) if isinstance(bucket, dict) else len(entries)
         )
         return {
             "source": normalized_source,

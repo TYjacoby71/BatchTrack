@@ -17,7 +17,6 @@ from ._archive import (
     restore_recipe,
     unlist_recipe,
 )
-from ._maintenance import repair_test_sequences
 
 # Import the public functions from our internal helper modules
 from ._core import (
@@ -28,6 +27,7 @@ from ._core import (
     update_recipe,
 )
 from ._current import ensure_current_versions_for_org, set_current_version
+from ._maintenance import repair_test_sequences
 from ._merge import build_rebased_ingredients
 from ._scaling import scale_recipe
 from ._validation import validate_recipe_data

@@ -1,8 +1,8 @@
 """Thin wrapper around google-generativeai so the rest of the app has a single entrypoint."""
 
 from __future__ import annotations
-import logging
 
+import logging
 import threading
 from dataclasses import dataclass
 from typing import (
@@ -20,7 +20,6 @@ import google.generativeai as genai
 from flask import current_app
 
 logger = logging.getLogger(__name__)
-
 
 
 class GoogleAIClientError(RuntimeError):
@@ -126,7 +125,10 @@ class GoogleAIClient:
                 stream=stream,
             )
         except Exception as exc:  # pragma: no cover - network errors
-            logger.warning("Suppressed exception fallback at app/services/ai/google_ai_client.py:124", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/ai/google_ai_client.py:124",
+                exc_info=True,
+            )
             raise GoogleAIClientError(f"Gemini request failed: {exc}") from exc
 
         # Streamed responses return a generator; consolidate into one object.
@@ -173,7 +175,10 @@ def _first_text(response: Any) -> str:
             if text:
                 return text
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/ai/google_ai_client.py:170", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/ai/google_ai_client.py:170",
+            exc_info=True,
+        )
         pass
 
     # Fallback to string conversion.
@@ -195,5 +200,8 @@ def _extract_tool_calls(response: Any) -> Sequence[Mapping[str, Any]] | None:
                 collected.append(part.executable_code)
         return collected or None
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/ai/google_ai_client.py:191", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/ai/google_ai_client.py:191",
+            exc_info=True,
+        )
         return None

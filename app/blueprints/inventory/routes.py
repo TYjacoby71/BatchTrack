@@ -427,7 +427,10 @@ def api_toggle_global_link(item_id: int):
             }
         )
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:429", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/inventory/routes.py:429",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.exception("Failed to toggle global link")
         return jsonify({"success": False, "error": str(exc)}), 500
@@ -536,11 +539,16 @@ def list_inventory():
         if bypass_cache:
             cache.delete(cache_key)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:537", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/inventory/routes.py:537",
+            exc_info=True,
+        )
         pass
 
     units = Unit.scoped().filter(Unit.is_active).all()
-    categories = IngredientCategory.scoped().order_by(IngredientCategory.name.asc()).all()
+    categories = (
+        IngredientCategory.scoped().order_by(IngredientCategory.name.asc()).all()
+    )
     org_tracks_inventory_quantities = _org_tracks_inventory_quantities()
 
     if not bypass_cache:
@@ -548,7 +556,10 @@ def list_inventory():
         try:
             cached_payload = cache.get(cache_key)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:548", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/inventory/routes.py:548",
+                exc_info=True,
+            )
             cached_payload = None
         if cached_payload:
             cached_items = _hydrate_inventory_items(cached_payload.get("items", []))
@@ -608,7 +619,10 @@ def list_inventory():
             timeout=cache_ttl,
         )
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:608", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/inventory/routes.py:608",
+            exc_info=True,
+        )
         pass
 
     hydrated_items = _hydrate_inventory_items(serialized_items)
@@ -647,7 +661,10 @@ def set_column_visibility():
             )
             db.session.commit()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:647", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/inventory/routes.py:647",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.exception("Failed to persist inventory column visibility preferences")
     return redirect(url_for("inventory.list_inventory"))
@@ -686,14 +703,18 @@ def view_inventory(id):
         from app.services.quantity_base import from_base_quantity
 
         # Only check InventoryLot for expired quantities
-        expired_lots_for_calc = InventoryLot.scoped().filter(
-            and_(
-                InventoryLot.inventory_item_id == item.id,
-                InventoryLot.remaining_quantity_base > 0,
-                InventoryLot.expiration_date.isnot(None),
-                InventoryLot.expiration_date < today,
+        expired_lots_for_calc = (
+            InventoryLot.scoped()
+            .filter(
+                and_(
+                    InventoryLot.inventory_item_id == item.id,
+                    InventoryLot.remaining_quantity_base > 0,
+                    InventoryLot.expiration_date.isnot(None),
+                    InventoryLot.expiration_date < today,
+                )
             )
-        ).all()
+            .all()
+        )
         expired_base = sum(
             int(lot.remaining_quantity_base or 0) for lot in expired_lots_for_calc
         )
@@ -729,12 +750,14 @@ def view_inventory(id):
     if not hasattr(item, "temp_available_quantity"):
         item.temp_available_quantity = float(item.quantity)
 
-    history_query = UnifiedInventoryHistory.scoped().filter_by(
-        inventory_item_id=id
-    ).options(
-        joinedload(UnifiedInventoryHistory.batch),
-        joinedload(UnifiedInventoryHistory.used_for_batch),
-        joinedload(UnifiedInventoryHistory.affected_lot),
+    history_query = (
+        UnifiedInventoryHistory.scoped()
+        .filter_by(inventory_item_id=id)
+        .options(
+            joinedload(UnifiedInventoryHistory.batch),
+            joinedload(UnifiedInventoryHistory.used_for_batch),
+            joinedload(UnifiedInventoryHistory.affected_lot),
+        )
     )
 
     # Lots: retrieve via FIFO service to preserve service authority
@@ -774,7 +797,8 @@ def view_inventory(id):
 
         # Only check InventoryLot for expired entries
         expired_entries = (
-            InventoryLot.scoped().filter(
+            InventoryLot.scoped()
+            .filter(
                 and_(
                     InventoryLot.inventory_item_id == id,
                     InventoryLot.remaining_quantity_base > 0,
@@ -804,9 +828,9 @@ def view_inventory(id):
         expired_entries=expired_entries,
         expired_total=expired_total,
         units=get_global_unit_list(),
-        get_ingredient_categories=IngredientCategory.scoped().order_by(
-            IngredientCategory.name
-        ).all,
+        get_ingredient_categories=IngredientCategory.scoped()
+        .order_by(IngredientCategory.name)
+        .all,
         User=User,
         UnifiedInventoryHistory=UnifiedInventoryHistory,
         now=datetime.now(timezone.utc),
@@ -1158,7 +1182,10 @@ def edit_inventory(id):
                         else:
                             item.density_source = "manual"
                     except Exception:
-                        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:1158", exc_info=True)
+                        logger.warning(
+                            "Suppressed exception fallback at app/blueprints/inventory/routes.py:1158",
+                            exc_info=True,
+                        )
                         item.density_source = "manual"
                 except (ValueError, TypeError):
                     logger.warning(f"Invalid category_id provided: {raw_category_id}")
@@ -1224,7 +1251,10 @@ def archive_inventory(id):
         db.session.commit()
         flash("Inventory item archived successfully.", "success")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:1223", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/inventory/routes.py:1223",
+            exc_info=True,
+        )
         db.session.rollback()
         flash(f"Error archiving item: {str(e)}", "error")
     return redirect(url_for("inventory.list_inventory"))
@@ -1244,7 +1274,10 @@ def restore_inventory(id):
         db.session.commit()
         flash("Inventory item restored successfully.", "success")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:1242", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/inventory/routes.py:1242",
+            exc_info=True,
+        )
         db.session.rollback()
         flash(f"Error restoring item: {str(e)}", "error")
     return redirect(url_for("inventory.list_inventory"))
@@ -1277,15 +1310,18 @@ def debug_inventory(id):
             "fifo_error": error_msg,
             "inventory_qty": inv_qty,
             "fifo_total": fifo_total,
-            "history_count": UnifiedInventoryHistory.scoped().filter_by(
-                inventory_item_id=id
-            ).count(),
+            "history_count": UnifiedInventoryHistory.scoped()
+            .filter_by(inventory_item_id=id)
+            .count(),
         }
 
         return jsonify(debug_info)
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:1282", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/inventory/routes.py:1282",
+            exc_info=True,
+        )
         import traceback
 
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500

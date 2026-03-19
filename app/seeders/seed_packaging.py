@@ -1,5 +1,5 @@
-import logging
 import json
+import logging
 import os
 import sys
 
@@ -34,7 +34,10 @@ def seed_packaging_from_files(selected_files):
             with open(filepath, "r") as f:
                 category_data = json.load(f)
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/seeders/seed_packaging.py:32", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/seed_packaging.py:32",
+                exc_info=True,
+            )
             print(f"  ⚠️  Error loading {filename}: {e}")
             continue
 
@@ -133,6 +136,9 @@ if __name__ == "__main__":
             print("\n🎉 Packaging Seeding Complete!")
             print(f"📊 Items created: {items_created}")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/seeders/seed_packaging.py:130", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/seed_packaging.py:130",
+                exc_info=True,
+            )
             db.session.rollback()
             print(f"\n❌ Seeding failed during commit: {e}")

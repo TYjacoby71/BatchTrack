@@ -71,7 +71,9 @@ def test_settings_list_preferences_api_round_trip(client, app):
             "ingredients_archived_filter": "true",
         },
     }
-    save_response = client.post("/settings/api/list-preferences/inventory_list", json=payload)
+    save_response = client.post(
+        "/settings/api/list-preferences/inventory_list", json=payload
+    )
     assert save_response.status_code == 200
     save_data = save_response.get_json() or {}
     assert save_data.get("success") is True

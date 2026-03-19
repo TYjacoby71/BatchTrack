@@ -11,6 +11,7 @@ Glossary:
 """
 
 from __future__ import annotations
+
 import logging
 
 from ..models.subscription_tier import SubscriptionTier
@@ -21,7 +22,6 @@ from .tier_presentation import TierPresentationCore
 from .tier_presentation.helpers import coerce_int, normalize_token_set
 
 logger = logging.getLogger(__name__)
-
 
 
 # --- Signup plan catalog service ---
@@ -172,7 +172,9 @@ class SignupPlanCatalogService:
             ]
             presentation_feature_total = len(all_presentation_features)
 
-            monthly_lookup_key = (getattr(tier_obj, "stripe_lookup_key", None) or "").strip()
+            monthly_lookup_key = (
+                getattr(tier_obj, "stripe_lookup_key", None) or ""
+            ).strip()
             monthly_pricing = None
             if include_live_pricing and monthly_lookup_key:
                 try:
@@ -181,7 +183,10 @@ class SignupPlanCatalogService:
                         allow_network=allow_live_pricing_network,
                     )
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/services/signup_plan_catalog_service.py:148", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/signup_plan_catalog_service.py:148",
+                        exc_info=True,
+                    )
                     monthly_pricing = None
 
             yearly_lookup_key = None
@@ -200,7 +205,10 @@ class SignupPlanCatalogService:
                         allow_network=allow_live_pricing_network,
                     )
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/services/signup_plan_catalog_service.py:164", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/signup_plan_catalog_service.py:164",
+                        exc_info=True,
+                    )
                     yearly_pricing = None
             if yearly_pricing and yearly_pricing.get("billing_cycle") != "yearly":
                 yearly_pricing = None
@@ -218,9 +226,7 @@ class SignupPlanCatalogService:
                 yearly_pricing["formatted_price"]
                 if yearly_pricing
                 else (
-                    "Yearly pricing at secure checkout"
-                    if yearly_lookup_key
-                    else None
+                    "Yearly pricing at secure checkout" if yearly_lookup_key else None
                 )
             )
             price_display = monthly_price_display or "Contact Sales"

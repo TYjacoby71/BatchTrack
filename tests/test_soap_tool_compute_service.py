@@ -83,8 +83,7 @@ def test_compute_service_sheet_shows_fragrance_and_additives_when_present():
     html = result["export"]["sheet_html"]
 
     assert (
-        "Fragrance &amp; Essential Oils" in html
-        or "Fragrance & Essential Oils" in html
+        "Fragrance &amp; Essential Oils" in html or "Fragrance & Essential Oils" in html
     )
     assert "Lavender EO" in html
     assert "Additives" in html

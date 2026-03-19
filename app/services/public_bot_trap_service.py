@@ -117,9 +117,8 @@ class PublicBotTrapService:
         normalized_host = host.strip().lower()
         for allowed in allowed_hosts:
             normalized_allowed = allowed.strip().lower()
-            if (
-                normalized_host == normalized_allowed
-                or normalized_host.endswith(f".{normalized_allowed}")
+            if normalized_host == normalized_allowed or normalized_host.endswith(
+                f".{normalized_allowed}"
             ):
                 return True
         return False
@@ -265,7 +264,10 @@ class PublicBotTrapService:
         try:
             import redis
         except Exception:  # pragma: no cover - optional dependency
-            logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:267", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/public_bot_trap_service.py:267",
+                exc_info=True,
+            )
             return None
 
         app_obj = None
@@ -327,7 +329,10 @@ class PublicBotTrapService:
         try:
             return bool(redis_client.exists(key))
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:328", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/public_bot_trap_service.py:328",
+                exc_info=True,
+            )
             return False
 
     @classmethod
@@ -345,7 +350,9 @@ class PublicBotTrapService:
         try:
             redis_client.set(cls._redis_temp_ip_block_key(ip_value), "1", ex=ttl)
         except Exception as exc:
-            logger.debug("Failed to cache temporary bot-trap IP block in Redis: %s", exc)
+            logger.debug(
+                "Failed to cache temporary bot-trap IP block in Redis: %s", exc
+            )
 
     @classmethod
     def _cache_penalty_level(
@@ -447,7 +454,9 @@ class PublicBotTrapService:
         last_hit_at = cls._as_utc(row.last_hit_at)
         if last_hit_at is None:
             return True
-        retention_window = max(cls._strike_window_seconds(), cls._penalty_reset_seconds())
+        retention_window = max(
+            cls._strike_window_seconds(), cls._penalty_reset_seconds()
+        )
         return (now - last_hit_at).total_seconds() > retention_window
 
     @classmethod
@@ -592,9 +601,7 @@ class PublicBotTrapService:
         level = cls._coerce_int(ip_state.penalty_level, default=0, min_value=0)
         if (
             cls._as_utc(ip_state.last_blocked_at) is None
-            or (
-                now - cls._as_utc(ip_state.last_blocked_at)
-            ).total_seconds()
+            or (now - cls._as_utc(ip_state.last_blocked_at)).total_seconds()
             > cls._penalty_reset_seconds()
         ):
             level = 0
@@ -710,10 +717,7 @@ class PublicBotTrapService:
                 if ip_state is not None:
                     changed = cls._cleanup_ip_state_row(ip_state, now=now)
                     blocked_until = cls._as_utc(ip_state.blocked_until)
-                    blocked = (
-                        blocked_until is not None
-                        and blocked_until > now
-                    )
+                    blocked = blocked_until is not None and blocked_until > now
                     if not blocked and cls._row_is_redundant(ip_state, now=now):
                         db.session.delete(ip_state)
                         changed = True
@@ -764,7 +768,10 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:764", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/public_bot_trap_service.py:764",
+                    exc_info=True,
+                )
                 pass
             return False
 
@@ -869,7 +876,10 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:868", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/public_bot_trap_service.py:868",
+                    exc_info=True,
+                )
                 pass
 
     @classmethod
@@ -957,7 +967,10 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:955", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/public_bot_trap_service.py:955",
+                    exc_info=True,
+                )
                 pass
 
         return entry
@@ -1011,7 +1024,9 @@ class PublicBotTrapService:
                     )
                     redis_client.expire(penalty_key, cls._penalty_reset_seconds())
 
-                    block_seconds = cls._block_base_seconds() * (2 ** (penalty_level - 1))
+                    block_seconds = cls._block_base_seconds() * (
+                        2 ** (penalty_level - 1)
+                    )
                     block_seconds = min(block_seconds, cls._block_max_seconds())
                     blocked_until = now + timedelta(seconds=block_seconds)
                     redis_client.set(
@@ -1035,8 +1050,12 @@ class PublicBotTrapService:
                         ip_state.blocked_until = blocked_until
                         ip_state.penalty_level = penalty_level
                         ip_state.last_blocked_at = now
-                        ip_state.last_source = cls._safe_value(source, max_len=80) or "unknown"
-                        ip_state.last_reason = cls._safe_value(reason, max_len=80) or "unknown"
+                        ip_state.last_source = (
+                            cls._safe_value(source, max_len=80) or "unknown"
+                        )
+                        ip_state.last_reason = (
+                            cls._safe_value(reason, max_len=80) or "unknown"
+                        )
                         ip_state.last_hit_at = now
 
                 cls._record_hit_row_if_enabled(entry)
@@ -1059,7 +1078,10 @@ class PublicBotTrapService:
                 try:
                     db.session.rollback()
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:1056", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/public_bot_trap_service.py:1056",
+                        exc_info=True,
+                    )
                     pass
 
         try:
@@ -1106,7 +1128,10 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:1102", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/public_bot_trap_service.py:1102",
+                    exc_info=True,
+                )
                 pass
 
         return {
@@ -1132,7 +1157,10 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:1127", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/public_bot_trap_service.py:1127",
+                    exc_info=True,
+                )
                 pass
 
     @classmethod
@@ -1152,6 +1180,9 @@ class PublicBotTrapService:
             try:
                 db.session.rollback()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/public_bot_trap_service.py:1146", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/public_bot_trap_service.py:1146",
+                    exc_info=True,
+                )
                 pass
         return None

@@ -7,8 +7,8 @@ Glossary:
 - FIFO entry: A lot event displayed in FIFO ordering.
 - Batch usage: Lot consumption tied to a batch.
 """
-import logging
 
+import logging
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
@@ -49,7 +49,8 @@ def get_fifo_details(inventory_id):
 
         # Get current FIFO entries (available stock) from UnifiedInventoryHistory
         fifo_entries = (
-            UnifiedInventoryHistory.scoped().filter_by(inventory_item_id=inventory_id)
+            UnifiedInventoryHistory.scoped()
+            .filter_by(inventory_item_id=inventory_id)
             .filter(
                 or_(
                     UnifiedInventoryHistory.remaining_quantity_base > 0,
@@ -109,7 +110,10 @@ def get_fifo_details(inventory_id):
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/fifo_routes.py:107", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/fifo_routes.py:107",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -130,7 +134,9 @@ def get_batch_inventory_summary(batch_id):
 
         # Add containers
         batch_containers = BatchContainer.scoped().filter_by(batch_id=batch_id).all()
-        extra_containers = ExtraBatchContainer.scoped().filter_by(batch_id=batch_id).all()
+        extra_containers = (
+            ExtraBatchContainer.scoped().filter_by(batch_id=batch_id).all()
+        )
 
         container_summary = []
         for container in batch_containers:
@@ -173,16 +179,17 @@ def get_batch_inventory_summary(batch_id):
                 ],
             }
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/api/fifo_routes.py:170", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/api/fifo_routes.py:170",
+                exc_info=True,
+            )
             freshness_payload = {"overall_freshness_percent": None, "items": []}
 
         return jsonify(
             {
                 "batch": {
                     "label_code": batch.label_code,
-                    "recipe_name": format_recipe_lineage_name(
-                        batch.recipe
-                    ),
+                    "recipe_name": format_recipe_lineage_name(batch.recipe),
                     "scale": batch.scale,
                 },
                 "ingredient_summary": ingredient_summary,
@@ -192,7 +199,10 @@ def get_batch_inventory_summary(batch_id):
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/fifo_routes.py:188", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/fifo_routes.py:188",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -203,7 +213,8 @@ def get_batch_inventory_summary(batch_id):
 def get_batch_fifo_usage(inventory_id, batch_id):
     """Get lot-level usage data for a specific ingredient in a specific batch using unified events."""
     events = (
-        UnifiedInventoryHistory.scoped().filter(
+        UnifiedInventoryHistory.scoped()
+        .filter(
             UnifiedInventoryHistory.inventory_item_id == inventory_id,
             UnifiedInventoryHistory.batch_id == batch_id,
             UnifiedInventoryHistory.change_type == "batch",
@@ -235,14 +246,20 @@ def get_batch_fifo_usage(inventory_id, batch_id):
                 try:
                     age_days = max(0, (when - lot.received_date).days)
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/blueprints/api/fifo_routes.py:230", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/blueprints/api/fifo_routes.py:230",
+                        exc_info=True,
+                    )
                     age_days = None
 
             # Compute freshness percent using shared logic
             try:
                 life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(lot, when)  # type: ignore
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/api/fifo_routes.py:236", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/api/fifo_routes.py:236",
+                    exc_info=True,
+                )
                 life_remaining_percent = None
 
         # Fallback freshness computation if lot is missing but item has shelf life
@@ -263,7 +280,10 @@ def get_batch_fifo_usage(inventory_id, batch_id):
                     life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(_FakeLot, when)  # type: ignore
                     age_days = (when - received_guess).days
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/api/fifo_routes.py:256", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/api/fifo_routes.py:256",
+                    exc_info=True,
+                )
                 pass
 
         usage_data.append(
@@ -291,7 +311,8 @@ def build_merged_ingredient_summary(batch: Batch):
     """
     # Gather all deduction events for this batch
     events = (
-        UnifiedInventoryHistory.scoped().filter(
+        UnifiedInventoryHistory.scoped()
+        .filter(
             UnifiedInventoryHistory.batch_id == batch.id,
             UnifiedInventoryHistory.change_type == "batch",
             UnifiedInventoryHistory.quantity_change < 0,
@@ -330,12 +351,18 @@ def build_merged_ingredient_summary(batch: Batch):
                     try:
                         age_days = max(0, (when - lot.received_date).days)
                     except Exception:
-                        logger.warning("Suppressed exception fallback at app/blueprints/api/fifo_routes.py:322", exc_info=True)
+                        logger.warning(
+                            "Suppressed exception fallback at app/blueprints/api/fifo_routes.py:322",
+                            exc_info=True,
+                        )
                         age_days = None
                 try:
                     life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(lot, when)  # type: ignore
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/blueprints/api/fifo_routes.py:326", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/blueprints/api/fifo_routes.py:326",
+                        exc_info=True,
+                    )
                     life_remaining_percent = None
 
             if (
@@ -358,7 +385,10 @@ def build_merged_ingredient_summary(batch: Batch):
                     life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(_FakeLot, when)  # type: ignore
                     age_days = (when - received_guess).days
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/blueprints/api/fifo_routes.py:348", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/blueprints/api/fifo_routes.py:348",
+                        exc_info=True,
+                    )
                     pass
 
             usage_data.append(

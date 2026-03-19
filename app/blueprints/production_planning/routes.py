@@ -222,16 +222,22 @@ def debug_recipe_containers(recipe_id):
             )
 
         # Get all available containers in org
-        container_category = IngredientCategory.scoped().filter_by(
-            name="Container", organization_id=current_user.organization_id
-        ).first()
+        container_category = (
+            IngredientCategory.scoped()
+            .filter_by(name="Container", organization_id=current_user.organization_id)
+            .first()
+        )
 
         all_containers = []
         if container_category:
-            containers = InventoryItem.scoped().filter_by(
-                organization_id=current_user.organization_id,
-                category_id=container_category.id,
-            ).all()
+            containers = (
+                InventoryItem.scoped()
+                .filter_by(
+                    organization_id=current_user.organization_id,
+                    category_id=container_category.id,
+                )
+                .all()
+            )
             all_containers = [
                 {
                     "id": c.id,
@@ -253,7 +259,10 @@ def debug_recipe_containers(recipe_id):
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/production_planning/routes.py:255", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/production_planning/routes.py:255",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 

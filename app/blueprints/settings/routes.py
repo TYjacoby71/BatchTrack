@@ -26,7 +26,6 @@ from . import settings_bp
 logger = logging.getLogger(__name__)
 
 
-
 @settings_bp.route("/")
 @settings_bp.route("")
 @login_required
@@ -131,7 +130,9 @@ def regenerate_affiliate_link():
     if not can_generate:
         return jsonify({"success": False, "error": "Insufficient permissions"}), 403
 
-    profile = AffiliateService.get_or_create_affiliate_profile(current_user, auto_commit=True)
+    profile = AffiliateService.get_or_create_affiliate_profile(
+        current_user, auto_commit=True
+    )
     if not profile:
         return (
             jsonify(
@@ -144,9 +145,7 @@ def regenerate_affiliate_link():
         )
 
     AffiliateService.rotate_profile_referral_code(profile, auto_commit=True)
-    link = AffiliateService.build_referral_link(
-        current_user, base_url=request.url_root
-    )
+    link = AffiliateService.build_referral_link(current_user, base_url=request.url_root)
     return jsonify(
         {
             "success": True,
@@ -198,7 +197,10 @@ def get_user_preferences():
                 }
             )
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:134", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:134",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -231,7 +233,10 @@ def update_user_preferences():
         flash("All preferences saved successfully", "success")
         return jsonify({"success": True, "message": "Preferences updated successfully"})
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:166", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:166",
+            exc_info=True,
+        )
         flash("Error saving preferences", "error")
         return jsonify({"error": str(e)}), 500
 
@@ -251,7 +256,10 @@ def get_list_preferences(scope):
         values = user_prefs.get_list_preferences(scope)
         return jsonify({"success": True, "scope": scope, "values": values})
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:185", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:185",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -276,7 +284,9 @@ def update_list_preferences(scope):
 
         if not isinstance(values, dict):
             return (
-                jsonify({"success": False, "error": "Preference values must be an object"}),
+                jsonify(
+                    {"success": False, "error": "Preference values must be an object"}
+                ),
                 400,
             )
 
@@ -291,7 +301,10 @@ def update_list_preferences(scope):
             {"success": True, "scope": scope, "values": next_scope_values, "mode": mode}
         )
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:224", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:224",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -314,7 +327,10 @@ def update_system_settings():
             {"success": True, "message": "System settings updated successfully"}
         )
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:246", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:246",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -415,7 +431,10 @@ def save_profile():
             return redirect(redirect_url)
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:343", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:343",
+            exc_info=True,
+        )
         print(f"Error in profile save: {str(e)}")
         import traceback
 
@@ -463,7 +482,10 @@ def change_password():
 
         return jsonify({"success": True, "message": "Password changed successfully"})
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:390", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:390",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -500,7 +522,10 @@ def set_backup_password():
         return jsonify({"success": True, "message": "Backup password set successfully"})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:426", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:426",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
@@ -527,7 +552,10 @@ def bulk_update_ingredients():
         return jsonify({"success": True, "updated_count": updated_count})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:452", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:452",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
@@ -558,7 +586,10 @@ def bulk_update_containers():
         return jsonify({"success": True, "updated_count": updated_count})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:482", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:482",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
@@ -609,7 +640,10 @@ def update_user_preference():
             return jsonify({"error": "Invalid preference key"}), 400
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:532", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:532",
+            exc_info=True,
+        )
         db.session.rollback()
         flash("Error saving preference", "error")
         return jsonify({"error": str(e)}), 500
@@ -635,7 +669,10 @@ def update_system_setting():
         return jsonify({"success": True})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/settings/routes.py:557", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/settings/routes.py:557",
+            exc_info=True,
+        )
         flash("Error saving system setting", "error")
         return jsonify({"error": str(e)}), 500
 

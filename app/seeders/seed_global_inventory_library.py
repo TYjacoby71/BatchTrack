@@ -59,7 +59,10 @@ def seed_global_inventory_library():
             total_categories += categories_created
             total_items += items_created
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/seeders/seed_global_inventory_library.py:57", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/seed_global_inventory_library.py:57",
+                exc_info=True,
+            )
             print(f"   ❌ Ingredients failed: {e}")
 
         # 2. Containers
@@ -77,7 +80,10 @@ def seed_global_inventory_library():
             )
             total_items += items_created
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/seeders/seed_global_inventory_library.py:74", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/seed_global_inventory_library.py:74",
+                exc_info=True,
+            )
             print(f"   ❌ Containers failed: {e}")
 
         # 3. Packaging
@@ -87,7 +93,10 @@ def seed_global_inventory_library():
             )
             total_items += items_created
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/seeders/seed_global_inventory_library.py:83", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/seed_global_inventory_library.py:83",
+                exc_info=True,
+            )
             print(f"   ❌ Packaging failed: {e}")
 
         # 4. Consumables
@@ -97,7 +106,10 @@ def seed_global_inventory_library():
             )
             total_items += items_created
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/seeders/seed_global_inventory_library.py:92", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/seed_global_inventory_library.py:92",
+                exc_info=True,
+            )
             print(f"   ❌ Consumables failed: {e}")
 
         try:
@@ -106,7 +118,10 @@ def seed_global_inventory_library():
                 f"   ✅ Global inventory library: {total_categories} categories, {total_items} items"
             )
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/seeders/seed_global_inventory_library.py:100", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/seed_global_inventory_library.py:100",
+                exc_info=True,
+            )
             db.session.rollback()
             print(f"   ❌ Global inventory library failed: {e}")
 

@@ -11,7 +11,6 @@ from .analytics_tracking_service import AnalyticsTrackingService
 logger = logging.getLogger(__name__)
 
 
-
 class ProductService:
     BULK_SIZE_LABEL_BY_UNIT_TYPE = {
         "weight": "Bulk Weight",
@@ -37,14 +36,18 @@ class ProductService:
             from ..models import Unit
 
             unit_row = Unit.query.filter(
-                (func.lower(Unit.name) == unit_key) | (func.lower(Unit.symbol) == unit_key)
+                (func.lower(Unit.name) == unit_key)
+                | (func.lower(Unit.symbol) == unit_key)
             ).first()
             if not unit_row:
                 return "Bulk"
             unit_type = str(unit_row.unit_type or "").strip().lower()
             return ProductService.BULK_SIZE_LABEL_BY_UNIT_TYPE.get(unit_type, "Bulk")
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/product_service.py:42", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/product_service.py:42",
+                exc_info=True,
+            )
             return "Bulk"
 
     @staticmethod
@@ -73,7 +76,10 @@ class ProductService:
             # collapse whitespace and cap length to DB field size
             normalized_size_label = " ".join(normalized_size_label.split())[:64]
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/product_service.py:70", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/product_service.py:70",
+                exc_info=True,
+            )
             normalized_size_label = "Bulk"
 
         if ProductService.is_bulk_size_label(normalized_size_label):
@@ -102,7 +108,10 @@ class ProductService:
                     db.session.flush()
                 category_id = default_cat.id
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/product_service.py:98", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/product_service.py:98",
+                    exc_info=True,
+                )
                 category_id = None
             product = Product(
                 name=product_name,
@@ -170,7 +179,9 @@ class ProductService:
             bulk_candidates = [
                 sku_candidate
                 for sku_candidate in all_variant_skus
-                if ProductService.is_bulk_size_label(getattr(sku_candidate, "size_label", None))
+                if ProductService.is_bulk_size_label(
+                    getattr(sku_candidate, "size_label", None)
+                )
             ]
             sku_candidate_pools = [
                 [
@@ -247,7 +258,10 @@ class ProductService:
                                     sku = candidate
                                     break
                             except Exception:
-                                logger.warning("Suppressed exception fallback at app/services/product_service.py:242", exc_info=True)
+                                logger.warning(
+                                    "Suppressed exception fallback at app/services/product_service.py:242",
+                                    exc_info=True,
+                                )
                                 continue
             else:
                 # Preserve existing behavior for non-bulk labels
@@ -299,7 +313,10 @@ class ProductService:
                         else None
                     )
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/services/product_service.py:293", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/product_service.py:293",
+                        exc_info=True,
+                    )
                     category = None
                 template = (
                     category.sku_name_template
@@ -322,7 +339,10 @@ class ProductService:
                     )
                 sku_name = SKUNameBuilder.render(template, base_context)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/product_service.py:315", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/product_service.py:315",
+                    exc_info=True,
+                )
                 sku_name = f"{product.name} - {variant.name} - {size_label}"
 
             # Create the ProductSKU entry - ensure sku field is properly set
@@ -381,7 +401,10 @@ class ProductService:
                         else None
                     )
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/services/product_service.py:373", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/product_service.py:373",
+                        exc_info=True,
+                    )
                     category = None
                 template = (
                     category.sku_name_template
@@ -403,7 +426,10 @@ class ProductService:
                     )
                     sku.sku_name = SKUNameBuilder.render(template, base_context)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/product_service.py:394", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/product_service.py:394",
+                exc_info=True,
+            )
             pass
 
         return sku

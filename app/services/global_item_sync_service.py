@@ -185,7 +185,10 @@ class GlobalItemSyncService:
                     )
                 except Exception:
                     # History is best-effort; don't break sync.
-                    logger.warning("Suppressed exception fallback at app/services/global_item_sync_service.py:186", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/global_item_sync_service.py:186",
+                        exc_info=True,
+                    )
                     pass
 
         logger.info(

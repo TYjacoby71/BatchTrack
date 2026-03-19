@@ -54,9 +54,7 @@ def validate_ingredients_with_uscs(
             # Convert USCS status to production planning status
             status = _convert_uscs_status(stock_item.get("status", "unknown"))
             inventory_item = recipe_ingredient.inventory_item
-            cost_per_unit = (
-                getattr(inventory_item, "cost_per_unit", 0) or 0
-            )
+            cost_per_unit = getattr(inventory_item, "cost_per_unit", 0) or 0
             scaled_quantity = stock_item["needed_quantity"]
             line_total_cost = calculate_recipe_line_item_cost_or_zero(
                 quantity=scaled_quantity,

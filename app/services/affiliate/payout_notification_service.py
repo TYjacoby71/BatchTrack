@@ -17,7 +17,9 @@ class AffiliatePayoutNotificationService:
     """Dispatch payout-status update notifications."""
 
     @staticmethod
-    def _collect_recipients(organization, referrer_user_ids: list[int] | None = None) -> list[str]:
+    def _collect_recipients(
+        organization, referrer_user_ids: list[int] | None = None
+    ) -> list[str]:
         recipients: list[str] = []
         if organization is None:
             return recipients
@@ -27,11 +29,13 @@ class AffiliatePayoutNotificationService:
         if owner_email:
             recipients.append(owner_email)
 
-        contact_email = (getattr(organization, "contact_email", "") or "").strip().lower()
+        contact_email = (
+            (getattr(organization, "contact_email", "") or "").strip().lower()
+        )
         if contact_email and contact_email not in recipients:
             recipients.append(contact_email)
 
-        for user_id in (referrer_user_ids or []):
+        for user_id in referrer_user_ids or []:
             user = User.query.get(int(user_id))
             if not user:
                 continue

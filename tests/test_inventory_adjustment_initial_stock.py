@@ -145,28 +145,28 @@ def test_infinite_item_records_usage_without_quantity_change(app):
 
 def test_infinite_adjustment_normalizes_stale_item_quantity_to_zero(app):
     with app.app_context():
-        org = Organization(name='Infinite Stale Quantity Org')
+        org = Organization(name="Infinite Stale Quantity Org")
         db.session.add(org)
         db.session.flush()
 
         user = User(
-            email='infinite-stale@test.com',
-            username='infinite-stale-user',
+            email="infinite-stale@test.com",
+            username="infinite-stale-user",
             organization_id=org.id,
-            is_verified=True
+            is_verified=True,
         )
         db.session.add(user)
         db.session.flush()
 
         stale_item = InventoryItem(
-            name='Stale Infinite Item',
-            unit='g',
+            name="Stale Infinite Item",
+            unit="g",
             quantity=42,
             quantity_base=42000,
             is_tracked=False,
             cost_per_unit=0.01,
             organization_id=org.id,
-            type='ingredient'
+            type="ingredient",
         )
         db.session.add(stale_item)
         db.session.commit()
@@ -176,11 +176,11 @@ def test_infinite_adjustment_normalizes_stale_item_quantity_to_zero(app):
             login_user(user)
             success, _message = process_inventory_adjustment(
                 item_id=item_id,
-                change_type='batch',
+                change_type="batch",
                 quantity=5,
-                unit='g',
-                notes='Normalize stale infinite quantity',
-                created_by=user.id
+                unit="g",
+                notes="Normalize stale infinite quantity",
+                created_by=user.id,
             )
 
         assert success is True

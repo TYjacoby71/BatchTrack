@@ -144,12 +144,8 @@ class PublicPricingPageService:
             "max_recipes": coerce_int(tier_data.get("max_recipes")),
             "max_batches": coerce_int(tier_data.get("max_batches")),
             "max_products": coerce_int(tier_data.get("max_products")),
-            "max_monthly_batches": coerce_int(
-                tier_data.get("max_monthly_batches")
-            ),
-            "max_batchbot_requests": coerce_int(
-                tier_data.get("max_batchbot_requests")
-            ),
+            "max_monthly_batches": coerce_int(tier_data.get("max_monthly_batches")),
+            "max_batchbot_requests": coerce_int(tier_data.get("max_batchbot_requests")),
         }
         retention_policy = str(tier_data.get("retention_policy") or "").strip().lower()
         retention_label = str(tier_data.get("retention_label") or "").strip()
@@ -166,7 +162,9 @@ class PublicPricingPageService:
             has_retention_entitlement=has_retention_entitlement,
         )
 
-        monthly_price_display = str(tier_data.get("monthly_price_display") or "").strip()
+        monthly_price_display = str(
+            tier_data.get("monthly_price_display") or ""
+        ).strip()
         yearly_price_display = str(tier_data.get("yearly_price_display") or "").strip()
         marketing_copy = build_marketing_copy(
             marketing_tagline=(
@@ -303,5 +301,7 @@ class PublicPricingPageService:
 
     @staticmethod
     def _can_standard_checkout(tier_obj: SubscriptionTier) -> bool:
-        billing_provider = str(getattr(tier_obj, "billing_provider", "")).strip().lower()
+        billing_provider = (
+            str(getattr(tier_obj, "billing_provider", "")).strip().lower()
+        )
         return billing_provider != "exempt"

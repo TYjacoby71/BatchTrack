@@ -181,7 +181,9 @@ class TestGoogleOAuthCharacterization:
             assert refreshed.oauth_provider == "google"
             assert refreshed.oauth_provider_id == "google-known-user"
 
-    def test_oauth_callback_stashes_new_user_info_and_redirects_signup(self, app, client):
+    def test_oauth_callback_stashes_new_user_info_and_redirects_signup(
+        self, app, client
+    ):
         """Callback should preserve profile info in session and route unknown users to signup."""
         with client.session_transaction() as sess:
             sess["oauth_state"] = "new-state"
@@ -219,4 +221,6 @@ class TestGoogleOAuthCharacterization:
             assert oauth_payload.get("last_name") == "Maker"
 
         with app.app_context():
-            assert User.query.filter_by(email="oauth.new.user@example.com").first() is None
+            assert (
+                User.query.filter_by(email="oauth.new.user@example.com").first() is None
+            )

@@ -8,6 +8,7 @@ Glossary:
 - Test sequence: Numeric identifier for non-current test versions.
 - Current version: Active master/variation used for production.
 """
+
 import logging
 
 import sqlalchemy as sa
@@ -466,7 +467,9 @@ def _assign_default_category_before_insert(mapper, connection, target):
             target.category_id = default_cat.id
     except Exception:
         # As a last resort, do nothing and let DB raise if truly impossible
-        logger.warning("Suppressed exception fallback at app/models/recipe.py:463", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/models/recipe.py:463", exc_info=True
+        )
         pass
 
 

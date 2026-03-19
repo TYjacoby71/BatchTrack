@@ -22,7 +22,9 @@ class MarketingContact(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), nullable=False)
-    email_normalized = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    email_normalized = db.Column(
+        db.String(255), nullable=False, unique=True, index=True
+    )
     first_name = db.Column(db.String(80), nullable=True)
     last_name = db.Column(db.String(80), nullable=True)
     business_type = db.Column(db.String(80), nullable=True)

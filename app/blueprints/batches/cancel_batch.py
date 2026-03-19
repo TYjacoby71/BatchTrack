@@ -9,6 +9,7 @@ Glossary:
 - Restoration summary: Human-readable list of items restored after cancel.
 - Batch service delegation: Route-to-service call pattern for cancellation logic.
 """
+
 import logging
 
 from flask import Blueprint, flash, redirect, url_for
@@ -62,6 +63,9 @@ def cancel_batch(batch_id):
         return redirect(url_for("batches.list_batches"))
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/batches/cancel_batch.py:60", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/batches/cancel_batch.py:60",
+            exc_info=True,
+        )
         flash(f"Error cancelling batch: {str(e)}", "error")
         return redirect(url_for("batches.view_batch_record", batch_identifier=batch_id))

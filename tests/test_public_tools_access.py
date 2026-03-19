@@ -52,9 +52,9 @@ def _assert_no_heading_level_skips(html: str, *, label: str):
 
     previous = levels[0]
     for current in levels[1:]:
-        assert current <= previous + 1, (
-            f"{label} has heading skip from h{previous} to h{current}"
-        )
+        assert (
+            current <= previous + 1
+        ), f"{label} has heading skip from h{previous} to h{current}"
         previous = current
 
 
@@ -65,7 +65,9 @@ def _set_feature_flag(app, *, key: str, enabled: bool):
     with app.app_context():
         flag = FeatureFlag.query.filter_by(key=key).first()
         if flag is None:
-            flag = FeatureFlag(key=key, enabled=enabled, description=f"{key} test toggle")
+            flag = FeatureFlag(
+                key=key, enabled=enabled, description=f"{key} test toggle"
+            )
             db.session.add(flag)
         else:
             flag.enabled = enabled
@@ -110,7 +112,7 @@ def test_tools_index_has_lang_and_ordered_category_headings(app):
     response = _assert_public_get(client, "/tools/", label="tools index")
     html = response.get_data(as_text=True)
 
-    assert "<html lang=\"en\"" in html
+    assert '<html lang="en"' in html
     assert '<h1 class="mb-1">Maker Tools</h1>' in html
     # Card copy evolves often; keep assertion focused on the primary soap tool route.
     assert 'href="/tools/soap"' in html
@@ -150,18 +152,38 @@ def test_public_soap_page_has_accessible_quality_controls(app):
     response = _assert_public_get(client, "/tools/soap", label="soap calculator")
     html = response.get_data(as_text=True)
 
-    assert '<label class="visually-hidden" for="qualityPreset">Quality preset</label>' in html
+    assert (
+        '<label class="visually-hidden" for="qualityPreset">Quality preset</label>'
+        in html
+    )
     assert '<label class="form-label" for="moldShape">Mold shape</label>' in html
-    assert 'id="qualityHardnessBar" role="progressbar" aria-labelledby="qualityHardnessName"' in html
-    assert 'id="qualityCleansingBar" role="progressbar" aria-labelledby="qualityCleansingName"' in html
-    assert 'id="qualityConditioningBar" role="progressbar" aria-labelledby="qualityConditioningName"' in html
-    assert 'id="qualityBubblyBar" role="progressbar" aria-labelledby="qualityBubblyName"' in html
-    assert 'id="qualityCreamyBar" role="progressbar" aria-labelledby="qualityCreamyName"' in html
-    assert 'id="iodineBar" role="progressbar" aria-labelledby="qualityIodineName"' in html
+    assert (
+        'id="qualityHardnessBar" role="progressbar" aria-labelledby="qualityHardnessName"'
+        in html
+    )
+    assert (
+        'id="qualityCleansingBar" role="progressbar" aria-labelledby="qualityCleansingName"'
+        in html
+    )
+    assert (
+        'id="qualityConditioningBar" role="progressbar" aria-labelledby="qualityConditioningName"'
+        in html
+    )
+    assert (
+        'id="qualityBubblyBar" role="progressbar" aria-labelledby="qualityBubblyName"'
+        in html
+    )
+    assert (
+        'id="qualityCreamyBar" role="progressbar" aria-labelledby="qualityCreamyName"'
+        in html
+    )
+    assert (
+        'id="iodineBar" role="progressbar" aria-labelledby="qualityIodineName"' in html
+    )
     assert 'id="insBar" role="progressbar" aria-labelledby="qualityInsName"' in html
     assert 'id="soapGuidanceOverlay"' in html
     assert 'aria-hidden="true"' in html
-    assert 'inert' in html
+    assert "inert" in html
 
 
 @pytest.mark.usefixtures("app")
@@ -323,8 +345,8 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(
     app, monkeypatch, tmp_path
 ):
     """Feedback notes should persist into DB and compatibility JSON buckets."""
-    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
     from app.models.tool_feedback_note import ToolFeedbackNote
+    from app.services.tools.feedback_note_service import ToolFeedbackNoteService
 
     monkeypatch.setattr(
         ToolFeedbackNoteService, "BASE_DIR", tmp_path / "tool_feedback_notes"
@@ -440,7 +462,9 @@ def test_public_feedback_note_api_saves_json_bucket_by_source_and_flow(
             limit=250,
         )
         assert db_bucket.get("count") == 1
-        assert (db_bucket.get("entries") or [])[0].get("message") == first_payload["message"]
+        assert (db_bucket.get("entries") or [])[0].get("message") == first_payload[
+            "message"
+        ]
 
 
 @pytest.mark.usefixtures("app")
@@ -802,7 +826,7 @@ def test_homepage_tool_cards_render_uploaded_soap_image_without_strict_filename(
         )
         html = response.get_data(as_text=True)
         assert 'src="/static/images/homepage/tools/soap/' in html
-        assert 'soap-tool-card.png' not in html
+        assert "soap-tool-card.png" not in html
     finally:
         if custom_name is not None and custom_name.exists():
             custom_name.unlink(missing_ok=True)
@@ -822,7 +846,9 @@ def test_homepage_feature_cards_render_uploaded_image_without_strict_filename(ap
     custom_name: Path | None = None
 
     with app.app_context():
-        feature_folder = Path(app.static_folder) / "images/homepage/features/fifo-inventory"
+        feature_folder = (
+            Path(app.static_folder) / "images/homepage/features/fifo-inventory"
+        )
         feature_folder.mkdir(parents=True, exist_ok=True)
         for candidate in feature_folder.iterdir():
             if (
@@ -870,7 +896,9 @@ def test_homepage_hero_slot_renders_uploaded_video_without_strict_filename(app):
     with app.app_context():
         hero_folder = Path(app.static_folder) / "images/homepage/hero/primary"
         hero_folder.mkdir(parents=True, exist_ok=True)
-        final_folder = Path(app.static_folder) / "images/homepage/app-screenshots/final-cta"
+        final_folder = (
+            Path(app.static_folder) / "images/homepage/app-screenshots/final-cta"
+        )
         final_folder.mkdir(parents=True, exist_ok=True)
         for candidate in hero_folder.iterdir():
             if (
@@ -927,7 +955,9 @@ def test_homepage_hero_slot_renders_uploaded_youtube_shortcut_without_hardcoded_
     with app.app_context():
         hero_folder = Path(app.static_folder) / "images/homepage/hero/primary"
         hero_folder.mkdir(parents=True, exist_ok=True)
-        final_folder = Path(app.static_folder) / "images/homepage/app-screenshots/final-cta"
+        final_folder = (
+            Path(app.static_folder) / "images/homepage/app-screenshots/final-cta"
+        )
         final_folder.mkdir(parents=True, exist_ok=True)
         for candidate in hero_folder.iterdir():
             if (
