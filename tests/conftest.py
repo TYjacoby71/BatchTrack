@@ -201,6 +201,8 @@ def _create_test_data():
         email="test@example.com",
         username="testuser",  # Added username for completeness
         password_hash="test_hash",
+        first_name="Test",
+        last_name="User",
         is_verified=True,
         organization_id=org.id,  # This is correct - organization_id is a foreign key
         user_type="customer",
@@ -323,6 +325,8 @@ def customer_user_fixture(app):
         user = User(
             username=unique_username,  # Use unique username
             email=f"{unique_username}@example.com",  # Use unique email too
+            first_name="Fixture",
+            last_name="Customer",
             organization_id=org.id,
             user_type="customer",  # Explicitly set as customer
             is_active=True,

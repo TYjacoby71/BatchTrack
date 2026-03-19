@@ -44,13 +44,11 @@ class TestExpirationCanonicalService:
     @patch("app.blueprints.expiration.services.db")
     @patch("app.blueprints.expiration.services.current_user")
     def test_mark_fifo_expired_calls_canonical_service(
-        self, mock_user, mock_db, mock_process
+        self, mock_user, mock_db, mock_process, app
     ):
         """Test that marking FIFO entry as expired calls process_inventory_adjustment"""
-        from app import create_app
         from app.blueprints.expiration import services as expiration_services
 
-        app = create_app({"TESTING": True})
         with app.app_context():
             mock_fifo_entry = MagicMock()
             mock_fifo_entry.id = 123
@@ -96,13 +94,11 @@ class TestExpirationCanonicalService:
     @patch("app.blueprints.expiration.services.db")
     @patch("app.blueprints.expiration.services.current_user")
     def test_mark_product_expired_calls_canonical_service(
-        self, mock_user, mock_db, mock_process
+        self, mock_user, mock_db, mock_process, app
     ):
         """Test that marking product SKU as expired calls process_inventory_adjustment"""
-        from app import create_app
         from app.blueprints.expiration import services as expiration_services
 
-        app = create_app({"TESTING": True})
         with app.app_context():
             mock_lot_entry = MagicMock()
             mock_lot_entry.id = 789

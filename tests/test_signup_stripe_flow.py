@@ -165,11 +165,13 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         assert int(org.subscription_tier_id or 0) == solo_id
         assert int(user.organization_id or 0) == int(org.id)
         assert pending.status == "account_created"
+        org_id = int(org.id)
+        user_id = int(user.id)
 
         # Simulate success route
         def fake_finalize(session_id):
             assert session_id == "cs_live"
-            return org, user
+            return db.session.get(type(org), org_id), db.session.get(type(user), user_id)
 
         monkeypatch.setattr(BillingService, "finalize_checkout_session", fake_finalize)
 
@@ -181,7 +183,7 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         assert response.status_code == 302
         assert response.headers["Location"].endswith("/onboarding/welcome")
         with client.session_transaction() as sess:
-            assert sess.get("_user_id") == str(user.id)
+            assert sess.get("_user_id") == str(user_id)
             conversion_payload = sess.get("ga4_checkout_conversion")
             assert isinstance(conversion_payload, dict)
             assert conversion_payload.get("transaction_id") == "cs_live"
@@ -207,6 +209,8 @@ def test_submission_uses_oauth_prefill_email_when_form_email_missing(app):
         prefill_email="social@example.com",
         prefill_phone="",
         signup_primary_tier_id="1",
+        signup_info_panel_by_tier={},
+        signup_info_posthog={},
     )
 
     submission = SignupCheckoutService._build_submission(

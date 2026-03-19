@@ -47,6 +47,8 @@ def _create_user(app):
         user = User(
             username=username,
             email=f"{username}@example.com",
+            first_name="Session",
+            last_name="Tester",
             organization_id=org.id,
             is_active=True,
             is_verified=True,
