@@ -475,7 +475,7 @@ def create_physical_form():
 @require_developer_permission("dev.system_admin")
 def toggle_physical_form(form_id: int):
     """Toggle a physical form's active state."""
-    physical_form = PhysicalForm.query.get_or_404(form_id)
+    physical_form = db.get_or_404(PhysicalForm, form_id)
     physical_form.is_active = not physical_form.is_active
     db.session.commit()
     state = "activated" if physical_form.is_active else "archived"
@@ -541,7 +541,7 @@ def create_variation():
 )
 @require_developer_permission("dev.system_admin")
 def toggle_variation(variation_id: int):
-    variation = Variation.query.get_or_404(variation_id)
+    variation = db.get_or_404(Variation, variation_id)
     variation.is_active = not variation.is_active
     db.session.commit()
     state = "activated" if variation.is_active else "archived"

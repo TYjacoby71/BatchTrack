@@ -283,7 +283,7 @@ def get_inventory_item(item_id):
 @login_required
 @require_permission("products.view")
 def get_category(cat_id):
-    c = ProductCategory.query.get_or_404(cat_id)
+    c = db.get_or_404(ProductCategory, cat_id)
     return jsonify(
         {
             "id": c.id,

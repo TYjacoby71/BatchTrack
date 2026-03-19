@@ -389,7 +389,7 @@ def recipe_library_detail(recipe_id: int, slug: str):
 def organization_marketplace(organization_id: int):
     if not _marketplace_display_enabled():
         abort(404)
-    org = Organization.query.get_or_404(organization_id)
+    org = db.get_or_404(Organization, organization_id)
     if not _org_allows_permission(org, RECIPE_MARKETPLACE_PERMISSION):
         abort(404)
     if org.recipe_library_blocked:

@@ -14,6 +14,7 @@ from __future__ import annotations
 from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
 
+from app.extensions import db
 from app.models import User
 from app.services.developer.user_service import UserService
 
@@ -100,7 +101,7 @@ def change_developer_password():
 @require_developer_permission("dev.manage_users")
 def toggle_user_active(user_id):
     """Toggle user active status."""
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
     success, message = UserService.toggle_user_active(user)
     flash(message, "success" if success else "error")
     return redirect(url_for("developer.users"))
@@ -114,7 +115,7 @@ def toggle_user_active(user_id):
 @require_developer_permission("dev.manage_users")
 def get_user_details(user_id):
     """Get detailed user information for editing."""
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
     if user.user_type == "developer":
         return jsonify(
             {
@@ -144,7 +145,7 @@ def get_user_details(user_id):
 @require_developer_permission("dev.manage_roles")
 def get_developer_user_details(user_id):
     """Get detailed developer user information for editing."""
-    user = User.query.get_or_404(user_id)
+    user = db.get_or_404(User, user_id)
     if user.user_type != "developer":
         return jsonify({"success": False, "error": "User is not a developer"})
 
@@ -195,7 +196,7 @@ def get_developer_user_details(user_id):
 def update_user():
     """Update user information."""
     data = request.get_json() or {}
-    user = User.query.get_or_404(data.get("user_id"))
+    user = db.get_or_404(User, data.get("user_id"))
     success, message = UserService.update_user(user, data)
     status = 200 if success else 400
     return jsonify({"success": success, "message": message}), status
@@ -210,7 +211,7 @@ def update_user():
 def update_developer_user():
     """Update developer user information."""
     data = request.get_json() or {}
-    user = User.query.get_or_404(data.get("user_id"))
+    user = db.get_or_404(User, data.get("user_id"))
     success, message = UserService.update_developer_user(user, data)
     status = 200 if success else 400
     return jsonify({"success": success, "message": message}), status
@@ -225,7 +226,7 @@ def update_developer_user():
 def reset_user_password():
     """Reset user password."""
     data = request.get_json() or {}
-    user = User.query.get_or_404(data.get("user_id"))
+    user = db.get_or_404(User, data.get("user_id"))
     success, message = UserService.reset_password(user, data.get("new_password"))
     status = 200 if success else 400
     return jsonify({"success": success, "message": message}), status
@@ -240,7 +241,7 @@ def reset_user_password():
 def soft_delete_user():
     """Soft delete a user."""
     data = request.get_json() or {}
-    user = User.query.get_or_404(data.get("user_id"))
+    user = db.get_or_404(User, data.get("user_id"))
     success, message = UserService.soft_delete_user(user)
     status = 200 if success else 400
     return jsonify({"success": success, "message": message}), status
@@ -255,7 +256,7 @@ def soft_delete_user():
 def hard_delete_user():
     """Hard delete a user while preserving tenant data integrity."""
     data = request.get_json() or {}
-    user = User.query.get_or_404(data.get("user_id"))
+    user = db.get_or_404(User, data.get("user_id"))
     success, message = UserService.hard_delete_user(user)
     status = 200 if success else 400
     return jsonify({"success": success, "message": message}), status

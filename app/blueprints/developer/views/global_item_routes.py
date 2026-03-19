@@ -367,7 +367,7 @@ def global_items_admin():
 @developer_bp.route("/global-items/<int:item_id>")
 @require_developer_permission("dev.system_admin")
 def global_item_detail(item_id):
-    item = GlobalItem.query.get_or_404(item_id)
+    item = db.get_or_404(GlobalItem, item_id)
     global_ingredient_categories = (
         IngredientCategory.query.filter_by(
             organization_id=None,
@@ -420,7 +420,7 @@ def global_item_edit(item_id):
         flash(f"CSRF validation failed: {exc}", "error")
         return redirect(url_for("developer.global_item_detail", item_id=item_id))
 
-    item = GlobalItem.query.get_or_404(item_id)
+    item = db.get_or_404(GlobalItem, item_id)
     form_data = request.form
     before = {
         "name": item.name,
@@ -642,7 +642,7 @@ def global_item_edit(item_id):
 def global_item_stats_view(item_id):
     from app.services.statistics.global_item_stats import GlobalItemStatsService
 
-    item = GlobalItem.query.get_or_404(item_id)
+    item = db.get_or_404(GlobalItem, item_id)
     stats = GlobalItemStatsService.get_rollup(item_id)
     return render_template("developer/global_item_stats.html", item=item, stats=stats)
 
@@ -992,7 +992,7 @@ def delete_global_item(item_id):
         confirm_name = data.get("confirm_name", "").strip()
         force_delete = data.get("force_delete", False)
 
-        item = GlobalItem.query.get_or_404(item_id)
+        item = db.get_or_404(GlobalItem, item_id)
         if confirm_name != item.name:
             return jsonify(
                 {

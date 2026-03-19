@@ -12,6 +12,7 @@ import logging
 from flask import flash, redirect, render_template, request, url_for
 from flask_wtf.csrf import validate_csrf
 
+from app.extensions import db
 from app.models.models import Organization
 from app.services.affiliate import (
     PAYOUT_STATUS_COMPLETE,
@@ -51,7 +52,7 @@ def affiliate_ecosystem():
 @require_developer_permission("dev.view_all_billing")
 def affiliate_ecosystem_organization(org_id):
     """Scoped affiliate analytics for one organization."""
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     affiliate_context = AffiliateService.build_organization_dashboard_context(
         org, page=1, per_page=25
     )

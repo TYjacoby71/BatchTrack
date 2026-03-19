@@ -337,9 +337,9 @@ def toggle_permission_status():
 
     try:
         if permission_table == "developer_permission":
-            permission = DeveloperPermission.query.get_or_404(permission_id)
+            permission = db.get_or_404(DeveloperPermission, permission_id)
         elif permission_table == "permission":
-            permission = Permission.query.get_or_404(permission_id)
+            permission = db.get_or_404(Permission, permission_id)
         else:
             return jsonify({"success": False, "message": "Invalid permission table"})
 
@@ -462,7 +462,7 @@ def create_role():
 def update_role(role_id):
     """Update role"""
     try:
-        role = Role.query.get_or_404(role_id)
+        role = db.get_or_404(Role, role_id)
 
         # Check permissions
         if role.is_system_role and current_user.user_type != "developer":

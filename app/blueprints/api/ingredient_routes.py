@@ -246,7 +246,7 @@ def search_ingredient_definitions():
 @require_permission("inventory.view")
 def list_forms_for_ingredient_definition(ingredient_id: int):
     """Return the existing global items tied to a specific ingredient definition."""
-    ingredient = IngredientDefinition.query.get_or_404(ingredient_id)
+    ingredient = db.get_or_404(IngredientDefinition, ingredient_id)
     items = (
         GlobalItem.query.filter(
             GlobalItem.ingredient_id == ingredient.id,

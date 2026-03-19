@@ -17,6 +17,7 @@ from flask import flash, jsonify, redirect, render_template, request, session, u
 from flask_login import current_user
 from sqlalchemy import or_
 
+from app.extensions import db
 from app.models import Organization, User
 from app.services.developer.organization_service import OrganizationService
 from app.services.statistics import AnalyticsDataService
@@ -244,7 +245,7 @@ def create_organization():
 @require_developer_permission("dev.all_organizations")
 def organization_detail(org_id):
     """Detailed organization management."""
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
     per_page = max(10, min(per_page, 200))
@@ -301,7 +302,7 @@ def organization_detail(org_id):
 @require_developer_permission("dev.modify_any_organization")
 def edit_organization(org_id):
     """Edit organization details."""
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     success, message = OrganizationService.update_organization(org, request.form)
     flash(message, "success" if success else "error")
     return redirect(url_for("developer.organization_detail", org_id=org_id))
@@ -315,7 +316,7 @@ def edit_organization(org_id):
 @require_developer_permission("dev.billing_override")
 def upgrade_organization(org_id):
     """Upgrade organization subscription."""
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     success, message = OrganizationService.upgrade_organization(
         org, request.form.get("tier", "")
     )
@@ -332,7 +333,7 @@ def upgrade_organization(org_id):
 def delete_organization(org_id):
     """Permanently delete an organization and all associated data."""
     data = request.get_json() or {}
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     expected_confirm = f"DELETE {org.name}"
     is_valid, message = OrganizationService.validate_deletion(
         data.get("password"), data.get("confirm_text"), expected_confirm

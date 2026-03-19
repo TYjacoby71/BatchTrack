@@ -16,7 +16,7 @@ from flask import (
 )
 from flask_login import current_user
 
-from app.extensions import cache, limiter
+from app.extensions import cache, db, limiter
 from app.models import GlobalItem, InventoryItem
 from app.services.cache_invalidation import global_library_cache_key
 from app.services.global_item_listing_service import (
@@ -544,7 +544,7 @@ def global_library_item_stats(item_id: int):
     try:
         from app.models.global_item import GlobalItem
 
-        gi = GlobalItem.query.get_or_404(item_id)
+        gi = db.get_or_404(GlobalItem, item_id)
 
         rollup = AnalyticsDataService.get_global_item_rollup(item_id)
         cost = AnalyticsDataService.get_cost_distribution(item_id)
