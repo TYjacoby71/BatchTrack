@@ -513,7 +513,7 @@ def create_variation():
     physical_form = None
     if physical_form_id:
         try:
-            physical_form = PhysicalForm.query.get(int(physical_form_id))
+            physical_form = db.session.get(PhysicalForm, int(physical_form_id))
         except (TypeError, ValueError):
             physical_form = None
     slug = _generate_unique_slug(Variation, name)

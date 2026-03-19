@@ -111,7 +111,7 @@ def _determine_ingredient_layer(
         except (TypeError, ValueError):
             raise FormValidationError("Invalid ingredient definition selected.")
 
-        ingredient = IngredientDefinition.query.get(ingredient_id)
+        ingredient = db.session.get(IngredientDefinition, ingredient_id)
         if not ingredient:
             raise FormValidationError("Ingredient definition not found.")
 
@@ -159,7 +159,7 @@ def _determine_variation_layer(form_data, *, current_variation=None):
         except (TypeError, ValueError):
             raise FormValidationError("Invalid variation selected.")
 
-        variation = Variation.query.get(variation_id)
+        variation = db.session.get(Variation, variation_id)
         if not variation:
             raise FormValidationError("Variation not found.")
 
@@ -175,7 +175,7 @@ def _determine_variation_layer(form_data, *, current_variation=None):
     physical_form = None
     if physical_form_id:
         try:
-            physical_form = PhysicalForm.query.get(int(physical_form_id))
+            physical_form = db.session.get(PhysicalForm, int(physical_form_id))
         except (TypeError, ValueError):
             raise FormValidationError(
                 "Invalid physical form selected for the variation."
@@ -679,7 +679,9 @@ def create_global_item():
 
         if not selected_ingredient and ingredient_id:
             try:
-                selected_ingredient = IngredientDefinition.query.get(int(ingredient_id))
+                selected_ingredient = db.session.get(
+                    IngredientDefinition, int(ingredient_id)
+                )
             except (ValueError, TypeError):
                 selected_ingredient = None
 
@@ -696,7 +698,9 @@ def create_global_item():
 
         if not selected_physical_form and physical_form_id:
             try:
-                selected_physical_form = PhysicalForm.query.get(int(physical_form_id))
+                selected_physical_form = db.session.get(
+                    PhysicalForm, int(physical_form_id)
+                )
             except (ValueError, TypeError):
                 selected_physical_form = None
 

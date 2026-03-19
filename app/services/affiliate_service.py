@@ -1580,7 +1580,7 @@ class AffiliateService:
         """Send payout status update email notifications to org recipients."""
         if not organization_id:
             return {"attempted": 0, "sent": 0}
-        organization = Organization.query.get(int(organization_id))
+        organization = db.session.get(Organization, int(organization_id))
         if not organization:
             return {"attempted": 0, "sent": 0}
         return AffiliatePayoutNotificationService.send_payout_status_update_email(

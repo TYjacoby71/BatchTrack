@@ -159,7 +159,7 @@ class GlobalItem(db.Model):
         from app.models.ingredient_reference import PhysicalForm
 
         try:
-            form_obj = PhysicalForm.query.get(int(value))
+            form_obj = db.session.get(PhysicalForm, int(value))
         except (TypeError, ValueError):
             form_obj = None
         if not form_obj:

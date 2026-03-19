@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from ...extensions import db
 from ...models import User
 from ..email_service import EmailService
 from .payout_status import payout_status_label
@@ -36,7 +37,7 @@ class AffiliatePayoutNotificationService:
             recipients.append(contact_email)
 
         for user_id in referrer_user_ids or []:
-            user = User.query.get(int(user_id))
+            user = db.session.get(User, int(user_id))
             if not user:
                 continue
             user_email = (getattr(user, "email", "") or "").strip().lower()
