@@ -60,23 +60,39 @@ function toggleShelfLife() {
 
 // toggleOutputFields function removed - now handled by conditional template rendering
 
-function markBatchFailed() {
-  if (confirm('Mark this batch as failed? This action cannot be undone.')) {
-    const batchId = window.location.pathname.split('/').pop();
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/batches/finish-batch/${batchId}/fail`;
-
-    const csrf = document.querySelector('.csrf-token').value;
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrf_token';
-    csrfInput.value = csrf;
-
-    form.appendChild(csrfInput);
-    document.body.appendChild(form);
-    form.submit();
+async function requestConfirmation(options) {
+  if (typeof window.showConfirmDialog === 'function') {
+    return window.showConfirmDialog(options);
   }
+  if (typeof window.showAlert === 'function') {
+    window.showAlert('warning', 'Confirmation dialog is currently unavailable.');
+  }
+  return false;
+}
+
+async function markBatchFailed() {
+  const confirmed = await requestConfirmation({
+    title: 'Mark batch as failed?',
+    message: 'Mark this batch as failed? This action cannot be undone.',
+    confirmText: 'Mark as failed',
+    confirmVariant: 'danger',
+  });
+  if (!confirmed) return;
+
+  const batchId = window.location.pathname.split('/').pop();
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = `/batches/finish-batch/${batchId}/fail`;
+
+  const csrf = document.querySelector('.csrf-token').value;
+  const csrfInput = document.createElement('input');
+  csrfInput.type = 'hidden';
+  csrfInput.name = 'csrf_token';
+  csrfInput.value = csrf;
+
+  form.appendChild(csrfInput);
+  document.body.appendChild(form);
+  form.submit();
 }
 
 function updateRowCost(selectElement) {
@@ -126,14 +142,12 @@ function getCSRFToken() {
 }
 
 function showAlert(message, type) {
-    // Simple alert implementation - could be enhanced with Bootstrap alerts
-    if (type === 'error') {
-        alert('Error: ' + message);
-    } else if (type === 'success') {
-        alert('Success: ' + message);
-    } else {
-        alert(message);
+    const normalizedType = type === 'error' ? 'danger' : (type || 'info');
+    if (typeof window.showAlert === 'function') {
+        window.showAlert(normalizedType, message);
+        return;
     }
+    console.log(`[${normalizedType}] ${message}`);
 }
 
 function saveExtras() {
@@ -247,24 +261,30 @@ function saveBatchNotes() {
   });
 }
 
-function cancelBatch() {
-  if (confirm('Cancel this batch? Ingredients will be returned to inventory.')) {
-    const batchId = window.location.pathname.split('/').pop();
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/batches/cancel/${batchId}`;
+async function cancelBatch() {
+  const confirmed = await requestConfirmation({
+    title: 'Cancel this batch?',
+    message: 'Cancel this batch? Ingredients will be returned to inventory.',
+    confirmText: 'Cancel batch',
+    confirmVariant: 'danger',
+  });
+  if (!confirmed) return;
 
-    // Get CSRF token from the form input element
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrf_token';
-    csrfInput.value = csrfToken;
+  const batchId = window.location.pathname.split('/').pop();
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = `/batches/cancel/${batchId}`;
 
-    form.appendChild(csrfInput);
-    document.body.appendChild(form);
-    form.submit();
-  }
+  // Get CSRF token from the form input element
+  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+  const csrfInput = document.createElement('input');
+  csrfInput.type = 'hidden';
+  csrfInput.name = 'csrf_token';
+  csrfInput.value = csrfToken;
+
+  form.appendChild(csrfInput);
+  document.body.appendChild(form);
+  form.submit();
 }
 
 // Keep these handlers available for inline template attributes.

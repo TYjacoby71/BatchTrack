@@ -33,13 +33,24 @@ class DrawerProtocol {
         this.storeRetry(detail);
 
         if (detail.redirect_url) {
-            window.open(detail.redirect_url, '_blank');
+            if (typeof window.openWindowOrNotify === 'function') {
+                window.openWindowOrNotify(detail.redirect_url, '_blank', '', {
+                    blockedMessage: 'Pop-up blocked. Allow pop-ups to continue this flow.',
+                });
+            } else {
+                window.open(detail.redirect_url, '_blank');
+            }
             return;
         }
 
         if (!detail.modal_url) {
             if (detail.error_message) {
-                alert(detail.error_message);
+                if (typeof window.showAlert === 'function') {
+                    window.showAlert('danger', detail.error_message);
+                } else {
+                    console.error(detail.error_message);
+                }
+                this.emitAnalyticsEvent('fallback_error', detail);
             }
             return;
         }

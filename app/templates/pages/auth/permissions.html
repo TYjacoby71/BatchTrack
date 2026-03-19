@@ -94,7 +94,7 @@ async function updatePermissionRow(row) {
     });
     const data = await resp.json();
     if (!data.success) {
-        alert(data.message || 'Failed to update permission');
+        window.showAlert(data.message || 'Failed to update permission');
         return false;
     }
     const devToggle = row.querySelector('.perm-scope-toggle[data-scope="dev"]');

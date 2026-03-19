@@ -1222,7 +1222,7 @@ def archive_inventory(id):
     try:
         item.is_archived = True
         db.session.commit()
-        flash("Inventory item archived successfully.")
+        flash("Inventory item archived successfully.", "success")
     except Exception as e:
         logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:1223", exc_info=True)
         db.session.rollback()
@@ -1242,7 +1242,7 @@ def restore_inventory(id):
     try:
         item.is_archived = False
         db.session.commit()
-        flash("Inventory item restored successfully.")
+        flash("Inventory item restored successfully.", "success")
     except Exception as e:
         logger.warning("Suppressed exception fallback at app/blueprints/inventory/routes.py:1242", exc_info=True)
         db.session.rollback()

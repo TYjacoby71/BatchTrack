@@ -59,15 +59,7 @@ function organizationDashboard() {
         },
 
         showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} position-fixed`;
-            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            toast.textContent = message;
-
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
+            notify(message, type, { toast: true, autoHideMs: 3000 });
         }
     };
 }
@@ -78,22 +70,41 @@ function getCSRFToken() {
     return tokenMeta ? tokenMeta.getAttribute('content') : '';
 }
 
+function normalizeNoticeType(type = 'info') {
+    const raw = (type || 'info').toString().toLowerCase();
+    if (raw === 'error') return 'danger';
+    return raw;
+}
+
+function notify(message, type = 'info', options = {}) {
+    const normalized = normalizeNoticeType(type);
+    if (options.toast && typeof window.showToast === 'function') {
+        window.showToast(message, {
+            type: normalized,
+            title: options.title,
+            autoHideMs: options.autoHideMs ?? 3000
+        });
+        return;
+    }
+    if (typeof window.showAlert === 'function') {
+        window.showAlert(normalized, message, {
+            autoHideMs: options.autoHideMs ?? 5000
+        });
+        return;
+    }
+    console.log(`[${normalized}] ${message}`);
+}
+
+async function requestConfirmation(options = {}) {
+    if (typeof window.showConfirmDialog === 'function') {
+        return window.showConfirmDialog(options);
+    }
+    notify('Confirmation dialog is currently unavailable.', 'warning');
+    return false;
+}
+
 function showMessage(message, type = 'success') {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-
-    const container = document.querySelector('.container-fluid');
-    container.insertBefore(alertDiv, container.firstChild);
-
-    setTimeout(() => {
-        if (alertDiv && alertDiv.parentNode) {
-            alertDiv.remove();
-        }
-    }, 5000);
+    notify(message, type, { autoHideMs: 5000 });
 }
 
 // User management functions
@@ -238,7 +249,13 @@ async function inviteUser() {
 }
 
 async function toggleUserStatus(userId) {
-    if (!confirm('Are you sure you want to change this user\'s status?')) {
+    const confirmed = await requestConfirmation({
+        title: 'Change user status?',
+        message: 'Are you sure you want to change this user\'s status?',
+        confirmText: 'Change status',
+        confirmVariant: 'warning'
+    });
+    if (!confirmed) {
         return;
     }
 
@@ -346,11 +363,23 @@ async function confirmDeleteUser() {
     const userId = document.getElementById('editUserId').value;
     const username = document.getElementById('editUsername').textContent;
 
-    if (!confirm(`Are you sure you want to remove user "${username}"? This will deactivate their account but preserve all historical data.`)) {
+    const firstConfirm = await requestConfirmation({
+        title: 'Remove this user?',
+        message: `Are you sure you want to remove user "${username}"? This will deactivate their account but preserve all historical data.`,
+        confirmText: 'Continue',
+        confirmVariant: 'danger'
+    });
+    if (!firstConfirm) {
         return;
     }
 
-    if (!confirm('This will remove the user\'s access to the system. They can be restored later if needed. Continue?')) {
+    const secondConfirm = await requestConfirmation({
+        title: 'Confirm user removal',
+        message: 'This will remove the user\'s access to the system. They can be restored later if needed. Continue?',
+        confirmText: 'Remove user',
+        confirmVariant: 'danger'
+    });
+    if (!secondConfirm) {
         return;
     }
 
@@ -442,6 +471,12 @@ function updateCategoryCheckbox(category) {
 
 // Utility functions
 function exportReport(type) {
+    if (typeof window.openWindowOrNotify === 'function') {
+        window.openWindowOrNotify(`/organization/export/${type}`, '_blank', '', {
+            blockedMessage: 'Pop-up blocked. Allow pop-ups to export this report.'
+        });
+        return;
+    }
     window.open(`/organization/export/${type}`, '_blank');
 }
 
@@ -449,8 +484,14 @@ function editRole(roleId) {
     showMessage('Role editing functionality coming soon', 'info');
 }
 
-function deleteRole(roleId) {
-    if (!confirm('Are you sure you want to delete this role?')) {
+async function deleteRole(roleId) {
+    const confirmed = await requestConfirmation({
+        title: 'Delete role?',
+        message: 'Are you sure you want to delete this role?',
+        confirmText: 'Delete role',
+        confirmVariant: 'danger'
+    });
+    if (!confirmed) {
         return;
     }
     showMessage('Role deletion functionality coming soon', 'info');
@@ -474,9 +515,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle subscription tier dropdown changes
     const tierDropdown = document.getElementById('subscriptionTierSelect');
     if (tierDropdown) {
-        tierDropdown.addEventListener('change', function(e) {
+        tierDropdown.addEventListener('change', async function(e) {
             const selectedTier = e.target.value;
-            if (selectedTier && confirm(`Are you sure you want to change the subscription tier to ${selectedTier}?`)) {
+            const confirmed = selectedTier
+                ? await requestConfirmation({
+                    title: 'Change subscription tier?',
+                    message: `Are you sure you want to change the subscription tier to ${selectedTier}?`,
+                    confirmText: 'Change tier',
+                    confirmVariant: 'warning'
+                })
+                : false;
+            if (selectedTier && confirmed) {
                 updateSubscriptionTierDirectly(selectedTier);
             } else {
                 // Reset dropdown to original value if cancelled
@@ -533,25 +582,5 @@ async function updateSubscriptionTierDirectly(tierKey) {
 
 // Helper function to show messages
 function showMessage(message, type) {
-    // Remove existing alerts
-    const existingAlerts = document.querySelectorAll('.alert-dismissible');
-    existingAlerts.forEach(alert => alert.remove());
-    
-    // Create new alert
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
-    alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    document.body.appendChild(alertDiv);
-    
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
-    }, 3000);
+    notify(message, type, { autoHideMs: 5000 });
 }

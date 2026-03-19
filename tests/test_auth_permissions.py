@@ -40,6 +40,8 @@ def _create_org_with_permission(db_session):
     user = User(
         username=f"user_{suffix}",
         email=f"user_{suffix}@example.com",
+        first_name="Perm",
+        last_name="Allowed",
         organization_id=org.id,
         is_active=True,
     )
@@ -107,6 +109,8 @@ def test_permission_required_denies_user_without_permission(app, client, db_sess
         other_user = User(
             username=f"unauth_{uuid4().hex}",
             email=f"unauth_{uuid4().hex}@example.com",
+            first_name="Perm",
+            last_name="Denied",
             organization_id=org_id,
             is_active=True,
         )

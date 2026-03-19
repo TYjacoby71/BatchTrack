@@ -758,6 +758,20 @@
         statusEl.textContent = `${rows} line(s) ready${linkedLabel}.`;
     }
 
+    async function requestConfirmation(options) {
+        if (typeof window.showConfirmDialog === 'function') {
+            return window.showConfirmDialog(options);
+        }
+        return window.confirm(options.message || 'Are you sure?');
+    }
+
+    async function requestPrompt(options) {
+        if (typeof window.showPromptDialog === 'function') {
+            return window.showPromptDialog(options);
+        }
+        return window.prompt(options.message || 'Enter a value:', options.defaultValue ?? '');
+    }
+
     async function submitSingleAdjustment(line, lineNumber) {
         const targetUrl = buildAdjustUrl(line.inventory_item_id);
         const formData = new FormData();
@@ -847,13 +861,20 @@
         updateStatus('All lines cleared.', { resetResults: true });
     });
 
-    document.getElementById('saveDraftBtn').addEventListener('click', () => {
+    document.getElementById('saveDraftBtn').addEventListener('click', async () => {
         const { lines } = collectRows();
         if (!lines.length) {
             updateStatus('Nothing to save.');
             return;
         }
-        const name = prompt('Name this draft:', `Draft ${new Date().toLocaleString()}`);
+        const defaultName = `Draft ${new Date().toLocaleString()}`;
+        const name = await requestPrompt({
+            title: 'Save draft',
+            message: 'Name this draft:',
+            defaultValue: defaultName,
+            confirmText: 'Save',
+            required: true
+        });
         if (!name) return;
         const drafts = getDrafts();
         drafts.unshift({ name, lines });
@@ -904,21 +925,46 @@
         if (selectedDraftId === null) return;
         loadDraft(selectedDraftId);
     });
-    deleteBtn.addEventListener('click', () => {
+    deleteBtn.addEventListener('click', async () => {
         if (selectedDraftId === null) return;
-        if (confirm('Delete this draft?')) {
+        const confirmed = await requestConfirmation({
+            title: 'Delete draft',
+            message: 'Delete this draft?',
+            confirmText: 'Delete',
+            confirmVariant: 'danger'
+        });
+        if (confirmed) {
             deleteDraft(selectedDraftId);
         }
     });
 
-    modalEl.addEventListener('hide.bs.modal', () => {
+    let allowModalClose = false;
+    modalEl.addEventListener('hide.bs.modal', async (event) => {
+        if (allowModalClose) {
+            allowModalClose = false;
+            return;
+        }
         const { lines } = collectRows();
         if (!lines.length) {
             return;
         }
-        const save = confirm('Save this draft before closing?');
+        event.preventDefault();
+        const save = await requestConfirmation({
+            title: 'Save draft before closing',
+            message: 'Save this draft before closing?',
+            confirmText: 'Save draft',
+            confirmVariant: 'primary'
+        });
         if (save) {
-            const name = prompt('Name this draft:', `Draft ${new Date().toLocaleString()}`) || `Draft ${new Date().toLocaleString()}`;
+            const defaultName = `Draft ${new Date().toLocaleString()}`;
+            const promptedName = await requestPrompt({
+                title: 'Save draft',
+                message: 'Name this draft:',
+                defaultValue: defaultName,
+                confirmText: 'Save',
+                required: false
+            });
+            const name = promptedName || defaultName;
             const drafts = getDrafts();
             drafts.unshift({ name, lines });
             saveDrafts(drafts);
@@ -929,6 +975,9 @@
             addRow();
             updateStatus('Draft discarded.');
         }
+        allowModalClose = true;
+        const modalInstance = window.bootstrap?.Modal?.getOrCreateInstance(modalEl);
+        modalInstance?.hide();
     });
 
     document.addEventListener('click', (event) => {

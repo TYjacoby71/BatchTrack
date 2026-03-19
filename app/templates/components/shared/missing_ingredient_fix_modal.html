@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const unit = unitSelect.value;
             
             if (!ingredientId || !quantity || !unit) {
-                alert('Please fill in all fields');
+                window.showAlert('Please fill in all fields');
                 return;
             }
             
@@ -100,12 +100,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }));
                 } else {
-                    alert('Error: ' + data.error);
+                    window.showAlert('Error: ' + data.error);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to add ingredient');
+                window.showAlert('Failed to add ingredient');
             });
         });
     }

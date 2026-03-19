@@ -173,7 +173,7 @@
       });
       Promise.all(promises.filter(p => p !== null))
         .then(() => window.location.reload())
-        .catch(err => alert('Error updating inventory'));
+        .catch(err => window.showAlert('Error updating inventory'));
     },
     resetPackagingRows() {
       this.rows = [{id: '', quantity: '', unit: '{{ units[0].name if units else "count" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}];
@@ -283,7 +283,9 @@
                   {% if not item.is_archived %}
                     <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}"
                        class="dropdown-item text-warning"
-                       onclick="return confirm('Are you sure you want to archive this item?')">Archive</a>
+                       data-confirm-message="Are you sure you want to archive this item?"
+                       data-confirm-title="Archive inventory item"
+                       data-confirm-variant="danger">Archive</a>
                   {% else %}
                     <a href="{{ url_for('inventory.restore_inventory', id=item.id) }}"
                        class="dropdown-item text-success">Restore</a>

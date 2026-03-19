@@ -349,9 +349,23 @@ async function editOrgUser(userId) {
     await openUserManagementModal(userId, 'organization', organizationData);
 }
 
-function loginAsOrgUser(userId = null) {
+async function loginAsOrgUser(userId = null) {
     if (userId) {
-        if (confirm('Login as this user? This will open a new tab with their session.')) {
+        const confirmMessage = 'Login as this user? This will open a new tab with their session.';
+        const confirmed = (typeof window.showConfirmDialog === 'function')
+            ? await window.showConfirmDialog({
+                title: 'Login as user',
+                message: confirmMessage,
+                confirmText: 'Open session',
+                confirmVariant: 'warning'
+            })
+            : window.confirm(confirmMessage);
+        if (!confirmed) return;
+        if (typeof window.openWindowOrNotify === 'function') {
+            window.openWindowOrNotify(`/developer/login-as/${userId}`, '_blank', '', {
+                blockedMessage: 'Pop-up blocked. Allow pop-ups to open the user session.'
+            });
+        } else {
             window.open(`/developer/login-as/${userId}`, '_blank');
         }
     }
@@ -368,16 +382,16 @@ function toggleOrgUserStatus(userId, currentStatus) {
         if (response.ok) {
             location.reload();
         } else {
-            alert('Error toggling user status');
+            window.showAlert('Error toggling user status');
         }
     })
     .catch(error => {
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     });
 }
 
 // Organization deletion function
-function deleteOrganization() {
+async function deleteOrganization() {
     const form = document.getElementById('deleteOrgForm');
     const password = document.getElementById('developerPassword').value;
     const confirmText = document.getElementById('confirmText').value;
@@ -387,22 +401,31 @@ function deleteOrganization() {
 
     // Validation
     if (!password) {
-        alert('Developer password is required');
+        window.showAlert('Developer password is required');
         return;
     }
 
     if (confirmText !== expectedText) {
-        alert(`Confirmation text must match exactly: "${expectedText}"`);
+        window.showAlert(`Confirmation text must match exactly: "${expectedText}"`);
         return;
     }
 
     if (!understand || !confirmUsers) {
-        alert('You must check both confirmation boxes');
+        window.showAlert('You must check both confirmation boxes');
         return;
     }
 
     // Final confirmation
-    if (!confirm('FINAL CONFIRMATION: Are you absolutely certain you want to permanently delete this organization and all its data? This cannot be undone.')) {
+    const finalConfirmMessage = 'FINAL CONFIRMATION: Are you absolutely certain you want to permanently delete this organization and all its data? This cannot be undone.';
+    const finalConfirmed = (typeof window.showConfirmDialog === 'function')
+        ? await window.showConfirmDialog({
+            title: 'Permanent delete organization',
+            message: finalConfirmMessage,
+            confirmText: 'Permanently delete',
+            confirmVariant: 'danger'
+        })
+        : window.confirm(finalConfirmMessage);
+    if (!finalConfirmed) {
         return;
     }
 
@@ -425,10 +448,10 @@ function deleteOrganization() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Organization deleted successfully');
+            window.showAlert('Organization deleted successfully');
             window.location.href = '/developer/dashboard';
         } else {
-            alert('Error: ' + (data.error || 'Failed to delete organization'));
+            window.showAlert('Error: ' + (data.error || 'Failed to delete organization'));
             // Re-enable button
             document.getElementById('confirmDeleteBtn').disabled = false;
             document.getElementById('confirmDeleteBtn').innerHTML = '<i class="fas fa-trash"></i> PERMANENTLY DELETE ORGANIZATION';
@@ -436,7 +459,7 @@ function deleteOrganization() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while deleting the organization');
+        window.showAlert('An error occurred while deleting the organization');
         // Re-enable button
         document.getElementById('confirmDeleteBtn').disabled = false;
         document.getElementById('confirmDeleteBtn').innerHTML = '<i class="fas fa-trash"></i> PERMANENTLY DELETE ORGANIZATION';

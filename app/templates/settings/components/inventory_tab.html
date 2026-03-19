@@ -66,8 +66,8 @@
             body: JSON.stringify({ inventory_cost_method: method })
         }).then(r => r.json()).then(resp => {
             if (!resp.success) {
-                alert(resp.error || 'Failed to update cost method');
+                window.showAlert(resp.error || 'Failed to update cost method');
             }
-        }).catch(() => alert('Failed to update cost method'));
+        }).catch(() => window.showAlert('Failed to update cost method'));
     }
 </script>

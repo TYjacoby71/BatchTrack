@@ -354,7 +354,16 @@
 
 <script>
 async function archiveExpired() {
-    if (!confirm('Archive all expired items with zero quantity? This cannot be undone.')) return;
+    const archiveConfirmMessage = 'Archive all expired items with zero quantity? This cannot be undone.';
+    const archiveConfirmed = (typeof window.showConfirmDialog === 'function')
+        ? await window.showConfirmDialog({
+            title: 'Archive expired inventory',
+            message: archiveConfirmMessage,
+            confirmText: 'Archive',
+            confirmVariant: 'danger'
+        })
+        : window.confirm(archiveConfirmMessage);
+    if (!archiveConfirmed) return;
 
     try {
         const response = await fetch('/expiration/api/archive-expired', {
@@ -367,11 +376,11 @@ async function archiveExpired() {
         }
         
         const data = await response.json();
-        alert(`Archived ${data.archived_count} expired items`);
+        window.showAlert(`Archived ${data.archived_count} expired items`);
         location.reload();
     } catch (error) {
         console.error('Archive error:', error);
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     }
 }
 
@@ -394,7 +403,16 @@ function getCSRFToken() {
 }
 
 async function markAsExpired(type, id) {
-    if (!confirm('Mark this item as expired and remove it from inventory?\n\nThis action targets the specific expired lot and cannot be undone.\n\nProceed?')) return;
+    const expiredConfirmMessage = 'Mark this item as expired and remove it from inventory?\n\nThis action targets the specific expired lot and cannot be undone.\n\nProceed?';
+    const expiredConfirmed = (typeof window.showConfirmDialog === 'function')
+        ? await window.showConfirmDialog({
+            title: 'Mark item expired',
+            message: expiredConfirmMessage,
+            confirmText: 'Mark expired',
+            confirmVariant: 'danger'
+        })
+        : window.confirm(expiredConfirmMessage);
+    if (!expiredConfirmed) return;
 
     console.log('Mark expired called with:', { type, id });
 
@@ -413,12 +431,12 @@ async function markAsExpired(type, id) {
         }
 
         const data = await response.json();
-        alert(`Marked ${data.expired_count} item as expired`);
+        window.showAlert(`Marked ${data.expired_count} item as expired`);
         // Stay on expiration page by reloading the current URL
         window.location.href = '/expiration/alerts';
     } catch (error) {
         console.error('Expiration error:', error);
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     }
 }
 </script>

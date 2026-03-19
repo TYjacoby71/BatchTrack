@@ -27,7 +27,7 @@
           </td>
           <td>
             <a href="{{ url_for('developer.edit_product_category', cat_id=c.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-            <form method="post" action="{{ url_for('developer.delete_product_category', cat_id=c.id) }}" style="display:inline-block" onsubmit="return confirm('Delete category {{ c.name }}?');">
+            <form method="post" action="{{ url_for('developer.delete_product_category', cat_id=c.id) }}" style="display:inline-block" data-confirm-message="Delete category {{ c.name }}?" data-confirm-title="Delete product category" data-confirm-variant="danger">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
             </form>

@@ -46,3 +46,13 @@ jobs:
         shell: bash
         run: |
           python3 scripts/validate_migration_integrity.py
+
+      - name: Run notification primitive guard (manual finalization)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          BASE_REF="${{ inputs.base_ref }}"
+          if [[ -z "$BASE_REF" ]]; then
+            BASE_REF="HEAD~1"
+          fi
+          python3 scripts/validate_notification_primitives.py --base-ref "$BASE_REF"

@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const unitCost = parseFloat(costInput.value) || 0;
             
             if (!quantity || quantity <= 0) {
-                alert('Please enter a valid quantity');
+                window.showAlert('Please enter a valid quantity');
                 return;
             }
             
@@ -79,12 +79,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }));
                 } else {
-                    alert('Error: ' + data.error);
+                    window.showAlert('Error: ' + data.error);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to restock item');
+                window.showAlert('Failed to restock item');
             });
         });
     }

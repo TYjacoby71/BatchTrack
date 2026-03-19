@@ -71,14 +71,14 @@ export class BatchManager {
             }
         } catch (error) {
             console.error('Start batch error:', error);
-            alert('Error starting batch. Please try again.');
+            this.showErrorMessage('Error starting batch. Please try again.');
         }
     }
 
     showInsufficientModal(issues = null) {
         const modalEl = document.getElementById('insufficientStockModal');
         if (!modalEl) {
-            alert('Insufficient inventory detected. Please add stock before continuing.');
+            this.showErrorMessage('Insufficient inventory detected. Please add stock before continuing.');
             return;
         }
 
@@ -118,7 +118,7 @@ export class BatchManager {
         if (this.overrideModal) {
             this.overrideModal.show();
         } else {
-            alert('Insufficient inventory detected. Bootstrap modal is not available.');
+            this.showErrorMessage('Insufficient inventory detected. Bootstrap modal is not available.');
         }
     }
 
@@ -166,20 +166,18 @@ export class BatchManager {
     }
 
     showSuccessMessage(message) {
-        const successDiv = document.createElement('div');
-        successDiv.className = 'alert alert-success';
-        successDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
-
-        const mainContent = document.querySelector('.container-fluid');
-        mainContent.insertBefore(successDiv, mainContent.firstChild);
+        if (typeof window.showAlert === 'function') {
+            window.showAlert('success', `<i class="fas fa-check-circle"></i> ${message}`);
+            return;
+        }
+        console.info(message);
     }
 
     showErrorMessage(message) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'alert alert-danger';
-        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
-
-        const mainContent = document.querySelector('.container-fluid');
-        mainContent.insertBefore(errorDiv, mainContent.firstChild);
+        if (typeof window.showAlert === 'function') {
+            window.showAlert('danger', `<i class="fas fa-exclamation-circle"></i> ${message}`);
+            return;
+        }
+        console.error(message);
     }
 }

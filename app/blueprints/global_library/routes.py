@@ -170,7 +170,8 @@ def global_library():
             )
             if not allowed:
                 flash(
-                    "Create a free account to keep searching the global library. You've reached the preview limit."
+                    "Create a free account to keep searching the global library. You've reached the preview limit.",
+                    "warning",
                 )
                 return redirect(
                     url_for(
@@ -318,7 +319,8 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
         )
         if not allowed:
             flash(
-                "Create a free account to keep exploring the global library. You've reached the 10-item preview limit."
+                "Create a free account to keep exploring the global library. You've reached the 10-item preview limit.",
+                "warning",
             )
             return redirect(
                 url_for(

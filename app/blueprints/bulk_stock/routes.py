@@ -68,16 +68,16 @@ def bulk_stock_check():
         if request.method == "POST":
             selected_ids = request.form.getlist("recipe_ids")
             if not selected_ids:
-                flash("Please select at least one recipe")
+                flash("Please select at least one recipe.", "warning")
                 return redirect(url_for("bulk_stock.bulk_stock_check"))
 
             try:
                 scale = float(request.form.get("scale", 1.0))
                 if scale <= 0:
-                    flash("Scale must be greater than 0")
+                    flash("Scale must be greater than 0.", "error")
                     return redirect(url_for("bulk_stock.bulk_stock_check"))
             except ValueError:
-                flash("Invalid scale value")
+                flash("Invalid scale value.", "error")
                 return redirect(url_for("bulk_stock.bulk_stock_check"))
 
             session["bulk_recipe_ids"] = selected_ids
@@ -136,7 +136,7 @@ def bulk_stock_check():
         )
     except Exception as exc:
         logger.warning("Suppressed exception fallback at app/blueprints/bulk_stock/routes.py:133", exc_info=True)
-        flash(f"Error checking stock: {str(exc)}")
+        flash(f"Error checking stock: {str(exc)}", "error")
         return redirect(url_for("bulk_stock.bulk_stock_check"))
 
 
@@ -154,12 +154,12 @@ def export_shopping_list_csv():
             return redirect(url_for("app_routes.dashboard"))
         summary = session.get("bulk_summary", [])
         if not summary:
-            flash("No stock check results available")
+            flash("No stock check results available.", "info")
             return redirect(url_for("bulk_stock.bulk_stock_check"))
 
         missing = [item for item in summary if item["status"] in ["LOW", "NEEDED"]]
         if not missing:
-            flash("No items need restocking")
+            flash("No items need restocking.", "info")
             return redirect(url_for("bulk_stock.bulk_stock_check"))
 
         string_io = io.StringIO()

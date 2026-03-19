@@ -1,4 +1,5 @@
 import json
+from uuid import uuid4
 
 import pytest
 
@@ -36,7 +37,9 @@ def test_global_link_suggestions_and_link_flow(app, db_session):
     org_id = org.id
 
     user = User(
-        email="test@example.com",
+        email=f"global-link-{uuid4().hex[:8]}@example.com",
+        first_name="Global",
+        last_name="Linker",
         user_type="developer",
         is_active=True,
         organization_id=org.id,

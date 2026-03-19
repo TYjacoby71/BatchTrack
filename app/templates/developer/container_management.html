@@ -284,12 +284,12 @@ function addItem(listType) {
     const value = input.value.trim();
 
     if (!value) {
-        alert('Please enter a value');
+        window.showAlert('Please enter a value');
         return;
     }
 
     if (masterLists[listType].includes(value)) {
-        alert('This item already exists in the list');
+        window.showAlert('This item already exists in the list');
         return;
     }
 
@@ -360,15 +360,15 @@ function saveMasterLists() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Master lists saved successfully!');
+            window.showAlert('Master lists saved successfully!');
             location.reload();
         } else {
-            alert('Error saving master lists: ' + data.error);
+            window.showAlert('Error saving master lists: ' + data.error);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error saving master lists');
+        window.showAlert('Error saving master lists');
     })
     .finally(() => {
         saveBtn.innerHTML = originalText;

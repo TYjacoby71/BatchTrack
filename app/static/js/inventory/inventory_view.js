@@ -63,6 +63,16 @@ function lockExpiredQuantityActions() {
     });
 }
 
+async function requestConfirmation(options) {
+    if (typeof window.showConfirmDialog === 'function') {
+        return window.showConfirmDialog(options);
+    }
+    if (typeof window.showAlert === 'function') {
+        window.showAlert('warning', 'Confirmation dialog is currently unavailable.');
+    }
+    return false;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const trackedToggleInModal = document.getElementById('modal_is_tracked');
     const orgTracksInventoryQuantities = !(trackedToggleInModal && trackedToggleInModal.disabled);
@@ -147,7 +157,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', async function(e) {
+            let requiresManualSubmit = false;
+            let blockedByAdditionalGuard = false;
             const trackedToggle = document.getElementById('modal_is_tracked');
             const initialTracked = trackedToggle
                 ? ((trackedToggle.dataset.initialTracked || '').toLowerCase() === 'true')
@@ -160,11 +172,15 @@ document.addEventListener('DOMContentLoaded', function() {
             );
 
             if (switchedToInfinite) {
-                const confirmedDrain = window.confirm(
-                    'You are about to toggle to Infinite mode. This will mark all of your existing lots with remaining quantity as 0.'
-                );
+                e.preventDefault();
+                requiresManualSubmit = true;
+                const confirmedDrain = await requestConfirmation({
+                    title: 'Switch to Infinite mode?',
+                    message: 'You are about to toggle to Infinite mode. This will mark all of your existing lots with remaining quantity as 0.',
+                    confirmText: 'Switch to Infinite',
+                    confirmVariant: 'danger'
+                });
                 if (!confirmedDrain) {
-                    e.preventDefault();
                     return;
                 }
                 let confirmInput = form.querySelector('input[name="confirm_infinite_drain"]');
@@ -178,6 +194,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (!quantityInput) {
+                if (requiresManualSubmit && !blockedByAdditionalGuard) {
+                    form.submit();
+                }
                 return;
             }
 
@@ -185,23 +204,36 @@ document.addEventListener('DOMContentLoaded', function() {
             const baselineQuantity = parseFloat(baselineRaw);
             const newQuantity = parseFloat(quantityInput.value);
             if (Number.isNaN(newQuantity) || Number.isNaN(baselineQuantity)) {
+                if (requiresManualSubmit && !blockedByAdditionalGuard) {
+                    form.submit();
+                }
                 return;
             }
 
             const quantityChanged = Math.abs(newQuantity - baselineQuantity) > 1e-9;
             if (!quantityChanged) {
+                if (requiresManualSubmit && !blockedByAdditionalGuard) {
+                    form.submit();
+                }
                 return;
             }
 
             if (!orgTracksInventoryQuantities) {
                 e.preventDefault();
+                blockedByAdditionalGuard = true;
                 showInventoryTrackingUpgradeModal();
                 return;
             }
 
             if (recountModal) {
                 e.preventDefault();
+                blockedByAdditionalGuard = true;
                 recountModal.show();
+                return;
+            }
+
+            if (requiresManualSubmit && !blockedByAdditionalGuard) {
+                form.submit();
             }
         });
     }

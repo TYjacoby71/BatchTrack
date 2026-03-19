@@ -514,12 +514,12 @@ function startTimer(name, duration) {
         if (data.success) {
             location.reload();
         } else {
-            alert('Error starting timer: ' + (data.error || 'Unknown error'));
+            window.showAlert('Error starting timer: ' + (data.error || 'Unknown error'));
         }
     })
     .catch(error => {
         console.error('Timer error:', error);
-        alert('Network error occurred');
+        window.showAlert('Network error occurred');
     });
 }
 

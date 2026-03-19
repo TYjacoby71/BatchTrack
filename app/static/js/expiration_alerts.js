@@ -38,8 +38,24 @@ function getCSRFToken() {
     return '';
 }
 
+async function requestConfirmation(options) {
+    if (typeof window.showConfirmDialog === 'function') {
+        return window.showConfirmDialog(options);
+    }
+    if (typeof window.showAlert === 'function') {
+        window.showAlert('warning', 'Confirmation dialog is currently unavailable.');
+    }
+    return false;
+}
+
 async function markAsExpired(type, id) {
-    if (!confirm('Mark this item as expired and remove it from inventory?\n\nThis action cannot be undone. Proceed?')) {
+    const confirmed = await requestConfirmation({
+        title: 'Mark item as expired?',
+        message: 'Mark this item as expired and remove it from inventory?\n\nThis action cannot be undone. Proceed?',
+        confirmText: 'Mark expired',
+        confirmVariant: 'danger'
+    });
+    if (!confirmed) {
         return;
     }
 
@@ -68,7 +84,13 @@ async function markAsExpired(type, id) {
 }
 
 async function archiveExpired() {
-    if (!confirm('Archive all expired items with zero quantity? This cannot be undone.')) {
+    const confirmed = await requestConfirmation({
+        title: 'Archive expired items?',
+        message: 'Archive all expired items with zero quantity? This cannot be undone.',
+        confirmText: 'Archive items',
+        confirmVariant: 'danger'
+    });
+    if (!confirmed) {
         return;
     }
 
@@ -93,14 +115,11 @@ async function archiveExpired() {
 }
 
 function showAlert(type, message) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
-    alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-
-    const mainContent = document.querySelector('.container-fluid') || document.body;
-    mainContent.insertBefore(alertDiv, mainContent.firstChild);
-
-    setTimeout(() => alertDiv.remove(), 5000);
+    if (typeof window.showAlert === 'function') {
+        window.showAlert(type, message);
+        return;
+    }
+    console.log(`[${type}] ${message}`);
 }
 
 // Safe data initialization

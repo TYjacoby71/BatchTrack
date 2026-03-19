@@ -77,8 +77,7 @@ $(document).ready(function() {
         if (typeof window.showAlert === 'function') {
             window.showAlert(type, message);
         } else {
-            // Fallback to simple alert
-            alert(message);
+            console.log(`[${type}] ${message}`);
         }
     }
         

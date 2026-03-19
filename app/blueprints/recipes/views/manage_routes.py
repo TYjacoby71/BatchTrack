@@ -409,7 +409,7 @@ def delete_recipe_route(recipe_id):
     try:
         success, message = delete_recipe(recipe_id)
         if success:
-            flash(message)
+            flash(message, "success")
         else:
             flash(f"Error deleting recipe: {message}", "error")
     except Exception as exc:
@@ -486,7 +486,7 @@ def lock_recipe(recipe_id):
     recipe = Recipe.scoped().filter_by(id=recipe_id).first_or_404()
     recipe.is_locked = True
     db.session.commit()
-    flash("Recipe locked successfully.")
+    flash("Recipe locked successfully.", "success")
     return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
 
@@ -504,7 +504,7 @@ def unlock_recipe(recipe_id):
     if current_user.check_password(unlock_password):
         recipe.is_locked = False
         db.session.commit()
-        flash("Recipe unlocked successfully.")
+        flash("Recipe unlocked successfully.", "success")
     else:
         flash("Incorrect password.", "error")
 

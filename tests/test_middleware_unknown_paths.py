@@ -179,12 +179,15 @@ def test_ping_and_head_health_probes_return_success(app):
 
 def test_marketing_context_skips_expensive_work_for_login(app, monkeypatch):
     client = app.test_client()
-    from app import template_context
+    from app.services.marketing_content_service import MarketingContentService
 
     def _fail_if_called(*_args, **_kwargs):
-        raise AssertionError("read_json_file should not be called for /auth/login")
+        raise AssertionError(
+            "Marketing content loaders should not run for /auth/login"
+        )
 
-    monkeypatch.setattr(template_context, "read_json_file", _fail_if_called)
+    monkeypatch.setattr(MarketingContentService, "get_reviews", _fail_if_called)
+    monkeypatch.setattr(MarketingContentService, "get_spotlights", _fail_if_called)
 
     response = client.get("/auth/login", follow_redirects=False)
 
@@ -193,21 +196,27 @@ def test_marketing_context_skips_expensive_work_for_login(app, monkeypatch):
 
 def test_marketing_context_still_runs_for_homepage(app, monkeypatch):
     client = app.test_client()
-    from app import template_context
+    from app.services.marketing_content_service import MarketingContentService
 
     calls = []
 
-    def _record_calls(_path, default=None):
-        calls.append(str(_path))
-        return default if default is not None else []
+    def _record_reviews():
+        calls.append("reviews")
+        return []
 
-    monkeypatch.setattr(template_context, "read_json_file", _record_calls)
+    def _record_spotlights():
+        calls.append("spotlights")
+        return []
+
+    monkeypatch.setattr(MarketingContentService, "get_reviews", _record_reviews)
+    monkeypatch.setattr(MarketingContentService, "get_spotlights", _record_spotlights)
     app_cache.clear_prefix("marketing:")
 
     response = client.get("/", query_string={"refresh": "1"}, follow_redirects=False)
 
     assert response.status_code == 200
-    assert calls
+    assert "reviews" in calls
+    assert "spotlights" in calls
 
 
 def test_high_confidence_probe_blocks_immediately(app):
