@@ -65,6 +65,18 @@ class BillingService:
     _pricing_lock_registry: dict[str, Lock] = defaultdict(Lock)
     _pricing_registry_lock = Lock()
 
+    @staticmethod
+    def _mask_identifier(
+        value: str | None, *, visible_prefix: int = 8, visible_suffix: int = 4
+    ) -> str:
+        """Return a short, non-sensitive identifier representation for logs."""
+        raw = str(value or "").strip()
+        if not raw:
+            return "unknown"
+        if len(raw) <= (visible_prefix + visible_suffix + 3):
+            return f"{raw[:visible_prefix]}..."
+        return f"{raw[:visible_prefix]}...{raw[-visible_suffix:]}"
+
     # Purpose: Build cache key for a pricing lookup.
     @classmethod
     def _pricing_cache_key(cls, lookup_key: str) -> str:
@@ -454,7 +466,11 @@ class BillingService:
         try:
             return stripe.Customer.retrieve(customer_id)
         except Exception as e:
-            logger.error(f"Failed to retrieve customer {customer_id}: {str(e)}")
+            logger.error(
+                "Failed to retrieve customer %s: %s",
+                BillingService._mask_identifier(customer_id),
+                e,
+            )
             return None
 
     # Purpose: Retrieve a Stripe checkout session.
@@ -464,7 +480,11 @@ class BillingService:
         try:
             return stripe.checkout.Session.retrieve(session_id)
         except Exception as e:
-            logger.error(f"Failed to retrieve checkout session {session_id}: {str(e)}")
+            logger.error(
+                "Failed to retrieve checkout session %s: %s",
+                BillingService._mask_identifier(session_id),
+                e,
+            )
             return None
 
     # Purpose: Route Stripe webhook events to handlers.
@@ -574,7 +594,8 @@ class BillingService:
                         )
             if not org:
                 logger.warning(
-                    f"Subscription.created for unknown customer {customer_id}"
+                    "Subscription.created for unknown customer %s",
+                    BillingService._mask_identifier(customer_id),
                 )
                 return
 
@@ -747,7 +768,10 @@ class BillingService:
 
             org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
             if not org:
-                logger.warning("Payment succeeded for unknown customer %s", customer_id)
+                logger.warning(
+                    "Payment succeeded for unknown customer %s",
+                    BillingService._mask_identifier(customer_id),
+                )
                 return
 
             org.billing_status = "active"
@@ -800,7 +824,10 @@ class BillingService:
 
             org = Organization.query.filter_by(stripe_customer_id=customer_id).first()
             if not org:
-                logger.warning("Payment failed for unknown customer %s", customer_id)
+                logger.warning(
+                    "Payment failed for unknown customer %s",
+                    BillingService._mask_identifier(customer_id),
+                )
                 return
 
             org.billing_status = "payment_failed"

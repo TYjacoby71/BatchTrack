@@ -302,6 +302,12 @@ def llms_txt():
     )
 
 
+@core_bp.route("/meta.json")
+def meta_json():
+    """Lightweight metadata document requested by social/crawler clients."""
+    return _serve_marketing_public_asset("meta.json", mimetype="application/json")
+
+
 @core_bp.route("/signup", methods=["GET", "POST"])
 def signup_alias():
     """Public short-path alias that reuses the auth signup flow."""
