@@ -21,6 +21,7 @@ from ...services.batch_service import (
     BatchOperationsService,
     BatchService,
 )
+from ...services.fifo_api_service import get_batch_inventory_summary_payload
 from ...services.production_planning.service import PlanProductionService
 from ...services.stock_check.core import UniversalStockCheckService
 from ...utils.notes import append_timestamped_note
@@ -180,22 +181,7 @@ def get_batch_remaining_details(batch_id):
 def get_batch_inventory_summary(batch_id):
     """Get batch inventory summary for FIFO modal"""
     try:
-        from ..api.fifo_routes import get_batch_inventory_summary as fifo_summary
-
-        # Call the function directly
-        result = fifo_summary(batch_id)
-        return result
-    except ImportError as e:
-        logger.error(f"Failed to import batch inventory summary function: {str(e)}")
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "error": "Batch inventory summary function not available",
-                }
-            ),
-            500,
-        )
+        return jsonify(get_batch_inventory_summary_payload(batch_id))
     except Exception as e:
         logger.error(f"Error in get_batch_inventory_summary: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500

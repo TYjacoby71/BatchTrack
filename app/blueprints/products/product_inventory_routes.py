@@ -420,11 +420,12 @@ def dispose_expired_sku(sku_id):
         return jsonify({"error": str(e)}), 500
 
 
-@product_inventory_bp.route("/webhook/sale", methods=["POST"])
+@product_inventory_bp.route("/integrations/pos/sale", methods=["POST"])
+@product_inventory_bp.route("/webhook/sale", methods=["POST"])  # legacy alias
 @login_required
 @require_permission("products.sales_tracking")
 def process_sale_webhook():
-    """Process sales from external systems (Shopify, Etsy, etc.)"""
+    """Process POS sale events (Shopify/Etsy/etc.)."""
     if not request.is_json:
         return jsonify({"error": "JSON data required"}), 400
 
@@ -477,11 +478,12 @@ def process_sale_webhook():
         return jsonify({"error": str(e)}), 500
 
 
-@product_inventory_bp.route("/webhook/return", methods=["POST"])
+@product_inventory_bp.route("/integrations/pos/return", methods=["POST"])
+@product_inventory_bp.route("/webhook/return", methods=["POST"])  # legacy alias
 @login_required
 @require_permission("products.sales_tracking")
 def process_return_webhook():
-    """Process returns from external systems"""
+    """Process POS return events."""
     if not request.is_json:
         return jsonify({"error": "JSON data required"}), 400
 

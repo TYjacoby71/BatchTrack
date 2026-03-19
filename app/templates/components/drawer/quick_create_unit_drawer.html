@@ -50,16 +50,19 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
             try {
-                const payload = { name: name.value.trim(), type: type.value };
-                const res = await fetch('/recipes/units/quick-add', {
+                const payload = { name: name.value.trim(), unit_type: type.value };
+                const res = await fetch('/api/units', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                if (data && data.error) throw new Error(data.error);
+                const unit = data && data.data ? data.data : data;
+                if (!res.ok || (data && data.success === false) || (unit && unit.error)) {
+                    throw new Error((data && data.error) || (unit && unit.error) || 'Failed to create unit');
+                }
                 // Emit event for any listeners to refresh units
-                window.dispatchEvent(new CustomEvent('unit.created', { detail: { unit: data } }));
+                window.dispatchEvent(new CustomEvent('unit.created', { detail: { unit } }));
                 const instance = bootstrap.Modal.getInstance(modalEl);
                 if (instance) instance.hide();
             } catch (e) {

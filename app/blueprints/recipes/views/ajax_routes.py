@@ -4,10 +4,13 @@ import logging
 
 from flask import jsonify, request
 from flask_login import current_user, login_required
-from sqlalchemy import func
 
 from app.extensions import db
-from app.models import InventoryItem, Unit
+from app.models import InventoryItem
+from app.services.unit_catalog_service import (
+    create_or_get_custom_unit,
+    serialize_unit,
+)
 from app.utils.permissions import require_permission
 
 from .. import recipes_bp
@@ -29,47 +32,15 @@ def quick_add_unit():
 
         if unit_type != "count":
             unit_type = "count"
-
-        existing = Unit.query.filter(
-            func.lower(Unit.name) == func.lower(db.literal(name)),
-            (
-                (Unit.is_custom.is_(False))
-                | (Unit.organization_id == current_user.organization_id)
-            ),
-        ).first()
-        if existing:
-            return jsonify(
-                {
-                    "id": existing.id,
-                    "name": existing.name,
-                    "unit_type": existing.unit_type,
-                    "symbol": existing.symbol,
-                    "is_custom": existing.is_custom,
-                }
-            )
-
-        unit = Unit(
+        unit, created = create_or_get_custom_unit(
             name=name,
             unit_type=unit_type,
-            base_unit="count",
-            conversion_factor=1.0,
-            is_active=True,
-            is_custom=True,
-            is_mapped=False,
             organization_id=current_user.organization_id,
             created_by=current_user.id,
         )
-        db.session.add(unit)
-        db.session.commit()
-        return jsonify(
-            {
-                "id": unit.id,
-                "name": unit.name,
-                "unit_type": unit.unit_type,
-                "symbol": unit.symbol,
-                "is_custom": True,
-            }
-        )
+        if created:
+            db.session.commit()
+        return jsonify(serialize_unit(unit))
     except Exception as exc:
         logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/ajax_routes.py:73", exc_info=True)
         db.session.rollback()

@@ -13,7 +13,9 @@ For in-context user-fixable errors, services should return a `drawer_payload` (s
 **Authority:** All inventory deduction order and batch lot management
 
 **Key Endpoints / Modules:**
-- API: `app/blueprints/api/fifo_routes.py` (details, summaries)
+- API: `app/blueprints/api/routes.py` (`/api/fifo-details/<inventory_id>`)
+- API: `app/blueprints/batches/routes.py` (`/batches/api/batch-inventory-summary/<batch_id>`)
+- Payload builders: `app/services/fifo_api_service.py` (details, summaries)
 - Ops: `app/services/inventory_adjustment/_fifo_ops.py` (deductions)
 
 **Usage Examples:**

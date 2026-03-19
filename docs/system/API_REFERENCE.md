@@ -93,6 +93,7 @@ POST     /production-planning/recipe/<recipe_id>/auto-fill-containers
 
 ```
 GET /api/inventory/item/<item_id>
+GET /api/fifo-details/<inventory_id>?batch_id=<batch_id>
 GET /batches/api/batch-inventory-summary/<batch_id>
 ```
 
@@ -147,6 +148,7 @@ Notes:
 
 ```
 GET  /api/units             — List units (authenticated)
+POST /api/units             — Create/get org custom unit (authenticated)
 POST /api/unit-converter    — Convert units (authenticated)
 GET  /api/unit-search       — Search units
 GET  /api/public/units      — List units (public, no auth)
@@ -216,6 +218,14 @@ POST /reservations/api/reservations/<order_id>/confirm_sale
 GET  /reservations/api/reservations/<order_id>/details
 GET  /reservations/api/inventory/<item_id>/reservations
 POST /reservations/api/reservations/cleanup_expired
+```
+
+`POST /reservations/api/reservations/create` accepts either `item_id` or `sku_code` plus `quantity` and `order_id`.
+
+Inventory POS event endpoints:
+```
+POST /products/inventory/integrations/pos/sale    (legacy alias: /products/inventory/webhook/sale)
+POST /products/inventory/integrations/pos/return  (legacy alias: /products/inventory/webhook/return)
 ```
 
 ---

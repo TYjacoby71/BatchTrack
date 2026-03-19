@@ -10,17 +10,12 @@ Glossary:
 - Admin blueprint: Route namespace mounted under the ``/admin`` URL prefix.
 """
 
-from flask import Blueprint, render_template
+from flask import render_template
 from flask_login import login_required
 
 from ...models import Organization, User
 from ...utils.permissions import require_permission
-
-# --- Admin blueprint ---
-# Purpose: Group internal system-admin routes under /admin.
-# Inputs: None.
-# Outputs: Flask blueprint for organization administration views.
-admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+from . import admin_bp
 
 
 # --- List organizations ---

@@ -37,6 +37,13 @@ from app.services.cache_invalidation import (
     product_bootstrap_cache_key,
     recipe_bootstrap_cache_key,
 )
+from app.services.fifo_api_service import get_fifo_details_payload
+from app.services.unit_catalog_service import (
+    create_or_get_custom_unit,
+    list_units as list_catalog_units,
+    normalize_unit_type,
+    serialize_unit,
+)
 from app.utils.cache_utils import should_bypass_cache
 from app.utils.code_generator import generate_recipe_prefix
 from app.utils.permissions import require_permission
@@ -97,7 +104,17 @@ def health_check():
 @require_permission("dashboard.view")
 def server_time():
     """Get current server time in user's timezone"""
+    from app.services.timer_service import TimerService
     from ...utils.timezone_utils import TimezoneUtils
+
+    # Keep timer auto-complete behavior on the canonical server-time endpoint.
+    try:
+        TimerService.complete_expired_timers()
+    except Exception:
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/routes.py:server_time",
+            exc_info=True,
+        )
 
     # Get current time in user's timezone
     user_time = TimezoneUtils.now()
@@ -218,18 +235,13 @@ def get_dashboard_alerts():
 # Import sub-blueprints to register their routes
 
 from app.models.product_category import ProductCategory
-from app.models.unit import Unit
-
-from ...utils.unit_utils import get_global_unit_list
 from .container_routes import container_api_bp
 from .ingredient_routes import ingredient_api_bp
-from .reservation_routes import reservation_api_bp
 
 # Register sub-blueprints
 
 api_bp.register_blueprint(ingredient_api_bp, url_prefix="/ingredients")
 api_bp.register_blueprint(container_api_bp)
-api_bp.register_blueprint(reservation_api_bp)
 
 
 # =========================================================
@@ -270,6 +282,25 @@ def get_inventory_item(item_id):
     )
 
 
+# --- FIFO details ---
+# Purpose: Return FIFO lot details for an inventory item.
+# Inputs: inventory_id route param plus optional batch_id query param.
+# Outputs: JSON payload with FIFO entries and optional batch usage list.
+@api_bp.route("/fifo-details/<int:inventory_id>", methods=["GET"])
+@login_required
+@require_permission("inventory.view")
+def get_fifo_details(inventory_id):
+    try:
+        batch_id = request.args.get("batch_id", type=int)
+        return jsonify(get_fifo_details_payload(inventory_id, batch_id=batch_id))
+    except Exception as exc:
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/routes.py:get_fifo_details",
+            exc_info=True,
+        )
+        return jsonify({"error": str(exc)}), 500
+
+
 # --- Product category ---
 # Purpose: Return product category details by id.
 # Inputs: Function arguments plus active request/application context.
@@ -299,52 +330,31 @@ def get_category(cat_id):
 @login_required
 @require_permission("inventory.view")
 def list_units():
-    """Unified unit search using get_global_unit_list (standard + org custom)."""
-    unit_type = (
-        request.args.get("type") or request.args.get("unit_type") or ""
-    ).strip()
-    q = (request.args.get("q") or "").strip()
-    try:
-        units = get_global_unit_list() or []
-    except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:302", exc_info=True)
-        units = []
-
-    if unit_type:
-        units = [u for u in units if getattr(u, "unit_type", None) == unit_type]
-    if q:
-        q_lower = q.lower()
-        units = [
-            u
-            for u in units
-            if (getattr(u, "name", "") or "").lower().find(q_lower) != -1
-        ]
-
-    try:
-        units.sort(
-            key=lambda u: (
-                str(getattr(u, "unit_type", "") or ""),
-                str(getattr(u, "name", "") or ""),
-            )
-        )
-    except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:322", exc_info=True)
-        pass
-
-    results = units[:50]
+    """Unified unit search using shared unit catalog service."""
+    unit_type = request.args.get("type") or request.args.get("unit_type")
+    q = request.args.get("q")
     return jsonify(
         {
             "success": True,
-            "data": [
-                {
-                    "id": getattr(u, "id", None),
-                    "name": getattr(u, "name", ""),
-                    "unit_type": getattr(u, "unit_type", None),
-                    "symbol": getattr(u, "symbol", None),
-                    "is_custom": getattr(u, "is_custom", False),
-                }
-                for u in results
-            ],
+            "data": list_catalog_units(unit_type=unit_type, query=q, limit=50),
+        }
+    )
+
+
+# --- List units ---
+# Purpose: Return authenticated unit list for dropdowns and selectors.
+# Inputs: Optional query params type/unit_type and q for filtering.
+# Outputs: JSON payload containing standard + org custom units.
+@api_bp.route("/units", methods=["GET"])
+@login_required
+@require_permission("inventory.view")
+def get_units():
+    unit_type = request.args.get("type") or request.args.get("unit_type")
+    q = request.args.get("q")
+    return jsonify(
+        {
+            "success": True,
+            "data": list_catalog_units(unit_type=unit_type, query=q, limit=250),
         }
     )
 
@@ -360,38 +370,25 @@ def create_unit():
     try:
         data = request.get_json() or {}
         name = (data.get("name") or "").strip()
-        unit_type = (data.get("unit_type") or "count").strip()
+        unit_type = normalize_unit_type(
+            data.get("unit_type") or data.get("type") or "count"
+        )
         if not name:
             return jsonify({"success": False, "error": "Name is required"}), 400
-        # Prevent duplicates within standard scope
-        existing = Unit.query.filter(Unit.name.ilike(name)).first()
-        if existing:
-            return jsonify(
-                {
-                    "success": True,
-                    "data": {
-                        "id": existing.id,
-                        "name": existing.name,
-                        "unit_type": existing.unit_type,
-                    },
-                }
-            )
-        u = Unit(
+        unit, created = create_or_get_custom_unit(
             name=name,
             unit_type=unit_type,
-            conversion_factor=1.0,
-            base_unit="Piece",
-            is_active=True,
-            is_custom=False,
-            is_mapped=True,
-            organization_id=None,
+            organization_id=current_user.organization_id,
+            created_by=current_user.id,
+            symbol=data.get("symbol"),
         )
-        db.session.add(u)
-        db.session.commit()
+        if created:
+            db.session.commit()
         return jsonify(
             {
                 "success": True,
-                "data": {"id": u.id, "name": u.name, "unit_type": u.unit_type},
+                "created": created,
+                "data": serialize_unit(unit),
             }
         )
     except Exception as e:
