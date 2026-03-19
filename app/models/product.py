@@ -175,7 +175,17 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
     # FIFO REFERENCE
     fifo_id = db.Column(db.String(32), nullable=True)
-    batch_id = db.Column(db.Integer, db.ForeignKey("batch.id"), nullable=True)
+    # Mark one side of the bidirectional Batch/ProductSKU FK pair as ALTER-managed
+    # to avoid cyclic drop-order warnings in metadata teardown.
+    batch_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "batch.id",
+            name="fk_product_sku_batch_id",
+            use_alter=True,
+        ),
+        nullable=True,
+    )
     container_id = db.Column(
         db.Integer, db.ForeignKey("inventory_item.id"), nullable=True
     )
