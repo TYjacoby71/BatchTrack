@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -41,6 +42,8 @@ from app.utils.permissions import (
 )
 from app.utils.seo import slugify_value
 from app.utils.settings import is_feature_enabled
+
+logger = logging.getLogger(__name__)
 
 global_library_bp = Blueprint("global_library_bp", __name__)
 
