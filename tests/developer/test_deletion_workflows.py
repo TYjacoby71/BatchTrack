@@ -355,4 +355,6 @@ def test_validate_deletion_rejects_mismatched_confirmation(monkeypatch):
     )
 
     assert success is False
-    assert 'Confirmation text must match exactly: "DELETE Tyson\'s Workspace"' == message
+    assert (
+        'Confirmation text must match exactly: "DELETE Tyson\'s Workspace"' == message
+    )

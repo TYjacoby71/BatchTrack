@@ -94,24 +94,30 @@ def list_reservations():
 
     # Get summary stats
     stats = {
-        "total_active": Reservation.scoped().filter(
+        "total_active": Reservation.scoped()
+        .filter(
             and_(
                 Reservation.status == "active",
                 Reservation.organization_id == current_user.organization_id,
             )
-        ).count(),
-        "total_expired": Reservation.scoped().filter(
+        )
+        .count(),
+        "total_expired": Reservation.scoped()
+        .filter(
             and_(
                 Reservation.status == "expired",
                 Reservation.organization_id == current_user.organization_id,
             )
-        ).count(),
-        "total_converted": Reservation.scoped().filter(
+        )
+        .count(),
+        "total_converted": Reservation.scoped()
+        .filter(
             and_(
                 Reservation.status == "converted_to_sale",
                 Reservation.organization_id == current_user.organization_id,
             )
-        ).count(),
+        )
+        .count(),
     }
 
     return render_template(
@@ -155,7 +161,10 @@ def create_reservation():
             return jsonify({"error": message}), 400
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:153", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/reservation_routes.py:153",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -170,9 +179,9 @@ def release_reservation(order_id):
         # First check if reservations exist for this order
         from ...models import Reservation
 
-        reservations = Reservation.scoped().filter_by(
-            order_id=order_id, status="active"
-        ).all()
+        reservations = (
+            Reservation.scoped().filter_by(order_id=order_id, status="active").all()
+        )
         print(
             f"DEBUG: Found {len(reservations)} active reservations for order {order_id}"
         )
@@ -227,7 +236,10 @@ def release_reservation(order_id):
             return jsonify({"error": message}), 400
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:224", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/reservation_routes.py:224",
+            exc_info=True,
+        )
         print(f"DEBUG: Exception in release_reservation: {str(e)}")
         import traceback
 
@@ -252,7 +264,10 @@ def confirm_sale(order_id):
             return jsonify({"error": message}), 400
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:248", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/reservation_routes.py:248",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -268,7 +283,10 @@ def get_reservation_details(order_id):
         return jsonify({"reservations": details})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:263", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/reservation_routes.py:263",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -284,7 +302,10 @@ def cleanup_expired():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:278", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/reservation_routes.py:278",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -295,7 +316,8 @@ def get_item_reservations(item_id):
     """Get all reservations for a specific inventory item"""
     try:
         reservations = (
-            Reservation.scoped().filter(
+            Reservation.scoped()
+            .filter(
                 and_(
                     Reservation.product_item_id == item_id,
                     Reservation.organization_id == current_user.organization_id,
@@ -333,5 +355,8 @@ def get_item_reservations(item_id):
         return jsonify({"reservations": result})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/reservation_routes.py:326", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/reservation_routes.py:326",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500

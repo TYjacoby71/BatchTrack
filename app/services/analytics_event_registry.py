@@ -256,7 +256,9 @@ def required_properties_for(event_name: str) -> tuple[str, ...]:
     return spec.required_properties or ()
 
 
-def missing_required_properties(event_name: str, properties: dict[str, Any]) -> tuple[str, ...]:
+def missing_required_properties(
+    event_name: str, properties: dict[str, Any]
+) -> tuple[str, ...]:
     """Return required properties missing from a candidate payload."""
     required = required_properties_for(event_name)
     if not required:
@@ -276,4 +278,3 @@ def list_registered_events(*, category: str | None = None) -> list[AnalyticsEven
         wanted = str(category).strip().lower()
         specs = [spec for spec in specs if spec.category == wanted]
     return sorted(specs, key=lambda spec: spec.name)
-

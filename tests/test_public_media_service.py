@@ -60,7 +60,9 @@ def test_resolve_first_media_from_folder_prefers_youtube_url_files(app, tmp_path
     )
 
 
-def test_resolve_first_media_skips_invalid_url_and_falls_back_to_local_video(app, tmp_path):
+def test_resolve_first_media_skips_invalid_url_and_falls_back_to_local_video(
+    app, tmp_path
+):
     static_root = tmp_path / "static"
     folder = static_root / "images" / "homepage" / "hero" / "primary"
     _write_text(folder / "youtube.url", "this is not a youtube link")

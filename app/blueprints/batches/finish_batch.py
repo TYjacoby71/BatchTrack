@@ -72,7 +72,10 @@ def complete_batch(batch_id):
         # This delegates to the existing _complete_batch_internal function below
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:74", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:74",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error completing batch {batch_id}: {str(e)}")
         flash(f"Error completing batch: {str(e)}", "error")
@@ -117,7 +120,10 @@ def fail_batch(batch_id):
             )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:118", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:118",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error failing batch {batch_id}: {str(e)}")
         if request.is_json:
@@ -182,11 +188,13 @@ def _complete_batch_internal(batch_id, form_data):
                     getattr(current_user, "organization_id", None)
                     or batch.organization_id
                 )
-                existing_skus_query = ProductSKU.scoped().join(
-                    ProductSKU.inventory_item
-                ).filter(
-                    ProductSKU.product_id == product_id,
-                    ProductSKU.variant_id == variant_id,
+                existing_skus_query = (
+                    ProductSKU.scoped()
+                    .join(ProductSKU.inventory_item)
+                    .filter(
+                        ProductSKU.product_id == product_id,
+                        ProductSKU.variant_id == variant_id,
+                    )
                 )
                 if inv_org_id:
                     existing_skus_query = existing_skus_query.filter(
@@ -217,7 +225,10 @@ def _complete_batch_internal(batch_id, form_data):
                         "Final portions must be provided for portioned batches",
                     )
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:217", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:217",
+                exc_info=True,
+            )
             return False, "Invalid final portions value"
 
         # Perishable settings
@@ -306,14 +317,20 @@ def _complete_batch_internal(batch_id, form_data):
                     # Fallback: if no containers involved, treat as N/A (leave default)
                     pass
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:305", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:305",
+                exc_info=True,
+            )
             pass
 
         try:
             db.session.commit()
             return True, f"Batch {batch.label_code} completed successfully!"
         except Exception as commit_error:
-            logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:311", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:311",
+                exc_info=True,
+            )
             db.session.rollback()
             return (
                 False,
@@ -321,7 +338,10 @@ def _complete_batch_internal(batch_id, form_data):
             )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:318", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:318",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error completing batch {batch_id}: {str(e)}")
         return False, f"Error completing batch: {str(e)}"
@@ -339,12 +359,17 @@ def _create_intermediate_ingredient(
         # Create or get inventory item for the intermediate ingredient
         ingredient_name = f"{batch.recipe.name} (Intermediate)"
 
-        inventory_item = InventoryItem.scoped().filter_by(
-            name=ingredient_name,
-            organization_id=(
-                getattr(current_user, "organization_id", None) or batch.organization_id
-            ),
-        ).first()
+        inventory_item = (
+            InventoryItem.scoped()
+            .filter_by(
+                name=ingredient_name,
+                organization_id=(
+                    getattr(current_user, "organization_id", None)
+                    or batch.organization_id
+                ),
+            )
+            .first()
+        )
 
         if not inventory_item:
             inventory_item = InventoryItem(
@@ -416,27 +441,39 @@ def _create_product_output(
     """Create product SKUs from batch completion using centralized inventory adjustment"""
     try:
         # Get product and variant with proper organization scoping
-        product = Product.scoped().filter_by(
-            id=product_id,
-            organization_id=(
-                getattr(current_user, "organization_id", None) or batch.organization_id
-            ),
-        ).first()
+        product = (
+            Product.scoped()
+            .filter_by(
+                id=product_id,
+                organization_id=(
+                    getattr(current_user, "organization_id", None)
+                    or batch.organization_id
+                ),
+            )
+            .first()
+        )
 
-        variant = ProductVariant.scoped().filter_by(
-            id=variant_id,
-            product_id=product_id,
-            organization_id=(
-                getattr(current_user, "organization_id", None) or batch.organization_id
-            ),
-        ).first()
+        variant = (
+            ProductVariant.scoped()
+            .filter_by(
+                id=variant_id,
+                product_id=product_id,
+                organization_id=(
+                    getattr(current_user, "organization_id", None)
+                    or batch.organization_id
+                ),
+            )
+            .first()
+        )
 
         if not product:
             product = Product.scoped().filter_by(id=product_id).first()
         if not variant:
-            variant = ProductVariant.scoped().filter_by(
-                id=variant_id, product_id=product_id
-            ).first()
+            variant = (
+                ProductVariant.scoped()
+                .filter_by(id=variant_id, product_id=product_id)
+                .first()
+            )
 
         if not product or not variant:
             raise ValueError("Invalid product or variant selection")
@@ -517,16 +554,25 @@ def _create_product_output(
                 try:
                     portion_unit_cost = total_ingredient_cost / float(final_portions)
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:513", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:513",
+                        exc_info=True,
+                    )
                     portion_unit_cost = ingredient_unit_cost
 
                 # Fetch or create SKU tied to provided product/variant within batch org context
                 from ...models import InventoryItem
                 from ...models.product import ProductSKU
 
-                sku = ProductSKU.scoped().filter_by(
-                    product_id=product.id, variant_id=variant.id, size_label=size_label
-                ).first()
+                sku = (
+                    ProductSKU.scoped()
+                    .filter_by(
+                        product_id=product.id,
+                        variant_id=variant.id,
+                        size_label=size_label,
+                    )
+                    .first()
+                )
 
                 if not sku:
                     # Create inventory item for the SKU
@@ -577,7 +623,10 @@ def _create_product_output(
                         base_context.update(naming_context)
                         sku_name = SKUNameBuilder.render(template, base_context)
                     except Exception:
-                        logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:572", exc_info=True)
+                        logger.warning(
+                            "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:572",
+                            exc_info=True,
+                        )
                         sku_name = f"{product.name} - {variant.name} - {size_label}"
 
                     sku = ProductSKU(
@@ -614,7 +663,8 @@ def _create_product_output(
                     )
 
                 portion_lot = (
-                    InventoryLot.scoped().filter_by(
+                    InventoryLot.scoped()
+                    .filter_by(
                         inventory_item_id=sku.inventory_item_id, batch_id=batch.id
                     )
                     .order_by(InventoryLot.created_at.desc())
@@ -661,7 +711,10 @@ def _derive_size_label_from_portions(
         unit = bulk_unit
         return f"{per_portion} {unit} {portion_name}"
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:655", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:655",
+            exc_info=True,
+        )
         return "Portion"
 
 
@@ -714,13 +767,17 @@ def _process_container_allocations(
         if final_quantity > 0:
             try:
                 # Get container with simple query
-                container_item = InventoryItem.scoped().filter_by(
-                    id=int(container_id),
-                    organization_id=(
-                        getattr(current_user, "organization_id", None)
-                        or batch.organization_id
-                    ),
-                ).first()
+                container_item = (
+                    InventoryItem.scoped()
+                    .filter_by(
+                        id=int(container_id),
+                        organization_id=(
+                            getattr(current_user, "organization_id", None)
+                            or batch.organization_id
+                        ),
+                    )
+                    .first()
+                )
 
                 if not container_item:
                     logger.error(
@@ -819,7 +876,10 @@ def _create_container_sku(
             try:
                 display_name = container_item.container_display_name
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:812", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:812",
+                    exc_info=True,
+                )
                 display_name = container_item.name
             size_label = f"{cap_str} {display_name}".strip()
         else:
@@ -827,7 +887,10 @@ def _create_container_sku(
             try:
                 display_name = container_item.container_display_name
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:819", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:819",
+                    exc_info=True,
+                )
                 display_name = container_item.name
             size_label = display_name
         # Final sanitize
@@ -886,7 +949,10 @@ def _create_container_sku(
             base_context.update(naming_context)
             product_sku.sku_name = SKUNameBuilder.render(template, base_context)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/batches/finish_batch.py:877", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:877",
+                exc_info=True,
+            )
             pass
 
         # Set perishable data at the inventory_item level from batch
@@ -918,7 +984,8 @@ def _create_container_sku(
         )
 
         new_lot = (
-            InventoryLot.scoped().filter_by(
+            InventoryLot.scoped()
+            .filter_by(
                 inventory_item_id=product_sku.inventory_item_id, batch_id=batch.id
             )
             .order_by(InventoryLot.created_at.desc())
@@ -988,9 +1055,8 @@ def _create_bulk_sku(
             f"Created/updated {bulk_size_label} SKU: {bulk_sku.sku_code} with {quantity} {unit} at ${ingredient_unit_cost:.2f} per {unit}"
         )
         bulk_lot = (
-            InventoryLot.scoped().filter_by(
-                inventory_item_id=bulk_sku.inventory_item_id, batch_id=batch.id
-            )
+            InventoryLot.scoped()
+            .filter_by(inventory_item_id=bulk_sku.inventory_item_id, batch_id=batch.id)
             .order_by(InventoryLot.created_at.desc())
             .first()
         )

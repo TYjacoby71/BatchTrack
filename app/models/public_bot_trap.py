@@ -32,7 +32,9 @@ class BotTrapIpState(db.Model):
     last_source = db.Column(db.String(80), nullable=True)
     last_reason = db.Column(db.String(80), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
-    updated_at = db.Column(db.DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+    updated_at = db.Column(
+        db.DateTime, nullable=False, default=_utcnow, onupdate=_utcnow
+    )
 
     def __repr__(self) -> str:  # pragma: no cover - debugging helper
         return f"<BotTrapIpState ip={self.ip!r} blocked_until={self.blocked_until!r}>"

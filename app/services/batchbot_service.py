@@ -1,7 +1,7 @@
 from __future__ import annotations
-import logging
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Mapping, Optional, Sequence
@@ -30,7 +30,6 @@ from app.services.statistics.analytics_service import AnalyticsDataService
 from app.utils.timezone_utils import TimezoneUtils
 
 logger = logging.getLogger(__name__)
-
 
 
 class BatchBotServiceError(RuntimeError):
@@ -974,7 +973,10 @@ def _iso_dt(value: Any) -> Optional[str]:
     try:
         return TimezoneUtils.coerce_datetime(value).isoformat()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/batchbot_service.py:972", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/batchbot_service.py:972",
+            exc_info=True,
+        )
         return None
 
 
@@ -984,5 +986,8 @@ def _json_default(value: Any) -> str:
     try:
         return float(value)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/batchbot_service.py:981", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/batchbot_service.py:981",
+            exc_info=True,
+        )
         return str(value)

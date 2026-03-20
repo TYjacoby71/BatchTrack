@@ -1,4 +1,5 @@
 """Seeder and initialization CLI commands grouped by process stage."""
+
 import logging
 
 import click
@@ -20,7 +21,6 @@ from ...seeders.user_seeder import seed_users_and_organization
 logger = logging.getLogger(__name__)
 
 
-
 @click.command("activate-users")
 @with_appcontext
 def activate_users():
@@ -38,7 +38,10 @@ def activate_users():
         db.session.commit()
         print(f"✅ Activated {len(inactive_users)} users.")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:36", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:36",
+            exc_info=True,
+        )
         print(f"❌ Error activating users: {str(e)}")
         raise
 
@@ -73,7 +76,10 @@ def init_production_command():
             seed_consolidated_permissions()
             print("✅ Permissions, organization roles, and developer roles seeded")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:70", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/scripts/commands/seeding.py:70",
+                exc_info=True,
+            )
             print(f"⚠️  Permission seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
@@ -81,7 +87,10 @@ def init_production_command():
             seed_subscriptions()
             print("✅ Subscription tiers seeded")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:77", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/scripts/commands/seeding.py:77",
+                exc_info=True,
+            )
             print(f"⚠️  Subscription seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
@@ -89,7 +98,10 @@ def init_production_command():
             seed_feature_flags()
             print("✅ Feature flags seeded")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:84", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/scripts/commands/seeding.py:84",
+                exc_info=True,
+            )
             print(f"⚠️  Feature flag seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
@@ -97,7 +109,10 @@ def init_production_command():
             seed_app_settings()
             print("✅ App settings seeded")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:91", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/scripts/commands/seeding.py:91",
+                exc_info=True,
+            )
             print(f"⚠️  App settings seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
@@ -109,10 +124,16 @@ def init_production_command():
 
                 backfill_addon_permissions()
             except Exception as e:
-                logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:102", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/scripts/commands/seeding.py:102",
+                    exc_info=True,
+                )
                 print(f"⚠️  Add-on permission backfill issue: {e}")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:104", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/scripts/commands/seeding.py:104",
+                exc_info=True,
+            )
             print(f"⚠️  Add-on seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
@@ -120,7 +141,10 @@ def init_production_command():
             seed_units()
             print("✅ Units seeded")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:111", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/scripts/commands/seeding.py:111",
+                exc_info=True,
+            )
             print(f"⚠️  Unit seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
@@ -130,7 +154,10 @@ def init_production_command():
             seed_users_and_organization()
             print("✅ Organization and users seeded")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:120", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/scripts/commands/seeding.py:120",
+                exc_info=True,
+            )
             print(f"⚠️  User/organization seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
@@ -143,7 +170,10 @@ def init_production_command():
             seed_product_categories()
             print("✅ Product categories seeded")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:132", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/scripts/commands/seeding.py:132",
+                exc_info=True,
+            )
             print(f"⚠️  Product category seeding issue: {e}")
 
         try:
@@ -154,7 +184,10 @@ def init_production_command():
             seed_global_inventory_library()
             print("✅ Global inventory library seeded")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:142", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/scripts/commands/seeding.py:142",
+                exc_info=True,
+            )
             print(f"⚠️  Global inventory library seeding issue: {e}")
 
         print("\n📊 Production Seeding Summary:")
@@ -162,7 +195,10 @@ def init_production_command():
             try:
                 db.session.rollback()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:149", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/scripts/commands/seeding.py:149",
+                    exc_info=True,
+                )
                 pass
             from ...models import (
                 Addon,
@@ -228,11 +264,17 @@ def init_production_command():
             print("📝 Note: This command can be run multiple times safely")
 
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:214", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/scripts/commands/seeding.py:214",
+                exc_info=True,
+            )
             print(f"   - Status check failed: {e}")
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:217", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:217",
+            exc_info=True,
+        )
         print(f"❌ Production seeding failed: {str(e)}")
         db.session.rollback()
         raise
@@ -247,7 +289,10 @@ def seed_users_command():
         seed_users_and_organization()
         print("✅ Users and organization seeded successfully!")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:231", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:231",
+            exc_info=True,
+        )
         print(f"❌ User seeding failed: {str(e)}")
         db.session.rollback()
         raise
@@ -262,7 +307,10 @@ def seed_permissions_command():
         seed_consolidated_permissions()
         print("✅ Permissions seeded successfully!")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:245", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:245",
+            exc_info=True,
+        )
         print(f"❌ Permission seeding failed: {str(e)}")
         db.session.rollback()
         raise
@@ -277,7 +325,10 @@ def seed_organizations_command():
         seed_users_and_organization()
         print("✅ Organizations seeded successfully!")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:259", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:259",
+            exc_info=True,
+        )
         print(f"❌ Organization seeding failed: {str(e)}")
         db.session.rollback()
         raise
@@ -318,7 +369,10 @@ def seed_units_command():
         print("✅ Units seeded successfully")
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:299", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:299",
+            exc_info=True,
+        )
         print(f"❌ Unit seeding failed: {str(e)}")
         import traceback
 
@@ -337,7 +391,10 @@ def seed_sub_tiers_command():
         seed_subscription_tiers()
         print("✅ Subscription tiers seeded successfully!")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:317", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:317",
+            exc_info=True,
+        )
         print(f"❌ Subscription tier seeding failed: {str(e)}")
         db.session.rollback()
         raise
@@ -352,7 +409,10 @@ def seed_feature_flags_command():
         seed_feature_flags()
         print("✅ Feature flags seeded successfully!")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:331", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:331",
+            exc_info=True,
+        )
         print(f"❌ Feature flag seeding failed: {str(e)}")
         db.session.rollback()
         raise
@@ -367,7 +427,10 @@ def seed_app_settings_command():
         seed_app_settings()
         print("✅ App settings seeded successfully!")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:345", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:345",
+            exc_info=True,
+        )
         print(f"❌ App settings seeding failed: {str(e)}")
         db.session.rollback()
         raise
@@ -389,7 +452,10 @@ def seed_categories_command():
         seed_categories(organization_id=org.id)
         print("✅ Categories seeded successfully")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:366", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:366",
+            exc_info=True,
+        )
         print(f"❌ Category seeding failed: {str(e)}")
         db.session.rollback()
         raise
@@ -406,7 +472,10 @@ def seed_product_categories_command():
         seed_product_categories()
         print("✅ Product categories seeded successfully")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:382", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:382",
+            exc_info=True,
+        )
         print(f"❌ Product category seeding failed: {e}")
         raise
 
@@ -433,7 +502,10 @@ def seed_permission_categories_command(category):
             print("✅ All permission categories seeded successfully!")
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:408", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:408",
+            exc_info=True,
+        )
         print(f"❌ Permission category seeding failed: {str(e)}")
         db.session.rollback()
         raise
@@ -485,7 +557,10 @@ def seed_test_data_command():
         print("✅ Test data seeded successfully!")
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:459", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:459",
+            exc_info=True,
+        )
         print(f"❌ Test data seeding failed: {str(e)}")
         import traceback
 
@@ -506,7 +581,10 @@ def seed_global_inventory_command():
         seed_global_inventory_library()
         print("✅ Global inventory library seeded successfully!")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:479", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:479",
+            exc_info=True,
+        )
         print(f"❌ Global inventory seeding failed: {str(e)}")
         db.session.rollback()
         raise
@@ -523,7 +601,10 @@ def generate_container_attributes_command():
         generate_attributes()
         print("✅ Container attribute JSON files generated successfully!")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/scripts/commands/seeding.py:495", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/scripts/commands/seeding.py:495",
+            exc_info=True,
+        )
         print(f"❌ Error generating container attributes: {str(e)}")
         db.session.rollback()
         raise

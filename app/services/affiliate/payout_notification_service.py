@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from ...extensions import db
 from ...models import User
 from ..email_service import EmailService
 from .payout_status import payout_status_label
@@ -17,7 +18,9 @@ class AffiliatePayoutNotificationService:
     """Dispatch payout-status update notifications."""
 
     @staticmethod
-    def _collect_recipients(organization, referrer_user_ids: list[int] | None = None) -> list[str]:
+    def _collect_recipients(
+        organization, referrer_user_ids: list[int] | None = None
+    ) -> list[str]:
         recipients: list[str] = []
         if organization is None:
             return recipients
@@ -27,12 +30,14 @@ class AffiliatePayoutNotificationService:
         if owner_email:
             recipients.append(owner_email)
 
-        contact_email = (getattr(organization, "contact_email", "") or "").strip().lower()
+        contact_email = (
+            (getattr(organization, "contact_email", "") or "").strip().lower()
+        )
         if contact_email and contact_email not in recipients:
             recipients.append(contact_email)
 
-        for user_id in (referrer_user_ids or []):
-            user = User.query.get(int(user_id))
+        for user_id in referrer_user_ids or []:
+            user = db.session.get(User, int(user_id))
             if not user:
                 continue
             user_email = (getattr(user, "email", "") or "").strip().lower()

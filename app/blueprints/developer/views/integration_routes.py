@@ -9,8 +9,8 @@ Glossary:
 """
 
 from __future__ import annotations
-import logging
 
+import logging
 import os
 import re
 
@@ -27,7 +27,6 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 logger = logging.getLogger(__name__)
-
 
 
 # --- Integrations checklist ---
@@ -105,7 +104,10 @@ def integrations_checklist():
         try:
             return re.sub(r"//[^:@/]+:[^@/]+@", "//****:****@", value)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:103", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:103",
+                exc_info=True,
+            )
             return value
 
     backend = (
@@ -415,7 +417,10 @@ def integrations_test_email():
             )
         return jsonify({"success": False, "error": "Failed to send email"}), 500
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:412", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:412",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
@@ -447,10 +452,16 @@ def integrations_test_stripe():
                 }
             )
         except Exception as exc:
-            logger.warning("Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:443", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:443",
+                exc_info=True,
+            )
             return jsonify({"success": False, "error": f"Stripe API error: {exc}"}), 500
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:445", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:445",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
@@ -481,7 +492,10 @@ def integrations_stripe_events():
             )
         return jsonify({"success": True, "data": payload})
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:475", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:475",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
@@ -520,7 +534,10 @@ def integrations_set_feature_flags():
         return jsonify({"success": True})
 
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:513", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:513",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(exc)}), 500
 
@@ -539,7 +556,10 @@ def integrations_set_auto_backup():
         update_settings_value("system", "auto_backup", enabled)
         return jsonify({"success": True, "enabled": enabled})
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:531", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:531",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
@@ -568,7 +588,10 @@ def integrations_check_webhook():
                 {"success": True, "url": url, "status": status, "message": message}
             )
         except Exception as exc:
-            logger.warning("Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:559", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:559",
+                exc_info=True,
+            )
             return (
                 jsonify(
                     {"success": False, "url": url, "error": f"Connection error: {exc}"}
@@ -576,5 +599,8 @@ def integrations_check_webhook():
                 500,
             )
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:566", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:566",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(exc)}), 500

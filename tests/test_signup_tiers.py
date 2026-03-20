@@ -147,9 +147,8 @@ class TestSignupTierCharacterization:
             follow_redirects=True,
         )
         assert missing_tier_response.status_code == 200
-        assert (
-            "Please select a subscription plan"
-            in missing_tier_response.get_data(as_text=True)
+        assert "Please select a subscription plan" in missing_tier_response.get_data(
+            as_text=True
         )
 
         invalid_tier_response = client.post(
@@ -164,9 +163,8 @@ class TestSignupTierCharacterization:
             follow_redirects=True,
         )
         assert invalid_tier_response.status_code == 200
-        assert (
-            "Invalid subscription plan selected"
-            in invalid_tier_response.get_data(as_text=True)
+        assert "Invalid subscription plan selected" in invalid_tier_response.get_data(
+            as_text=True
         )
 
     def test_signup_rejects_short_password_when_password_present(self, app, client):
@@ -235,5 +233,7 @@ class TestSignupTierCharacterization:
         )
         assert response.status_code == 200
         html = response.get_data(as_text=True)
-        assert "An account with that email already exists. Please log in instead." in html
+        assert (
+            "An account with that email already exists. Please log in instead." in html
+        )
         assert f'value="{tier_id}"' in html

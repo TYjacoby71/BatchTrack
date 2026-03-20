@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, timezone
 
-import pytest
 from werkzeug.exceptions import NotFound
 
 from app.utils.cache_manager import app_cache
@@ -182,9 +181,7 @@ def test_marketing_context_skips_expensive_work_for_login(app, monkeypatch):
     from app.services.marketing_content_service import MarketingContentService
 
     def _fail_if_called(*_args, **_kwargs):
-        raise AssertionError(
-            "Marketing content loaders should not run for /auth/login"
-        )
+        raise AssertionError("Marketing content loaders should not run for /auth/login")
 
     monkeypatch.setattr(MarketingContentService, "get_reviews", _fail_if_called)
     monkeypatch.setattr(MarketingContentService, "get_spotlights", _fail_if_called)
@@ -477,7 +474,6 @@ def test_bot_trap_identity_blocks_are_db_backed(app):
 
 def test_bot_trap_hit_audit_logging_is_disabled_by_default(app):
     client = app.test_client()
-    from app.services.public_bot_trap_service import PublicBotTrapService
     from app.models.public_bot_trap import BotTrapHit
 
     with app.app_context():

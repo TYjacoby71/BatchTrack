@@ -141,7 +141,8 @@ def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict
     ]
     masters.sort(key=lambda r: int(getattr(r, "version_number", 0) or 0), reverse=True)
     master_version_ids: Dict[int, int] = {
-        int(getattr(master, "version_number", 0) or 0): int(master.id) for master in masters
+        int(getattr(master, "version_number", 0) or 0): int(master.id)
+        for master in masters
     }
 
     master_tests = [
@@ -214,9 +215,7 @@ def build_version_branches(recipes: List[Recipe]) -> Tuple[List[dict], List[dict
     variation_tests_by_parent: Dict[int, List[Recipe]] = {}
     for test in variation_tests:
         test_version_key = (
-            (
-                getattr(test, "variation_name", None) or getattr(test, "name", None) or ""
-            )
+            (getattr(test, "variation_name", None) or getattr(test, "name", None) or "")
             .strip()
             .lower(),
             int(getattr(test, "version_number", 0) or 0),

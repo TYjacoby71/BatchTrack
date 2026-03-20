@@ -10,8 +10,8 @@ Glossary:
 """
 
 from __future__ import annotations
-import logging
 
+import logging
 from typing import Any, Dict, List
 
 from app.models import FeatureFlag
@@ -111,7 +111,11 @@ def _center_pinned_tool(cards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if len(cards) < 3:
         return cards
     pinned_index = next(
-        (idx for idx, tool in enumerate(cards) if tool.get("slug") == PINNED_HOMEPAGE_TOOL_SLUG),
+        (
+            idx
+            for idx, tool in enumerate(cards)
+            if tool.get("slug") == PINNED_HOMEPAGE_TOOL_SLUG
+        ),
         None,
     )
     if pinned_index is None:
@@ -132,7 +136,10 @@ def is_tool_flag_enabled(flag_key: str, default: bool = True) -> bool:
         if flag is not None:
             return bool(flag.enabled)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/public_tools_service.py:130", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/public_tools_service.py:130",
+            exc_info=True,
+        )
         return bool(default)
     return bool(default)
 
@@ -152,9 +159,14 @@ def get_public_tool_flags() -> Dict[str, bool]:
         return flags
 
     try:
-        rows = FeatureFlag.query.filter(FeatureFlag.key.in_(tuple(key_to_slug.keys()))).all()
+        rows = FeatureFlag.query.filter(
+            FeatureFlag.key.in_(tuple(key_to_slug.keys()))
+        ).all()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/public_tools_service.py:151", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/public_tools_service.py:151",
+            exc_info=True,
+        )
         rows = []
 
     for row in rows:
@@ -220,7 +232,9 @@ def get_homepage_balanced_display_tools(
     if len(display_cards) >= max_cards:
         return display_cards[:max_cards]
 
-    ranked_all: List[Dict[str, Any]] = [_with_tool_media(tool) for tool in PUBLIC_TOOL_CATALOG]
+    ranked_all: List[Dict[str, Any]] = [
+        _with_tool_media(tool) for tool in PUBLIC_TOOL_CATALOG
+    ]
     ranked_all.sort(key=_tool_sort_key)
     for tool in ranked_all:
         if len(display_cards) >= max_cards:
@@ -245,7 +259,9 @@ def get_tools_index_cards(
     """Return full tools-page card list with enabled/disabled states."""
     resolved_flags = tool_flags if tool_flags is not None else get_public_tool_flags()
     cards: List[Dict[str, Any]] = []
-    ranked_all: List[Dict[str, Any]] = [_with_tool_media(tool) for tool in PUBLIC_TOOL_CATALOG]
+    ranked_all: List[Dict[str, Any]] = [
+        _with_tool_media(tool) for tool in PUBLIC_TOOL_CATALOG
+    ]
     ranked_all.sort(key=_tool_sort_key)
 
     for tool in ranked_all:

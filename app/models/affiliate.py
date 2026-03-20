@@ -71,7 +71,10 @@ class AffiliateReferral(db.Model):
         db.Integer, nullable=False, default=12, server_default="12"
     )
     signed_up_at = db.Column(
-        db.DateTime, nullable=False, index=True, default=lambda: datetime.now(timezone.utc)
+        db.DateTime,
+        nullable=False,
+        index=True,
+        default=lambda: datetime.now(timezone.utc),
     )
     churned_at = db.Column(db.DateTime, nullable=True, index=True)
     created_at = db.Column(
@@ -116,7 +119,9 @@ class AffiliateMonthlyEarning(db.Model):
         db.Integer, db.ForeignKey("organization.id"), nullable=False, index=True
     )
     earning_month = db.Column(db.Date, nullable=False, index=True)
-    currency = db.Column(db.String(3), nullable=False, default="usd", server_default="usd")
+    currency = db.Column(
+        db.String(3), nullable=False, default="usd", server_default="usd"
+    )
     gross_revenue_cents = db.Column(
         db.Integer, nullable=False, default=0, server_default="0"
     )

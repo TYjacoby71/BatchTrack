@@ -1,4 +1,5 @@
 import logging
+
 # Import moved to avoid circular dependency
 # from ..blueprints.expiration.services import ExpirationService
 import os
@@ -12,7 +13,6 @@ from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 from ..utils.json_store import read_json_file
 
 logger = logging.getLogger(__name__)
-
 
 
 class DashboardAlertService:
@@ -433,7 +433,10 @@ class DashboardAlertService:
             issues = query.count()
             return issues
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/dashboard_alerts.py:431", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/dashboard_alerts.py:431",
+                exc_info=True,
+            )
             return 0
 
     @staticmethod
@@ -442,7 +445,13 @@ class DashboardAlertService:
         try:
             # Incomplete = any batch not in a terminal status.
             # Keep legacy aliases ("canceled", "finished") terminal for compatibility.
-            terminal_statuses = ["completed", "failed", "cancelled", "canceled", "finished"]
+            terminal_statuses = [
+                "completed",
+                "failed",
+                "cancelled",
+                "canceled",
+                "finished",
+            ]
             query = Batch.query.filter(
                 Batch.status.is_(None) | (~Batch.status.in_(terminal_statuses)),
             )
@@ -460,5 +469,8 @@ class DashboardAlertService:
             incomplete = query.count()
             return incomplete
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/dashboard_alerts.py:455", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/dashboard_alerts.py:455",
+                exc_info=True,
+            )
             return 0

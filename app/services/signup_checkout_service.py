@@ -23,8 +23,8 @@ from ..extensions import db
 from ..models import User
 from ..models.subscription_tier import SubscriptionTier
 from ..utils.analytics_attribution import extract_click_ids
-from .analytics_tracking_service import AnalyticsTrackingService
 from .affiliate_service import AffiliateService
+from .analytics_tracking_service import AnalyticsTrackingService
 from .billing_service import BillingService
 from .lifetime_pricing_service import LifetimePricingService
 from .signup_info_partial_service import SignupInfoPartialService
@@ -179,9 +179,10 @@ class SignupCheckoutService:
             available_tiers=available_tiers,
             preselected_tier=preselected_tier,
         )
-        signup_primary_tier_id = cls._resolve_artisan_tier_id(
-            available_tiers=available_tiers
-        ) or selected_default_tier_id
+        signup_primary_tier_id = (
+            cls._resolve_artisan_tier_id(available_tiers=available_tiers)
+            or selected_default_tier_id
+        )
         preselected_tier = selected_default_tier_id
 
         lifetime_offers = LifetimePricingService.build_lifetime_offers(
@@ -311,7 +312,9 @@ class SignupCheckoutService:
 
         signup_plan_cards = cls._build_signup_paid_plan_cards(context.available_tiers)
         signup_info_panel_by_tier = dict(context.signup_info_panel_by_tier or {})
-        selected_signup_info_panel = signup_info_panel_by_tier.get(selected_paid_tier_id)
+        selected_signup_info_panel = signup_info_panel_by_tier.get(
+            selected_paid_tier_id
+        )
         if not selected_signup_info_panel and signup_info_panel_by_tier:
             selected_signup_info_panel = next(iter(signup_info_panel_by_tier.values()))
         artisan_upsell_offer = context.lifetime_by_tier_id.get(
@@ -320,9 +323,7 @@ class SignupCheckoutService:
         if artisan_upsell_offer and not artisan_upsell_offer.get("has_remaining"):
             artisan_upsell_offer = None
         page_title = "BatchTrack Signup | Hobbyist, Artisan & Enterprise"
-        page_description = (
-            "Choose Hobbyist, Artisan monthly (with a 14-day free trial), or Enterprise monthly."
-        )
+        page_description = "Choose Hobbyist, Artisan monthly (with a 14-day free trial), or Enterprise monthly."
         return {
             "signup_source": context.signup_source,
             "referral_code": context.referral_code,
@@ -678,9 +679,7 @@ class SignupCheckoutService:
         if not password:
             return None
         if len(password) < cls._MIN_PASSWORD_LENGTH:
-            return (
-                f"Password must be at least {cls._MIN_PASSWORD_LENGTH} characters."
-            )
+            return f"Password must be at least {cls._MIN_PASSWORD_LENGTH} characters."
         return None
 
     @staticmethod
@@ -741,7 +740,9 @@ class SignupCheckoutService:
             )
             payload[tier_id] = {
                 "name": str(getattr(tier_obj, "name", None) or "Plan"),
-                "description": str(getattr(tier_obj, "description", None) or "").strip(),
+                "description": str(
+                    getattr(tier_obj, "description", None) or ""
+                ).strip(),
                 "marketing_tagline": str(
                     getattr(tier_obj, "marketing_tagline", None) or ""
                 ).strip(),
@@ -792,7 +793,9 @@ class SignupCheckoutService:
             ),
         }
         if submission.client_first_landing_at:
-            metadata["client_first_landing_at"] = str(submission.client_first_landing_at)
+            metadata["client_first_landing_at"] = str(
+                submission.client_first_landing_at
+            )
 
         if submission.detected_timezone:
             metadata["detected_timezone"] = submission.detected_timezone
@@ -836,7 +839,9 @@ class SignupCheckoutService:
         )
         if selected_partial_id:
             metadata["signup_info_partial_id"] = selected_partial_id
-            assignment_mode = str((resolved_panel or {}).get("assignment_mode") or "").strip()
+            assignment_mode = str(
+                (resolved_panel or {}).get("assignment_mode") or ""
+            ).strip()
             if assignment_mode:
                 metadata["signup_info_assignment_mode"] = assignment_mode
             variant_key = str((resolved_panel or {}).get("variant_key") or "").strip()
@@ -890,7 +895,9 @@ class SignupCheckoutService:
         tier_by_id = {str(getattr(tier, "id", "") or ""): tier for tier in db_tiers}
         lookup_index: dict[str, SubscriptionTier] = {}
         for tier in db_tiers:
-            lookup_key = str(getattr(tier, "stripe_lookup_key", "") or "").strip().lower()
+            lookup_key = (
+                str(getattr(tier, "stripe_lookup_key", "") or "").strip().lower()
+            )
             if lookup_key and lookup_key not in lookup_index:
                 lookup_index[lookup_key] = tier
 
@@ -968,7 +975,9 @@ class SignupCheckoutService:
     def _resolve_artisan_tier_id(*, available_tiers: dict[str, dict]) -> str | None:
         for tier_id, tier_data in available_tiers.items():
             tier_name = str((tier_data or {}).get("name") or "").strip().lower()
-            lookup_key = str((tier_data or {}).get("stripe_lookup_key") or "").strip().lower()
+            lookup_key = (
+                str((tier_data or {}).get("stripe_lookup_key") or "").strip().lower()
+            )
             if lookup_key in {"artisan_monthly", "artisan-monthly"}:
                 return str(tier_id)
             if SignupCheckoutService._is_artisan_tier_name(tier_name):
@@ -977,7 +986,7 @@ class SignupCheckoutService:
 
     @staticmethod
     def _build_signup_paid_plan_cards(
-        available_tiers: dict[str, dict]
+        available_tiers: dict[str, dict],
     ) -> list[dict[str, Any]]:
         cards: list[dict[str, Any]] = []
         for tier_id, tier_data in available_tiers.items():
@@ -1014,9 +1023,7 @@ class SignupCheckoutService:
         return cards
 
     @classmethod
-    def _apply_founding_member_seat_cap(
-        cls, offer: dict, *, seat_limit: int
-    ) -> dict:
+    def _apply_founding_member_seat_cap(cls, offer: dict, *, seat_limit: int) -> dict:
         normalized_limit = max(1, int(seat_limit or cls._FOUNDING_MEMBER_SEAT_LIMIT))
         sold_count = int(offer.get("sold_count") or 0)
         true_spots_left = max(0, normalized_limit - sold_count)

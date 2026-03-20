@@ -9,13 +9,13 @@ Glossary:
 """
 
 from ..extensions import db
-from .app_setting import AppSetting
 from .affiliate import (
     AffiliateMonthlyEarning,
     AffiliatePayoutAccount,
     AffiliateProfile,
     AffiliateReferral,
 )
+from .app_setting import AppSetting
 from .batch import (
     Batch,
     BatchConsumable,
@@ -42,8 +42,8 @@ from .ingredient_reference import (
     PhysicalForm,
     Variation,
 )
-from .mixins import ScopedModelMixin
 from .marketing_lead import MarketingContact, MarketingLeadEvent
+from .mixins import ScopedModelMixin
 
 # Import in dependency order for PostgreSQL table creation
 # 1. Base models with no dependencies
@@ -114,10 +114,10 @@ try:
 except ImportError:
     pass
 
+from . import user_lifecycle  # noqa: F401  # register User lifecycle hooks
 from .batchbot_credit import BatchBotCreditBundle
 from .domain_event import DomainEvent
 from .freshness_snapshot import FreshnessSnapshot
-from . import user_lifecycle  # noqa: F401  # register User lifecycle hooks
 
 # Import inventory lot model
 from .inventory_lot import InventoryLot

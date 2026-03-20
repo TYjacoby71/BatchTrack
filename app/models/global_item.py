@@ -1,4 +1,5 @@
 import logging
+
 from sqlalchemy import event
 
 from app.services.cache_invalidation import invalidate_global_library_cache
@@ -9,7 +10,6 @@ from ..utils.timezone_utils import TimezoneUtils
 from .db_dialect import is_postgres
 
 logger = logging.getLogger(__name__)
-
 
 
 class GlobalItem(db.Model):
@@ -159,7 +159,7 @@ class GlobalItem(db.Model):
         from app.models.ingredient_reference import PhysicalForm
 
         try:
-            form_obj = PhysicalForm.query.get(int(value))
+            form_obj = db.session.get(PhysicalForm, int(value))
         except (TypeError, ValueError):
             form_obj = None
         if not form_obj:
@@ -206,7 +206,10 @@ def _apply_metadata_defaults(target):
     try:
         from app.services.global_item_metadata_service import GlobalItemMetadataService
     except Exception:
-        logger.warning("Suppressed exception fallback at app/models/global_item.py:204", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/models/global_item.py:204",
+            exc_info=True,
+        )
         return
 
     new_metadata = GlobalItemMetadataService.merge_metadata(target)

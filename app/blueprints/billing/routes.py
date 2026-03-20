@@ -140,7 +140,10 @@ def storage_addon():
 
         storage_addon = Addon.query.filter_by(key="storage", is_active=True).first()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/billing/routes.py:138", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/billing/routes.py:138",
+            exc_info=True,
+        )
         storage_addon = None
     if not storage_addon or storage_addon not in getattr(tier, "allowed_addons", []):
         flash(
@@ -427,7 +430,11 @@ def complete_signup_from_stripe():
             else None
         ),
         "tier_name": (
-            str(getattr(getattr(organization, "subscription_tier_obj", None), "name", "")).strip()
+            str(
+                getattr(
+                    getattr(organization, "subscription_tier_obj", None), "name", ""
+                )
+            ).strip()
             or None
             if organization
             else None
@@ -610,6 +617,7 @@ def stripe_webhook():
         logger.error(f"Webhook signature verification failed: {str(e)}")
         return "", 400
 
+
 # --- Handle subscription change ---
 # Purpose: Apply subscription created/updated webhook payload status to org records.
 # Inputs: Stripe subscription event dictionary with customer/status metadata.
@@ -649,6 +657,7 @@ def handle_subscription_change(event):
     except Exception as e:
         logger.error(f"Error handling subscription change: {e}")
         return jsonify({"error": "Processing failed"}), 500
+
 
 # --- Handle subscription deletion ---
 # Purpose: Apply subscription deletion webhook payload status to org records.

@@ -35,5 +35,7 @@ def has_valid_tier_integration(organization) -> bool:
 
 def normalized_billing_status(organization) -> str:
     """Return normalized billing status string."""
-    raw = getattr(organization, "billing_status", "active") if organization else "active"
+    raw = (
+        getattr(organization, "billing_status", "active") if organization else "active"
+    )
     return str(raw or "active").strip().lower()

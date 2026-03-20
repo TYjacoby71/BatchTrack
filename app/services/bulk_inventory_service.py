@@ -1,6 +1,6 @@
 from __future__ import annotations
-import logging
 
+import logging
 from typing import Any, Callable, Mapping, MutableMapping, Optional, Sequence
 
 from flask import current_app
@@ -15,7 +15,6 @@ from app.services.inventory_adjustment import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 
 class BulkInventoryServiceError(RuntimeError):
@@ -146,12 +145,18 @@ class BulkInventoryService:
             }
             return response
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/bulk_inventory_service.py:144", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/bulk_inventory_service.py:144",
+                exc_info=True,
+            )
             db.session.rollback()
             try:
                 current_app.logger.exception("Bulk inventory update failed")
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/bulk_inventory_service.py:148", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/bulk_inventory_service.py:148",
+                    exc_info=True,
+                )
                 pass
             return {
                 "success": False,

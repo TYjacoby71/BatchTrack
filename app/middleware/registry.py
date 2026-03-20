@@ -113,7 +113,9 @@ def register_middleware(app: Flask) -> None:
                     block=True,
                 )
             except Exception as exc:
-                logger.debug("Failed to record early path block hit for %s: %s", path, exc)
+                logger.debug(
+                    "Failed to record early path block hit for %s: %s", path, exc
+                )
 
             logger.warning(
                 "Early-blocked high-confidence probe path: path=%s ip=%s user_id=%s",
@@ -162,7 +164,9 @@ def register_middleware(app: Flask) -> None:
             return None
 
         if not current_user.is_authenticated:
-            endpoint_info = f"endpoint={request.endpoint}, path={path}, method={request.method}"
+            endpoint_info = (
+                f"endpoint={request.endpoint}, path={path}, method={request.method}"
+            )
             level_name = str(
                 current_app.config.get("ANON_REQUEST_LOG_LEVEL", "DEBUG")
             ).upper()
@@ -184,12 +188,16 @@ def register_middleware(app: Flask) -> None:
                     request.headers.get("User-Agent", "unknown")[:100],
                 )
                 if wants_json_response():
-                    message = "Method not allowed" if status_code == 405 else "Not found"
+                    message = (
+                        "Method not allowed" if status_code == 405 else "Not found"
+                    )
                     return jsonify({"error": message}), status_code
                 body = "Method Not Allowed" if status_code == 405 else "Not Found"
                 return (body, status_code)
             elif logger.isEnabledFor(log_level):
-                logger.log(log_level, "Unauthenticated access attempt: %s", endpoint_info)
+                logger.log(
+                    log_level, "Unauthenticated access attempt: %s", endpoint_info
+                )
 
             if wants_json_response():
                 return jsonify({"error": "Authentication required"}), 401

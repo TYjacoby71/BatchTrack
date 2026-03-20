@@ -10,8 +10,8 @@ Glossary:
 """
 
 from __future__ import annotations
-import logging
 
+import logging
 from typing import Any, Dict, Optional
 
 from flask import session
@@ -24,7 +24,6 @@ from ._constants import _ALLOWED_RECIPE_STATUSES
 logger = logging.getLogger(__name__)
 
 
-
 # --- Resolve current org ---
 # Purpose: Determine the organization id for the active user context.
 def _resolve_current_org_id() -> Optional[int]:
@@ -35,7 +34,10 @@ def _resolve_current_org_id() -> Optional[int]:
                 return session.get("dev_selected_org_id")
             return getattr(current_user, "organization_id", None)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/recipe_service/_helpers.py:33", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/recipe_service/_helpers.py:33",
+            exc_info=True,
+        )
         return None
     return None
 
@@ -122,7 +124,10 @@ def _extract_category_data_from_request() -> Optional[Dict[str, Any]]:
             cat_data["vessel_fill_pct"] = cat_data["candle_fill_pct"]
         return cat_data or None
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/recipe_service/_helpers.py:119", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/recipe_service/_helpers.py:119",
+            exc_info=True,
+        )
         return None
 
 

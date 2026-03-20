@@ -9,6 +9,7 @@ Glossary:
 - Soap calculate API: Structured endpoint that delegates full stage computation
   to the soap tool service package.
 """
+
 import logging
 
 from flask import Blueprint, jsonify, render_template, request, url_for
@@ -17,8 +18,8 @@ from flask_login import current_user
 from app.extensions import limiter
 from app.services.public_bot_trap_service import PublicBotTrapService
 from app.services.public_tools_service import (
-    get_tools_index_cards,
     get_public_tool_flags,
+    get_tools_index_cards,
     is_tool_flag_enabled,
 )
 from app.services.tools.feedback_note_service import ToolFeedbackNoteService
@@ -104,7 +105,10 @@ def _consume_tool_quota(category_name: str | None):
             if now - last_dt > timedelta(hours=24):
                 record = {}
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/tools/routes.py:101", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/tools/routes.py:101",
+            exc_info=True,
+        )
         record = {}
 
     count = int(record.get("count") or 0)
@@ -346,7 +350,10 @@ def tools_feedback_notes():
             400,
         )
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/tools/routes.py:342", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/tools/routes.py:342",
+            exc_info=True,
+        )
         return (
             jsonify({"success": False, "error": "Unable to save your note right now."}),
             500,
@@ -394,7 +401,10 @@ def tools_draft():
                 try:
                     qty = float(qty) if qty not in (None, "", []) else None
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/blueprints/tools/routes.py:389", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/blueprints/tools/routes.py:389",
+                        exc_info=True,
+                    )
                     qty = None
                 unit = (ln.get("unit") or "").strip() or None
                 rec = {
@@ -413,7 +423,10 @@ def tools_draft():
                     rec["unit"] = unit or "gram"
                 out.append(rec)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/tools/routes.py:407", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/tools/routes.py:407",
+                    exc_info=True,
+                )
                 continue
         return out
 
@@ -448,15 +461,24 @@ def tools_draft():
         try:
             session.permanent = False
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/tools/routes.py:441", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/tools/routes.py:441",
+                exc_info=True,
+            )
             pass
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/tools/routes.py:443", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/tools/routes.py:443",
+            exc_info=True,
+        )
         session["tool_draft"] = data
         try:
             session.pop("tool_draft_meta", None)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/tools/routes.py:447", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/tools/routes.py:447",
+                exc_info=True,
+            )
             pass
     # Redirect to sign-in or directly to recipes new if already logged in
     return jsonify({"success": True, "redirect": url_for("recipes.new_recipe")})

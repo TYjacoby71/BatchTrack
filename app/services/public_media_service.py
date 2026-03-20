@@ -387,9 +387,13 @@ def _attach_card_media(cards: Iterable[Dict[str, str]]) -> List[Dict[str, Any]]:
     for card in cards:
         resolved = dict(card)
         folder = str(card.get("folder") or "")
-        media = resolve_first_media_from_folder(folder, allow_images=True, allow_videos=True)
+        media = resolve_first_media_from_folder(
+            folder, allow_images=True, allow_videos=True
+        )
         resolved["media"] = media
-        resolved["image_path"] = media["path"] if media and media.get("kind") == "image" else None
+        resolved["image_path"] = (
+            media["path"] if media and media.get("kind") == "image" else None
+        )
         resolved_cards.append(resolved)
     return resolved_cards
 
@@ -469,7 +473,7 @@ def get_homepage_testimonial_media() -> Dict[str, Dict[str, Dict[str, str] | Non
 
 
 def get_help_media_for_sections(
-    sections: Iterable[Dict[str, Any]]
+    sections: Iterable[Dict[str, Any]],
 ) -> Dict[str, List[Dict[str, str]]]:
     """Return media lists for help overview sections keyed by section slug."""
     media_by_section: Dict[str, List[Dict[str, str]]] = {}

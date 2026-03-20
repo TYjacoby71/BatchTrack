@@ -20,10 +20,10 @@ from flask_login import current_user, logout_user
 
 from ..extensions import db
 from ..route_access import RouteAccessConfig
-from ..services.billing_access_policy_service import BillingAccessAction
 from ..services.billing.orchestrators.auth_billing_orchestrator import (
     AuthBillingOrchestrator,
 )
+from ..services.billing_access_policy_service import BillingAccessAction
 from ..services.public_bot_trap_service import PublicBotTrapService
 from ..services.session_service import SessionService
 from .common import (
@@ -116,7 +116,9 @@ def handle_developer_context(path: str, endpoint: str | None, permission_scope=N
             permission_scope = resolve_route_permission_scope(endpoint)
 
         route_category = classify_route_category(path, permission_scope)
-        requires_org = route_category in {"customer", "unknown"} and not allowed_without_org
+        requires_org = (
+            route_category in {"customer", "unknown"} and not allowed_without_org
+        )
 
         if requires_org and not (selected_org_id or masquerade_org_id):
             try:
@@ -249,7 +251,9 @@ def enforce_customer_onboarding_completion():
     first_name = (getattr(current_user, "first_name", None) or "").strip()
     last_name = (getattr(current_user, "last_name", None) or "").strip()
     missing_required_profile = not (first_name and last_name)
-    requires_onboarding = bool(session.get("onboarding_welcome")) or missing_required_profile
+    requires_onboarding = (
+        bool(session.get("onboarding_welcome")) or missing_required_profile
+    )
     if not requires_onboarding:
         return None
 

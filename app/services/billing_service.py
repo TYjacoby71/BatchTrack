@@ -417,7 +417,10 @@ class BillingService:
                 )
                 return
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/billing_service.py:418", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/billing_service.py:418",
+                    exc_info=True,
+                )
                 pass
         elif current_timeout == desired_timeout or current_timeout == timeout_seconds:
             return
@@ -426,7 +429,10 @@ class BillingService:
             stripe.default_http_client = stripe.RequestsClient(timeout=desired_timeout)
             return
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/billing_service.py:426", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/billing_service.py:426",
+                exc_info=True,
+            )
             pass
 
         try:
@@ -443,7 +449,10 @@ class BillingService:
         try:
             secret = current_app.config.get("STRIPE_SECRET_KEY")
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/billing_service.py:442", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/billing_service.py:442",
+                exc_info=True,
+            )
             secret = None
         return secret
 
@@ -761,7 +770,10 @@ class BillingService:
                         next_payment_time
                     ).date()
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/services/billing_service.py:741", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/billing_service.py:741",
+                        exc_info=True,
+                    )
                     pass
 
             db.session.commit()
@@ -1166,7 +1178,9 @@ class BillingService:
                 is_zero_price = float(pricing.get("amount") or 0) <= 0
             except (TypeError, ValueError):
                 is_zero_price = False
-            is_zero_priced_subscription = checkout_mode == "subscription" and is_zero_price
+            is_zero_priced_subscription = (
+                checkout_mode == "subscription" and is_zero_price
+            )
             session_params = {
                 "mode": checkout_mode,
                 "payment_method_types": ["card"],
@@ -1219,7 +1233,8 @@ class BillingService:
                 }
             trial_days = int(
                 current_app.config.get(
-                    "SIGNUP_STRIPE_TRIAL_DAYS", BillingService._default_signup_trial_days
+                    "SIGNUP_STRIPE_TRIAL_DAYS",
+                    BillingService._default_signup_trial_days,
                 )
                 or 0
             )
@@ -1231,9 +1246,7 @@ class BillingService:
                 and not is_zero_priced_subscription
             )
             if should_apply_trial:
-                session_params["subscription_data"] = {
-                    "trial_period_days": trial_days
-                }
+                session_params["subscription_data"] = {"trial_period_days": trial_days}
             elif is_zero_priced_subscription:
                 session_params["payment_method_collection"] = "if_required"
                 session_params["custom_text"] = {

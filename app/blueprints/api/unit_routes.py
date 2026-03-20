@@ -9,6 +9,7 @@ Glossary:
 - Unit search: Filtered subset of units by type and free-text query.
 - Conversion engine: Service that performs quantity/unit transformations.
 """
+
 import logging
 
 from flask import Blueprint, jsonify, request
@@ -58,7 +59,10 @@ def get_units():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/unit_routes.py:56", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/unit_routes.py:56",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -123,7 +127,10 @@ def unit_search():
             }
         )
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/unit_routes.py:120", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/unit_routes.py:120",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -177,5 +184,8 @@ def convert_units():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/unit_routes.py:173", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/unit_routes.py:173",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(e)}), 500

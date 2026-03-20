@@ -149,7 +149,8 @@ def list_recipes():
         base_filters.append(Recipe.organization_id == current_user.organization_id)
 
     query = (
-        Recipe.scoped().filter(*base_filters)
+        Recipe.scoped()
+        .filter(*base_filters)
         .outerjoin(ingredient_counts, ingredient_counts.c.recipe_id == Recipe.id)
         .add_columns(
             ingredient_counts.c.ingredient_count,
@@ -200,7 +201,10 @@ def list_recipes():
     try:
         cache.set(page_cache_key, rendered, timeout=cache_ttl)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:202", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:202",
+            exc_info=True,
+        )
         pass
     return rendered
 
@@ -230,20 +234,28 @@ def view_recipe(recipe_id):
         )
         has_batches = batch_count > 0
         if recipe.recipe_group_id:
-            variation_count = Recipe.scoped().filter(
-                Recipe.recipe_group_id == recipe.recipe_group_id,
-                Recipe.is_master.is_(False),
-                Recipe.test_sequence.is_(None),
-                Recipe.is_archived.is_(False),
-                Recipe.is_current.is_(True),
-            ).count()
+            variation_count = (
+                Recipe.scoped()
+                .filter(
+                    Recipe.recipe_group_id == recipe.recipe_group_id,
+                    Recipe.is_master.is_(False),
+                    Recipe.test_sequence.is_(None),
+                    Recipe.is_archived.is_(False),
+                    Recipe.is_current.is_(True),
+                )
+                .count()
+            )
         else:
-            variation_count = Recipe.scoped().filter(
-                Recipe.parent_recipe_id == recipe.id,
-                Recipe.test_sequence.is_(None),
-                Recipe.is_archived.is_(False),
-                Recipe.is_current.is_(True),
-            ).count()
+            variation_count = (
+                Recipe.scoped()
+                .filter(
+                    Recipe.parent_recipe_id == recipe.id,
+                    Recipe.test_sequence.is_(None),
+                    Recipe.is_archived.is_(False),
+                    Recipe.is_current.is_(True),
+                )
+                .count()
+            )
         is_test = recipe.test_sequence is not None
         is_published_locked = recipe.status == "published" and not is_test
         is_archived = bool(recipe.is_archived)
@@ -266,7 +278,8 @@ def view_recipe(recipe_id):
 
         note_types = ("NOTE", "EDIT", "EDIT_OVERRIDE")
         recipe_notes = (
-            RecipeLineage.scoped().filter(
+            RecipeLineage.scoped()
+            .filter(
                 RecipeLineage.recipe_id == recipe.id,
                 RecipeLineage.notes.isnot(None),
                 RecipeLineage.event_type.in_(note_types),
@@ -281,7 +294,8 @@ def view_recipe(recipe_id):
         variation_branches = []
         if recipe.recipe_group_id:
             group_versions = (
-                Recipe.scoped().filter(Recipe.recipe_group_id == recipe.recipe_group_id)
+                Recipe.scoped()
+                .filter(Recipe.recipe_group_id == recipe.recipe_group_id)
                 .order_by(
                     Recipe.is_master.desc(),
                     Recipe.variation_name.asc().nullsfirst(),
@@ -309,7 +323,8 @@ def view_recipe(recipe_id):
         origin_parent_recipe = recipe.parent
         if recipe.is_master and recipe.test_sequence is None and recipe.recipe_group_id:
             origin_parent_recipe = (
-                Recipe.scoped().filter(
+                Recipe.scoped()
+                .filter(
                     Recipe.recipe_group_id == recipe.recipe_group_id,
                     Recipe.is_master.is_(True),
                     Recipe.test_sequence.is_(None),
@@ -346,7 +361,10 @@ def view_recipe(recipe_id):
         )
 
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:347", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:347",
+            exc_info=True,
+        )
         flash(f"Error loading recipe: {exc}", "error")
         logger.exception("Error viewing recipe: %s", exc)
         return redirect(url_for("recipes.list_recipes"))
@@ -385,7 +403,10 @@ def add_recipe_note(recipe_id):
         db.session.commit()
         flash("Note added.", "success")
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:385", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:385",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error("Error adding recipe note %s: %s", recipe_id, exc)
         flash("Unable to save note.", "error")
@@ -465,7 +486,10 @@ def make_parent_recipe(recipe_id):
         return redirect(url_for("recipes.view_recipe", recipe_id=recipe_id))
 
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:464", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:464",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error("Error converting recipe %s to parent: %s", recipe_id, exc)
         flash("An error occurred while converting the recipe to a parent.", "error")
@@ -530,7 +554,10 @@ def publish_test_version(recipe_id):
         flash("Test promoted to current version.", "success")
         return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:528", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:528",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error("Error publishing test version %s: %s", recipe_id, exc)
         flash("An error occurred while publishing the test.", "error")
@@ -553,7 +580,10 @@ def set_current_version_route(recipe_id):
         flash("Version set as current.", "success")
         return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:550", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:550",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error("Error setting current version %s: %s", recipe_id, exc)
         flash("An error occurred while setting the current version.", "error")
@@ -576,7 +606,10 @@ def promote_variation_to_master(recipe_id):
         flash("Variation promoted to new master version.", "success")
         return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:572", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:572",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error("Error promoting variation %s to master: %s", recipe_id, exc)
         flash("An error occurred while promoting the variation.", "error")
@@ -610,7 +643,10 @@ def promote_variation_to_new_group(recipe_id):
         flash("Variation promoted into a new recipe group.", "success")
         return redirect(url_for("recipes.view_recipe", recipe_id=result.id))
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:605", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/views/manage_routes.py:605",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error("Error promoting variation %s to new group: %s", recipe_id, exc)
         flash("An error occurred while creating the new recipe group.", "error")

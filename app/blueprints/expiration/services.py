@@ -369,9 +369,11 @@ class ExpirationService:
             # Get product info
             from ...models import Product, ProductSKU, ProductVariant
 
-            sku = ProductSKU.scoped().filter_by(
-                inventory_item_id=lot.inventory_item_id
-            ).first()
+            sku = (
+                ProductSKU.scoped()
+                .filter_by(inventory_item_id=lot.inventory_item_id)
+                .first()
+            )
             if not sku:
                 logger.warning(
                     f"No SKU found for inventory_item_id {lot.inventory_item_id}"
@@ -446,12 +448,16 @@ class ExpirationService:
             item.shelf_life_days = shelf_life_days
 
         # Update existing lots to reflect perishable status and set expiration if missing
-        lots = InventoryLot.scoped().filter(
-            and_(
-                InventoryLot.inventory_item_id == inventory_item_id,
-                InventoryLot.remaining_quantity_base > 0,
+        lots = (
+            InventoryLot.scoped()
+            .filter(
+                and_(
+                    InventoryLot.inventory_item_id == inventory_item_id,
+                    InventoryLot.remaining_quantity_base > 0,
+                )
             )
-        ).all()
+            .all()
+        )
 
         for lot in lots:
             lot.shelf_life_days = shelf_life_days
@@ -683,7 +689,10 @@ class ExpirationService:
             return False, "Invalid expiration type"
 
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/blueprints/expiration/services.py:685", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/expiration/services.py:685",
+                exc_info=True,
+            )
             return False, f"Error marking as expired: {str(e)}"
 
     @staticmethod

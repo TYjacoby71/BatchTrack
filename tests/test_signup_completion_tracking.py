@@ -12,9 +12,7 @@ from app.services.email_service import EmailService
 
 def test_quick_signup_emits_free_and_account_created_events(app, monkeypatch):
     client = app.test_client()
-    monkeypatch.setattr(
-        EmailService, "should_issue_verification_tokens", lambda: False
-    )
+    monkeypatch.setattr(EmailService, "should_issue_verification_tokens", lambda: False)
 
     email = f"quick-{uuid.uuid4().hex[:10]}@example.com"
     signup_source = "recipe_library_cta"
@@ -64,9 +62,7 @@ def test_quick_signup_emits_free_and_account_created_events(app, monkeypatch):
 
 def test_quick_signup_blocks_existing_email_and_keeps_prefill(app, monkeypatch):
     client = app.test_client()
-    monkeypatch.setattr(
-        EmailService, "should_issue_verification_tokens", lambda: False
-    )
+    monkeypatch.setattr(EmailService, "should_issue_verification_tokens", lambda: False)
     existing_email = "quick-existing@example.com"
     with app.app_context():
         existing_user = User(

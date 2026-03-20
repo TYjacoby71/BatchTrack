@@ -314,7 +314,9 @@ def test_ensure_stripe_applies_network_timeouts_and_retries(app, monkeypatch):
 
         monkeypatch.delitem(sys.modules, "gevent", raising=False)
         monkeypatch.setattr(
-            "app.services.billing_service.stripe.default_http_client", None, raising=False
+            "app.services.billing_service.stripe.default_http_client",
+            None,
+            raising=False,
         )
         monkeypatch.setattr(
             "app.services.billing_service.stripe.max_network_retries", 2, raising=False
@@ -351,7 +353,9 @@ def test_ensure_stripe_prefers_httpx_when_gevent_is_loaded(app, monkeypatch):
 
         monkeypatch.setitem(sys.modules, "gevent", object())
         monkeypatch.setattr(
-            "app.services.billing_service.stripe.default_http_client", None, raising=False
+            "app.services.billing_service.stripe.default_http_client",
+            None,
+            raising=False,
         )
         monkeypatch.setattr(
             "app.services.billing_service.stripe.max_network_retries", 2, raising=False

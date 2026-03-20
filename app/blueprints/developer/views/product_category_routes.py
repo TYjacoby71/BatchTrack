@@ -69,7 +69,7 @@ def create_product_category():
 @developer_bp.route("/product-categories/<int:cat_id>/edit", methods=["GET", "POST"])
 @require_developer_permission("dev.system_admin")
 def edit_product_category(cat_id):
-    cat = ProductCategory.query.get_or_404(cat_id)
+    cat = db.get_or_404(ProductCategory, cat_id)
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
         is_typically_portioned = request.form.get("is_typically_portioned") == "on"
@@ -103,7 +103,7 @@ def edit_product_category(cat_id):
 @developer_bp.route("/product-categories/<int:cat_id>/delete", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def delete_product_category(cat_id):
-    cat = ProductCategory.query.get_or_404(cat_id)
+    cat = db.get_or_404(ProductCategory, cat_id)
     in_use = (
         db.session.query(Product).filter_by(category_id=cat.id).first()
         or db.session.query(Recipe).filter_by(category_id=cat.id).first()

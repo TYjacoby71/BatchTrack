@@ -80,9 +80,7 @@ class MarketingLeadService:
             waitlist_key or source_key,
             fallback=cls._DEFAULT_SOURCE_KEY,
         )
-        normalized_context = cls._normalize_key(
-            context, fallback=cls._DEFAULT_CONTEXT
-        )
+        normalized_context = cls._normalize_key(context, fallback=cls._DEFAULT_CONTEXT)
 
         first_name_value = cls._safe_str(first_name)
         last_name_value = cls._safe_str(last_name)
@@ -113,11 +111,14 @@ class MarketingLeadService:
                     contact.last_name = last_name_value
                 if business_type_value and (
                     not contact.business_type
-                    or contact.business_type.lower() in {"not_specified", "not specified"}
+                    or contact.business_type.lower()
+                    in {"not_specified", "not specified"}
                 ):
                     contact.business_type = business_type_value
 
-            existing_traits = contact.traits_json if isinstance(contact.traits_json, dict) else {}
+            existing_traits = (
+                contact.traits_json if isinstance(contact.traits_json, dict) else {}
+            )
             merged_traits = {
                 **existing_traits,
                 "last_source_key": normalized_source,
@@ -198,9 +199,14 @@ class MarketingLeadService:
         try:
             rows = (
                 db.session.query(MarketingLeadEvent, MarketingContact)
-                .join(MarketingContact, MarketingLeadEvent.contact_id == MarketingContact.id)
+                .join(
+                    MarketingContact,
+                    MarketingLeadEvent.contact_id == MarketingContact.id,
+                )
                 .filter(MarketingLeadEvent.event_type == cls.WAITLIST_EVENT_TYPE)
-                .order_by(MarketingLeadEvent.occurred_at.desc(), MarketingLeadEvent.id.desc())
+                .order_by(
+                    MarketingLeadEvent.occurred_at.desc(), MarketingLeadEvent.id.desc()
+                )
                 .all()
             )
         except Exception:
@@ -216,7 +222,9 @@ class MarketingLeadService:
             first_name = (
                 cls._safe_str(payload.get("first_name")) or contact.first_name or ""
             )
-            last_name = cls._safe_str(payload.get("last_name")) or contact.last_name or ""
+            last_name = (
+                cls._safe_str(payload.get("last_name")) or contact.last_name or ""
+            )
             business_type = (
                 cls._safe_str(payload.get("business_type"))
                 or cls._safe_str(contact.business_type)
@@ -224,13 +232,9 @@ class MarketingLeadService:
             )
 
             timestamp = (
-                event.occurred_at.isoformat()
-                if event.occurred_at is not None
-                else None
+                event.occurred_at.isoformat() if event.occurred_at is not None else None
             ) or (
-                event.created_at.isoformat()
-                if event.created_at is not None
-                else None
+                event.created_at.isoformat() if event.created_at is not None else None
             )
             source_key = (
                 cls._safe_str(event.source_key)
@@ -247,7 +251,9 @@ class MarketingLeadService:
                 or cls._safe_str(payload.get("context"))
                 or cls._DEFAULT_CONTEXT
             )
-            notes = cls._safe_str(event.notes) or cls._safe_str(payload.get("notes")) or ""
+            notes = (
+                cls._safe_str(event.notes) or cls._safe_str(payload.get("notes")) or ""
+            )
             tags = (
                 event.tags_json
                 if isinstance(event.tags_json, list)

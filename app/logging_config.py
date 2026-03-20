@@ -35,7 +35,10 @@ class PiiRedactionFilter(logging.Filter):
             msg = PII_PATTERNS["bearer"].sub("Bearer [REDACTED]", msg)
             record.msg = msg
         except Exception:
-            logger.warning("Suppressed exception fallback at app/logging_config.py:29", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/logging_config.py:29",
+                exc_info=True,
+            )
             pass
         return True
 
@@ -46,7 +49,10 @@ class RequestContextFilter(logging.Filter):
         if has_request_context():
             try:
                 request_id = (
-                    str(getattr(g, "request_id", None) or request.headers.get("X-Request-ID"))
+                    str(
+                        getattr(g, "request_id", None)
+                        or request.headers.get("X-Request-ID")
+                    )
                     if request is not None
                     else "-"
                 )
@@ -96,7 +102,10 @@ def _apply_formatter(
             if redact_pii:
                 handler.addFilter(PiiRedactionFilter())
         except Exception:  # pragma: no cover
-            logger.warning("Suppressed exception fallback at app/logging_config.py:68", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/logging_config.py:68",
+                exc_info=True,
+            )
             continue
 
 

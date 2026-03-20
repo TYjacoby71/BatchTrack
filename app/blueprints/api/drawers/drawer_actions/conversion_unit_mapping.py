@@ -9,6 +9,7 @@ Glossary:
 - Custom unit mapping: Organization-specific conversion relationship record.
 - Mapping factor: Numeric multiplier translating from one unit to another.
 """
+
 import logging
 
 from flask import jsonify, render_template, request
@@ -78,11 +79,15 @@ def conversion_unit_mapping_modal_post():
     if conversion_factor <= 0:
         return jsonify({"error": "Conversion factor must be greater than 0"}), 400
 
-    existing = CustomUnitMapping.scoped().filter_by(
-        from_unit=from_unit,
-        to_unit=to_unit,
-        organization_id=current_user.organization_id,
-    ).first()
+    existing = (
+        CustomUnitMapping.scoped()
+        .filter_by(
+            from_unit=from_unit,
+            to_unit=to_unit,
+            organization_id=current_user.organization_id,
+        )
+        .first()
+    )
 
     if existing:
         existing.conversion_factor = conversion_factor
@@ -100,7 +105,10 @@ def conversion_unit_mapping_modal_post():
     try:
         db.session.commit()
     except Exception as exc:  # pragma: no cover - defensive rollback
-        logger.warning("Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py:98", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py:98",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"error": f"Failed to create mapping: {exc}"}), 500
 

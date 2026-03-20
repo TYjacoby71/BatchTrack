@@ -51,7 +51,9 @@ def log_fault(
     try:
         existing = read_json_file(log_path, default=[]) or []
     except Exception as err:  # pragma: no cover - defensive path
-        logger.warning("Suppressed exception fallback at app/utils/fault_log.py:50", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/utils/fault_log.py:50", exc_info=True
+        )
         LOG.warning("Failed to read fault log; starting new file: %s", err)
         existing = []
 
@@ -61,6 +63,8 @@ def log_fault(
         write_json_file(log_path, existing)
         return True
     except Exception as err:
-        logger.warning("Suppressed exception fallback at app/utils/fault_log.py:59", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/utils/fault_log.py:59", exc_info=True
+        )
         LOG.error("Failed to write fault log %s: %s", log_path, err)
         return False

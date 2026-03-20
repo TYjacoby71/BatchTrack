@@ -36,7 +36,13 @@ logger = logging.getLogger(__name__)
 
 BLOCKING_STOCK_STATUSES = {"NEEDED", "OUT_OF_STOCK", "ERROR", "DENSITY_MISSING"}
 BATCH_LIST_PREF_SCOPE = "batches_list"
-DEFAULT_VISIBLE_COLUMNS = ["recipe", "timestamp", "total_cost", "product_quantity", "tags"]
+DEFAULT_VISIBLE_COLUMNS = [
+    "recipe",
+    "timestamp",
+    "total_cost",
+    "product_quantity",
+    "tags",
+]
 ALLOWED_VISIBLE_COLUMNS = {
     "recipe",
     "timestamp",
@@ -225,7 +231,10 @@ def set_column_visibility():
         }
         _persist_batch_list_preferences(columns, filters)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/batches/routes.py:227", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/batches/routes.py:227",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.exception("Failed to persist batch column visibility preferences")
     flash("Column preferences updated.", "success")
@@ -296,7 +305,10 @@ def list_batches():
         try:
             _persist_batch_list_preferences(visible_columns, filters)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/batches/routes.py:297", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/batches/routes.py:297",
+                exc_info=True,
+            )
             db.session.rollback()
             logger.exception("Failed to persist batch list preferences")
 
@@ -389,7 +401,10 @@ def view_batch_record(batch_identifier):
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/batches/routes.py:389", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/batches/routes.py:389",
+            exc_info=True,
+        )
         print(f"DEBUG: Error in view_batch: {str(e)}")
         flash(f"Error viewing batch: {str(e)}", "error")
         return redirect(url_for("batches.list_batches"))

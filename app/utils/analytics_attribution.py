@@ -40,4 +40,3 @@ def extract_click_ids(request) -> dict[str, str]:
         if candidate:
             extracted[key] = candidate
     return extracted
-

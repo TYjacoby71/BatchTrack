@@ -244,7 +244,9 @@ def create_signup_info_partial():
 # Purpose: Update an existing signup info partial.
 # Inputs: Function arguments plus active request/application context.
 # Outputs: Return value or response payload for caller/HTTP client.
-@subscription_tiers_bp.route("/signup-info-partials/<partial_id>/update", methods=["POST"])
+@subscription_tiers_bp.route(
+    "/signup-info-partials/<partial_id>/update", methods=["POST"]
+)
 @login_required
 @require_permission("dev.manage_tiers")
 def update_signup_info_partial(partial_id):
@@ -271,7 +273,9 @@ def update_signup_info_partial(partial_id):
 # Purpose: Create a draft version from an existing signup info partial.
 # Inputs: Function arguments plus active request/application context.
 # Outputs: Return value or response payload for caller/HTTP client.
-@subscription_tiers_bp.route("/signup-info-partials/<partial_id>/clone", methods=["POST"])
+@subscription_tiers_bp.route(
+    "/signup-info-partials/<partial_id>/clone", methods=["POST"]
+)
 @login_required
 @require_permission("dev.manage_tiers")
 def clone_signup_info_partial(partial_id):
@@ -306,14 +310,18 @@ def clone_signup_info_partial(partial_id):
 # Purpose: Rewrite the currently open draft in-place from a prompt.
 # Inputs: Function arguments plus active request/application context.
 # Outputs: Return value or response payload for caller/HTTP client.
-@subscription_tiers_bp.route("/signup-info-partials/<partial_id>/ai-edit", methods=["POST"])
+@subscription_tiers_bp.route(
+    "/signup-info-partials/<partial_id>/ai-edit", methods=["POST"]
+)
 @login_required
 @require_permission("dev.manage_tiers")
 def apply_signup_info_ai_edit(partial_id):
     prompt = (request.form.get("prompt") or "").strip()
     if not prompt:
         flash("BatchBot prompt is required.", "error")
-        return redirect(url_for(".manage_signup_info_partials", open_partial_id=partial_id))
+        return redirect(
+            url_for(".manage_signup_info_partials", open_partial_id=partial_id)
+        )
     signup_tiers = (
         SubscriptionTier.query.filter_by(is_customer_facing=True)
         .filter(SubscriptionTier.billing_provider != "exempt")
@@ -335,7 +343,9 @@ def apply_signup_info_ai_edit(partial_id):
     except GoogleAIClientError as exc:
         flash(str(exc), "error")
     except Exception as exc:
-        logger.error("Failed to apply AI edits to signup info draft %s: %s", partial_id, exc)
+        logger.error(
+            "Failed to apply AI edits to signup info draft %s: %s", partial_id, exc
+        )
         flash("Unable to apply BatchBot draft edits.", "error")
     return redirect(url_for(".manage_signup_info_partials", open_partial_id=partial_id))
 
@@ -344,7 +354,9 @@ def apply_signup_info_ai_edit(partial_id):
 # Purpose: Generate a draft signup info partial from a developer prompt.
 # Inputs: Function arguments plus active request/application context.
 # Outputs: Return value or response payload for caller/HTTP client.
-@subscription_tiers_bp.route("/signup-info-partials/<partial_id>/ai-draft", methods=["POST"])
+@subscription_tiers_bp.route(
+    "/signup-info-partials/<partial_id>/ai-draft", methods=["POST"]
+)
 @login_required
 @require_permission("dev.manage_tiers")
 def generate_signup_info_ai_draft(partial_id):
@@ -375,7 +387,9 @@ def generate_signup_info_ai_draft(partial_id):
     except GoogleAIClientError as exc:
         flash(str(exc), "error")
     except Exception as exc:
-        logger.error("Failed to generate AI signup info draft for %s: %s", partial_id, exc)
+        logger.error(
+            "Failed to generate AI signup info draft for %s: %s", partial_id, exc
+        )
         flash("Unable to generate AI draft.", "error")
     if drafted:
         return redirect(
@@ -501,7 +515,10 @@ def create_tier():
                 v = int(str(text).strip())
                 return v
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:172", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:172",
+                    exc_info=True,
+                )
                 return default
 
         user_limit = _parse_int_allow_neg1(request.form.get("user_limit", 1), 1)
@@ -649,7 +666,10 @@ def create_tier():
                     else []
                 )
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:300", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:300",
+                    exc_info=True,
+                )
                 pass
 
         db.session.commit()
@@ -720,14 +740,14 @@ def edit_tier(tier_id):
             tier.name = request.form.get("name", tier.name)
             tier.description = request.form.get("description", tier.description)
             tier.marketing_tagline = (
-                (request.form.get("marketing_tagline") or "").strip() or None
-            )
+                request.form.get("marketing_tagline") or ""
+            ).strip() or None
             tier.marketing_summary = (
-                (request.form.get("marketing_summary") or "").strip() or None
-            )
+                request.form.get("marketing_summary") or ""
+            ).strip() or None
             tier.marketing_bullets = (
-                (request.form.get("marketing_bullets") or "").strip() or None
-            )
+                request.form.get("marketing_bullets") or ""
+            ).strip() or None
             tier.is_customer_facing = "is_customer_facing" in request.form
             # Allow -1 for unlimited
             try:
@@ -847,7 +867,10 @@ def edit_tier(tier_id):
                     else []
                 )
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:472", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:472",
+                    exc_info=True,
+                )
                 pass
 
             # Update permissions (merge with addon-linked permissions)
@@ -877,7 +900,10 @@ def edit_tier(tier_id):
             return redirect(url_for(".manage_tiers"))
 
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:501", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:501",
+                exc_info=True,
+            )
             db.session.rollback()
             logger.error(f"Error updating tier: {e}")
             flash("Error updating tier. Please try again.", "error")
@@ -932,7 +958,10 @@ def delete_tier(tier_id):
         flash(f'Subscription tier "{tier.name}" has been deleted.', "success")
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:555", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:555",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error deleting tier: {e}")
         flash("Error deleting tier. Please try again.", "error")

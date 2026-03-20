@@ -9,6 +9,7 @@ Glossary:
 """
 
 from __future__ import annotations
+
 import logging
 
 from flask_caching import Cache
@@ -50,7 +51,9 @@ def _limiter_key_func():
             if user_id:
                 return f"user:{user_id}"
     except Exception:
-        logger.warning("Suppressed exception fallback at app/extensions.py:48", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/extensions.py:48", exc_info=True
+        )
         pass
     return get_remote_address()
 

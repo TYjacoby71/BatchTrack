@@ -108,9 +108,7 @@ def calculate_production_costs(recipe_id: int, scale: float = 1.0) -> dict:
 
         for recipe_ingredient in recipe.recipe_ingredients:
             inventory_item = recipe_ingredient.inventory_item
-            cost_per_unit = (
-                getattr(inventory_item, "cost_per_unit", 0) or 0
-            )
+            cost_per_unit = getattr(inventory_item, "cost_per_unit", 0) or 0
             scaled_quantity = recipe_ingredient.quantity * scale
             ingredient_cost = Decimal(
                 str(

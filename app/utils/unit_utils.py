@@ -61,7 +61,9 @@ def _active_user():
     try:
         return current_user
     except Exception:
-        logger.warning("Suppressed exception fallback at app/utils/unit_utils.py:62", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/utils/unit_utils.py:62", exc_info=True
+        )
         return None
 
 

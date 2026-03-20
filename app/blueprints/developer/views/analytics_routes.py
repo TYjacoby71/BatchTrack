@@ -9,6 +9,7 @@ Glossary:
 """
 
 from __future__ import annotations
+
 import logging
 
 from flask import flash, jsonify, render_template, request, url_for
@@ -23,7 +24,6 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 logger = logging.getLogger(__name__)
-
 
 
 # --- Inventory Analytics Stub ---
@@ -61,7 +61,10 @@ def api_inventory_analytics_metrics():
             AnalyticsDataService.get_inventory_metrics(force_refresh=force_refresh)
         )
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:59", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:59",
+            exc_info=True,
+        )
         return jsonify({"error": str(exc)}), 500
 
 
@@ -82,7 +85,10 @@ def api_inventory_analytics_top_items():
         items = AnalyticsDataService.get_top_global_items(force_refresh=force_refresh)
         return jsonify({"items": items})
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:79", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:79",
+            exc_info=True,
+        )
         return jsonify({"error": str(exc)}), 500
 
 
@@ -103,7 +109,10 @@ def api_inventory_analytics_spoilage():
         items = AnalyticsDataService.get_spoilage_analysis(force_refresh=force_refresh)
         return jsonify({"items": items})
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:99", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:99",
+            exc_info=True,
+        )
         return jsonify({"error": str(exc)}), 500
 
 
@@ -125,7 +134,10 @@ def api_inventory_analytics_data_quality():
             AnalyticsDataService.get_data_quality_summary(force_refresh=force_refresh)
         )
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:120", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:120",
+            exc_info=True,
+        )
         return jsonify({"error": str(exc)}), 500
 
 
@@ -148,7 +160,10 @@ def api_inventory_analytics_recent_activity():
         )
         return jsonify({"activities": activities})
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:142", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:142",
+            exc_info=True,
+        )
         return jsonify({"error": str(exc)}), 500
 
 
@@ -171,7 +186,10 @@ def api_inventory_analytics_items_list():
         )
         return jsonify({"items": items})
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:164", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:164",
+            exc_info=True,
+        )
         return jsonify({"error": str(exc)}), 500
 
 
@@ -194,7 +212,10 @@ def api_inventory_analytics_cost_distribution(item_id):
         )
         return jsonify(distribution)
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:186", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/analytics_routes.py:186",
+            exc_info=True,
+        )
         return jsonify({"error": str(exc)}), 500
 
 

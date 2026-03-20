@@ -9,8 +9,8 @@ Glossary:
 """
 
 from __future__ import annotations
-import logging
 
+import logging
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional, Tuple
 
@@ -76,7 +76,10 @@ def _resolve_unit(unit_name: str | None) -> Optional[Unit]:
 
         seed_units()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/quantity_base.py:74", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/quantity_base.py:74",
+            exc_info=True,
+        )
         return None
     return Unit.query.filter(
         (Unit.name == unit_key)

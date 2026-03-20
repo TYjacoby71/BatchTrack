@@ -35,7 +35,10 @@ def _form_cache_ttl() -> int:
     try:
         return int(current_app.config.get("RECIPE_FORM_CACHE_TTL", 60))
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_templates.py:37", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/form_templates.py:37",
+            exc_info=True,
+        )
         return 60
 
 
@@ -111,7 +114,10 @@ def _effective_org_id() -> Optional[int]:
         ):
             return session.get("dev_selected_org_id")
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_templates.py:112", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/form_templates.py:112",
+            exc_info=True,
+        )
         return None
     return None
 
@@ -142,7 +148,9 @@ def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
             "product_groups": [],
         }
 
-    ingredients_query = InventoryItem.scoped().filter(InventoryItem.type == "ingredient")
+    ingredients_query = InventoryItem.scoped().filter(
+        InventoryItem.type == "ingredient"
+    )
     if org_id:
         ingredients_query = ingredients_query.filter_by(organization_id=org_id)
     all_ingredients = [
@@ -150,7 +158,9 @@ def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
         for item in ingredients_query.order_by(InventoryItem.name).all()
     ]
 
-    consumables_query = InventoryItem.scoped().filter(InventoryItem.type == "consumable")
+    consumables_query = InventoryItem.scoped().filter(
+        InventoryItem.type == "consumable"
+    )
     if org_id:
         consumables_query = consumables_query.filter_by(organization_id=org_id)
     all_consumables = [
@@ -252,7 +262,10 @@ def render_recipe_form(recipe=None, **context):
                 test_sequence=context.get("test_sequence_hint"),
             )
         except Exception:
-            logger.warning("Suppressed exception fallback at app/blueprints/recipes/form_templates.py:252", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/recipes/form_templates.py:252",
+                exc_info=True,
+            )
             label_prefix_display = None
     payload = {**form_data, **context, "label_prefix_display": label_prefix_display}
     return render_template("pages/recipes/recipe_form.html", recipe=recipe, **payload)

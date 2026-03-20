@@ -79,11 +79,15 @@ def create_reservation():
         )
 
     # Find SKU by code
-    sku = ProductSKU.scoped().filter_by(
-        sku_code=data["sku_code"],
-        organization_id=current_user.organization_id,
-        is_active=True,
-    ).first()
+    sku = (
+        ProductSKU.scoped()
+        .filter_by(
+            sku_code=data["sku_code"],
+            organization_id=current_user.organization_id,
+            is_active=True,
+        )
+        .first()
+    )
 
     if not sku:
         return jsonify({"error": "SKU not found or inactive"}), 404
@@ -116,7 +120,10 @@ def create_reservation():
             return jsonify({"error": "Failed to create reservation"}), 500
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/reservation_routes.py:118", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/reservation_routes.py:118",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error creating reservation: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -150,7 +157,10 @@ def release_reservation(reservation_id):
             return jsonify({"error": "Failed to release reservation"}), 500
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/reservation_routes.py:151", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/reservation_routes.py:151",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error releasing reservation: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -188,7 +198,10 @@ def convert_reservation_to_sale(reservation_id):
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/reservation_routes.py:188", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/reservation_routes.py:188",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error converting reservation to sale: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -209,12 +222,16 @@ def expire_old_reservations():
 
     try:
         # Find expired reservations
-        expired_reservations = Reservation.scoped().filter(
-            Reservation.status == "active",
-            Reservation.expires_at.isnot(None),
-            Reservation.expires_at < datetime.now(timezone.utc),
-            Reservation.organization_id == current_user.organization_id,
-        ).all()
+        expired_reservations = (
+            Reservation.scoped()
+            .filter(
+                Reservation.status == "active",
+                Reservation.expires_at.isnot(None),
+                Reservation.expires_at < datetime.now(timezone.utc),
+                Reservation.organization_id == current_user.organization_id,
+            )
+            .all()
+        )
 
         count = 0
         for reservation in expired_reservations:
@@ -239,7 +256,10 @@ def expire_old_reservations():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/reservation_routes.py:238", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/reservation_routes.py:238",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error expiring reservations: {str(e)}")
         return jsonify({"error": str(e)}), 500

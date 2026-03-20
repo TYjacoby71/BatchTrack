@@ -1,6 +1,6 @@
 import logging
 
-from flask import flash, jsonify, redirect, render_template, request, url_for
+from flask import flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user
 from flask_wtf.csrf import validate_csrf
 from wtforms.validators import ValidationError
@@ -49,23 +49,44 @@ def convert(amount, from_unit, to_unit):
 @conversion_bp.route("/units/<int:unit_id>/delete", methods=["POST"])
 @require_permission("inventory.edit")
 def delete_unit(unit_id):
-    unit = Unit.query.get_or_404(unit_id)
-    if not (unit.is_custom or unit.user_id):
+    unit = db.session.get(Unit, int(unit_id))
+    if not unit:
+        flash("Unit not found", "error")
+        return redirect(url_for("conversion_bp.manage_units"))
+
+    if not unit.is_custom:
         flash("Cannot delete system units", "error")
         return redirect(url_for("conversion_bp.manage_units"))
 
+    if current_user.user_type == "developer":
+        selected_org_id = session.get("dev_selected_org_id")
+        if selected_org_id and unit.organization_id != selected_org_id:
+            flash("Cannot delete units outside the selected organization", "error")
+            return redirect(url_for("conversion_bp.manage_units"))
+    elif unit.organization_id != current_user.organization_id:
+        flash("Cannot delete units from another organization", "error")
+        return redirect(url_for("conversion_bp.manage_units"))
+
     try:
-        CustomUnitMapping.scoped().filter(
+        mapping_query = CustomUnitMapping.scoped().filter(
             (CustomUnitMapping.from_unit == unit.name)
             | (CustomUnitMapping.to_unit == unit.name)
-        ).delete()
+        )
+        if unit.organization_id:
+            mapping_query = mapping_query.filter_by(
+                organization_id=unit.organization_id
+            )
+        mapping_query.delete()
 
         db.session.delete(unit)
         db.session.commit()
         logger.info(f"Successfully deleted unit: {unit.name}")
         flash("Unit deleted successfully", "success")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/conversion/routes.py:67", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/conversion/routes.py:67",
+            exc_info=True,
+        )
         db.session.rollback()
         flash(f"Error deleting unit: {str(e)}", "error")
 
@@ -208,7 +229,9 @@ def manage_units():
                     flash("This type of unit conversion is not supported.", "danger")
                     return redirect(url_for("conversion_bp.manage_units"))
 
-            existing = CustomUnitMapping.scoped().filter_by(from_unit=custom_unit).first()
+            existing = (
+                CustomUnitMapping.scoped().filter_by(from_unit=custom_unit).first()
+            )
             if existing:
                 flash("This custom unit already has a mapping.", "warning")
                 return redirect(url_for("conversion_bp.manage_units"))
@@ -278,16 +301,20 @@ def manage_units():
 
             selected_org_id = session.get("dev_selected_org_id")
             if selected_org_id:
-                mappings = CustomUnitMapping.scoped().filter_by(
-                    organization_id=selected_org_id
-                ).all()
+                mappings = (
+                    CustomUnitMapping.scoped()
+                    .filter_by(organization_id=selected_org_id)
+                    .all()
+                )
             else:
                 mappings = CustomUnitMapping.scoped().all()
         else:
             # Regular users see only their organization's mappings
-            mappings = CustomUnitMapping.scoped().filter_by(
-                organization_id=current_user.organization_id
-            ).all()
+            mappings = (
+                CustomUnitMapping.scoped()
+                .filter_by(organization_id=current_user.organization_id)
+                .all()
+            )
     else:
         mappings = []
 
@@ -314,21 +341,28 @@ def delete_mapping(mapping_id):
 
         selected_org_id = session.get("dev_selected_org_id")
         if selected_org_id:
-            mapping = CustomUnitMapping.scoped().filter_by(
-                id=mapping_id, organization_id=selected_org_id
-            ).first_or_404()
+            mapping = (
+                CustomUnitMapping.scoped()
+                .filter_by(id=mapping_id, organization_id=selected_org_id)
+                .first_or_404()
+            )
         else:
             mapping = CustomUnitMapping.scoped().filter_by(id=mapping_id).first_or_404()
     else:
-        mapping = CustomUnitMapping.scoped().filter_by(
-            id=mapping_id, organization_id=current_user.organization_id
-        ).first_or_404()
+        mapping = (
+            CustomUnitMapping.scoped()
+            .filter_by(id=mapping_id, organization_id=current_user.organization_id)
+            .first_or_404()
+        )
     try:
         db.session.delete(mapping)
         db.session.commit()
         flash("Mapping deleted successfully.", "success")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/conversion/routes.py:329", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/conversion/routes.py:329",
+            exc_info=True,
+        )
         db.session.rollback()
         flash(f"Error deleting mapping: {str(e)}", "error")
     return redirect(url_for("conversion_bp.manage_units"))
