@@ -2,15 +2,16 @@
 
 ## Launch Blockers & Infrastructure
 - Stand up production Stripe: complete business verification, finish product lookup key coverage (including storage add-ons), load live API keys, and implement failed-payment handling/grace periods in `BillingService`.
-- Configure transactional email delivery (provider choice, API keys, DNS records) and wire payment failure alert emails before go-live.
+- Finish launch-grade email hardening: complete provider DNS/auth setup, finalize verification/welcome/payment-failure templates/content, and run deliverability checks before go-live (core verification/onboarding wiring already exists).
 - Provision production PostgreSQL + backups, load all required environment variables, and document a tested deployment pipeline to the custom domain with SSL.
 - Enable monitoring/observability (Sentry or similar) plus user-friendly error pages to catch and communicate production failures.
 - Close remaining security gaps required for launch: enforce password strength rules, failed-login lockouts, and consistent server-side input validation across forms.
 - Publish counsel-reviewed billing terms in-app and confirm footer/legal links are wired before analytics tracking begins.
+- Decide Whop support posture for launch: either implement webhook/checkout parity or explicitly disable Whop runtime paths with operator-visible safeguards.
 
 ## Launch Runbook Execution
 - **Day 1 (Infra + Billing):** Create Stripe products with final lookup keys, load live keys + webhook, provision production database/backups, configure domain + SSL, and wire error monitoring.
-- **Day 2 (Email + Auth):** Select transactional + marketing email providers, finish SPF/DKIM/DMARC, verify email verification/password reset/welcome flows end-to-end.
+- **Day 2 (Email + Auth):** Finalize transactional + marketing email provider posture, finish SPF/DKIM/DMARC, verify current email verification/password-reset/welcome flows end-to-end, and approve launch-ready copy/templates.
 - **Day 3 (Signup→Payment E2E):** Run signup → email verify → org creation → paid checkout flow, ensure webhooks grant access, cover failed payment paths and tier enforcement.
 - **Day 4 (Core Flow QA):** QA inventory FIFO + adjustments, recipe creation/portioning, batch start/finish/product creation, and permission/org isolation.
 - **Day 5 (Onboarding + Help):** Build in-app onboarding checklist, hook empty states to help center/contact routes, and schedule lifecycle emails (day 0/3/7 triggers).
@@ -26,6 +27,9 @@
 - Normalize permission checks to `has_permission(...)`, enforce cleaner blueprint/service separation, and move lingering business logic out of templates.
 - Standardize error payloads/middleware and create branded error pages so users see consistent feedback instead of raw Flask errors.
 - Execute the FIX_IMMEDIATE testing checklist: verify API responses, service authority, error copy clarity, and persisted form state.
+- Replace developer waitlist placeholder route (`/developer/waitlist-signups`) with a data-backed view or remove endpoint until ready.
+- Replace fault-log placeholder route (`/faults/`) with a real fault-log surface (or explicitly deprecate and hide the blueprint).
+- Clean production module `app/services/pos_integration.py` by moving embedded mock/stub classes to test fixtures.
 
 ## Inventory & Costing Enhancements
 - Fill metadata gaps in `UnifiedInventoryHistory`/FIFO lots (vendor/source attribution) and keep `InventoryItem.cost_per_unit` current without spoilage skew.
@@ -48,6 +52,7 @@
 - Batch augmentation system: split base yield into scented/colored variations pre-finish, with percentage allocation, automatic sub-labels (101A-Lavender, 101B-Rose), added-ingredient tracking, and container redistribution.
 - Soap Maker fragrance safety safeguards: support IFRA max-safe % per fragrance line, enforce blend-level cap using the most restrictive component, and show real-time over-limit warnings before batch save/finish.
 - Recipe-bound instruction propagation + maker tool: duplicate instructions across every test and variation while preserving the exact source recipe ID linkage, and add a maker tool on the batch in-progress page so makers can pull up the linked instructions instantly.
+- Soap Tool push workflow: replace "Push is stubbed" client flow with a server-backed recipe creation/import pathway, or hide the action behind disabled feature messaging.
 - Multi-batch scheduling and resource optimization: plan batches across time with equipment scheduling and conflict prevention.
 - Quality control integration: batch testing protocols, specification compliance, recall management, and certificate generation.
 - Cost tracking and trend analysis: historical ingredient pricing, profit margin monitoring, recipe cost trends, and batch profitability (actual vs planned).
