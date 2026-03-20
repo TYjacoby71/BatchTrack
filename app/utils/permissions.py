@@ -447,24 +447,60 @@ def tier_required(min_tier: str):
 
 def role_required(*roles):
     """
-    Decorator to require specific roles
-    Allows everything during testing
+    Decorator to require specific role names.
+
+    This is retained for legacy callsites that still express role constraints
+    directly. Prefer permission-based decorators for new routes.
     """
+    normalized_roles = {
+        str(getattr(role, "value", role)).strip().lower() for role in roles if role
+    }
 
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **named_args):
-            # Allow everything during tests
-            if current_app.config.get("TESTING", False):
+            if current_app.config.get("SKIP_PERMISSIONS"):
                 return f(*args, **named_args)
 
-            # Basic auth check for non-test environments
             if not current_user.is_authenticated:
-                abort(401)
+                if wants_json():
+                    return jsonify({"error": "Authentication required"}), 401
+                return current_app.login_manager.unauthorized()
 
-            # TODO: Implement proper role checking
-            # For now, just check if user is authenticated
-            return f(*args, **named_args)
+            if not normalized_roles:
+                return f(*args, **named_args)
+
+            try:
+                active_roles = current_user.get_active_roles()
+            except Exception:
+                logger.warning(
+                    "Unable to resolve active roles for user %s during role_required.",
+                    getattr(current_user, "id", None),
+                    exc_info=True,
+                )
+                active_roles = []
+
+            active_role_names = {
+                (getattr(role, "name", "") or "").strip().lower()
+                for role in active_roles
+                if getattr(role, "is_active", True)
+            }
+
+            if active_role_names.intersection(normalized_roles):
+                return f(*args, **named_args)
+
+            if wants_json():
+                return (
+                    jsonify(
+                        {
+                            "error": "role_forbidden",
+                            "required_roles": sorted(normalized_roles),
+                        }
+                    ),
+                    403,
+                )
+            flash("You do not have the required role to access this page.", "error")
+            return _redirect_back()
 
         return decorated_function
 

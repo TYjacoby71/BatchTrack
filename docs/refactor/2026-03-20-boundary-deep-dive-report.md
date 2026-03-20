@@ -12,7 +12,7 @@
 | Controller vs business logic | 5.8/10 | 56 blueprint modules still contain direct query/session logic. |
 | Data access ownership | 5.8/10 | Persistence logic remains mixed into route layers instead of service/repository surfaces. |
 | Tenant isolation | 8.6/10 | Major scoped-query hardening is complete, with residual review needed on heuristic-risk files. |
-| Permission boundary | 7.6/10 | Non-public route permission audit is now clean; main remaining gap is `role_required` TODO fallback behavior. |
+| Permission boundary | 8.0/10 | Non-public route permission audit is clean and `role_required` now enforces real role checks; remaining risk is broader policy consistency (`user_type` gates and role->permission migration). |
 | Integration boundaries | 5.9/10 | Stripe path is mature; Whop and Soap push remain partial/stubbed; POS file still contains embedded test mocks. |
 | UI/product completion boundary | 6.7/10 | Several user/admin surfaces still show explicit "coming soon"/placeholder states. |
 
@@ -70,8 +70,8 @@
 
 ## Boundary 5: Permission boundary
 ### Real offenders
-- `app/utils/permissions.py`: `role_required` still contains TODO fallback behavior.
 - Route permission audit now reports no missing non-public route decorators.
+- `role_required` is now implemented with real role-name enforcement; remaining work is migrating legacy role gates toward canonical permission decorators.
 
 ### Risk concentration
 - Direct `current_user.user_type` gate occurrences detected in 9 files (29 occurrences total).
@@ -123,7 +123,7 @@
 | Item | Scheduled now? | Where |
 | --- | --- | --- |
 | Service-boundary extraction (top offenders) | Yes | `docs/todo/LAUNCH_HARDENING_CHECKLIST.md` 4.2 |
-| `role_required` removal/refactor | Yes | `docs/todo/LAUNCH_HARDENING_CHECKLIST.md` 4.3 |
+| `role_required` removal/refactor | In progress | `docs/todo/LAUNCH_HARDENING_CHECKLIST.md` 4.3 (implementation done; callsite migration/deprecation remains) |
 | Whop webhook/runtime stance | Yes | `docs/todo/LAUNCH_HARDENING_CHECKLIST.md` 5.1 and backlog launch blockers |
 | POS module mock cleanup | Yes | `docs/todo/CONSOLIDATED_BACKLOG.md` (Bugs & Stability) |
 | Developer waitlist placeholder route | Yes | `docs/todo/CONSOLIDATED_BACKLOG.md` (Bugs & Stability) |
@@ -139,7 +139,7 @@
 
 ## Fix plan (implementation order, no calendar estimates)
 ### Workstream A: Permission integrity (high leverage, low blast radius)
-- Replace `role_required` TODO path with real role checks or migrate all callsites to canonical permission decorators and remove helper.
+- Continue migrating legacy role checks to canonical permission decorators and eventually deprecate `role_required`.
 - Run route-permission audit in CI-friendly mode (with deterministic test DB config).
 
 ### Workstream B: Boundary extraction (high leverage, medium/high blast radius)
