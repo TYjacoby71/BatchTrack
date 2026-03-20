@@ -1,4 +1,5 @@
 import logging
+
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
@@ -23,16 +24,20 @@ def add_variant(product_id):
     """Quick add new product variant via AJAX"""
     try:
         # First try to get the Product record
-        product = Product.scoped().filter_by(
-            id=product_id, organization_id=current_user.organization_id
-        ).first()
+        product = (
+            Product.scoped()
+            .filter_by(id=product_id, organization_id=current_user.organization_id)
+            .first()
+        )
 
         # If no Product record exists, try to find it via ProductSKU and create Product
         if not product:
             # Look for existing SKU with this product_id
-            base_sku = ProductSKU.scoped().filter_by(
-                id=product_id, organization_id=current_user.organization_id
-            ).first()
+            base_sku = (
+                ProductSKU.scoped()
+                .filter_by(id=product_id, organization_id=current_user.organization_id)
+                .first()
+            )
 
             if not base_sku:
                 return jsonify({"error": "Product not found"}), 404
@@ -64,9 +69,11 @@ def add_variant(product_id):
         variant_name = variant_name.strip()
 
         # Check if variant already exists for this product
-        existing_variant = ProductVariant.scoped().filter_by(
-            product_id=product.id, name=variant_name
-        ).first()
+        existing_variant = (
+            ProductVariant.scoped()
+            .filter_by(product_id=product.id, name=variant_name)
+            .first()
+        )
 
         if existing_variant:
             return (
@@ -166,7 +173,10 @@ def add_variant(product_id):
 
     except Exception as e:
         # Rollback any changes if there's an error
-        logger.warning("Suppressed exception fallback at app/blueprints/products/product_variants.py:163", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/product_variants.py:163",
+            exc_info=True,
+        )
         db.session.rollback()
         # Log the full error for debugging
         import traceback
@@ -184,30 +194,38 @@ def view_variant(product_id, variant_name):
     # Get the product using the new Product model
     from ...models.product import Product, ProductVariant
 
-    product = Product.scoped().filter_by(
-        id=product_id, organization_id=current_user.organization_id
-    ).first()
+    product = (
+        Product.scoped()
+        .filter_by(id=product_id, organization_id=current_user.organization_id)
+        .first()
+    )
 
     if not product:
         flash("Product not found", "error")
         return redirect(url_for("products.list_products"))
 
     # Get the variant by name
-    variant = ProductVariant.scoped().filter_by(
-        product_id=product.id, name=variant_name
-    ).first()
+    variant = (
+        ProductVariant.scoped()
+        .filter_by(product_id=product.id, name=variant_name)
+        .first()
+    )
 
     if not variant:
         flash("Variant not found", "error")
         return redirect(url_for("products.view_product", product_id=product_id))
 
     # Get all SKUs for this product/variant combination
-    skus = ProductSKU.scoped().filter_by(
-        product_id=product.id,
-        variant_id=variant.id,
-        is_active=True,
-        organization_id=current_user.organization_id,
-    ).all()
+    skus = (
+        ProductSKU.scoped()
+        .filter_by(
+            product_id=product.id,
+            variant_id=variant.id,
+            is_active=True,
+            organization_id=current_user.organization_id,
+        )
+        .all()
+    )
 
     # Group SKUs by size_label
     size_groups = {}
@@ -240,17 +258,23 @@ def view_variant(product_id, variant_name):
 
     # Get available containers for manual stock addition
     available_containers = (
-        InventoryItem.scoped().filter_by(type="container", is_archived=False)
+        InventoryItem.scoped()
+        .filter_by(type="container", is_archived=False)
         .filter(InventoryItem.quantity > 0)
         .all()
     )
 
     # Get the base SKU inventory item ID for breadcrumb navigation
-    base_sku = ProductSKU.scoped().filter_by(
-        product_id=product.id,
-        variant_id=product.base_variant.id if product.base_variant else variant.id,
-        organization_id=current_user.organization_id,
-    ).filter(ProductSKU.size_label.ilike("Bulk%")).first()
+    base_sku = (
+        ProductSKU.scoped()
+        .filter_by(
+            product_id=product.id,
+            variant_id=product.base_variant.id if product.base_variant else variant.id,
+            organization_id=current_user.organization_id,
+        )
+        .filter(ProductSKU.size_label.ilike("Bulk%"))
+        .first()
+    )
 
     product_breadcrumb_id = (
         base_sku.inventory_item_id
@@ -291,17 +315,21 @@ def view_variant(product_id, variant_name):
 @require_permission("products.manage_variants")
 def create_sku_for_variant(product_id, variant_name):
     """Create a new SKU for an existing variant."""
-    product = Product.scoped().filter_by(
-        id=product_id, organization_id=current_user.organization_id
-    ).first()
+    product = (
+        Product.scoped()
+        .filter_by(id=product_id, organization_id=current_user.organization_id)
+        .first()
+    )
 
     if not product:
         flash("Product not found", "error")
         return redirect(url_for("products.list_products"))
 
-    variant = ProductVariant.scoped().filter_by(
-        product_id=product.id, name=variant_name
-    ).first()
+    variant = (
+        ProductVariant.scoped()
+        .filter_by(product_id=product.id, name=variant_name)
+        .first()
+    )
 
     if not variant:
         flash("Variant not found", "error")
@@ -331,12 +359,16 @@ def create_sku_for_variant(product_id, variant_name):
             )
         )
 
-    existing_sku = ProductSKU.scoped().filter_by(
-        product_id=product.id,
-        variant_id=variant.id,
-        size_label=size_label,
-        organization_id=current_user.organization_id,
-    ).first()
+    existing_sku = (
+        ProductSKU.scoped()
+        .filter_by(
+            product_id=product.id,
+            variant_id=variant.id,
+            size_label=size_label,
+            organization_id=current_user.organization_id,
+        )
+        .first()
+    )
 
     if existing_sku:
         flash(f'SKU with size "{size_label}" already exists for this variant.', "error")
@@ -386,7 +418,10 @@ def create_sku_for_variant(product_id, variant_name):
 
         flash(f'SKU "{size_label}" created successfully.', "success")
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/product_variants.py:383", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/product_variants.py:383",
+            exc_info=True,
+        )
         db.session.rollback()
         flash(f"Failed to create SKU: {str(e)}", "error")
 
@@ -409,18 +444,22 @@ def edit_variant(product_id, variant_name):
     from ...models.product import Product, ProductVariant
 
     # Get the product using the new Product model
-    product = Product.scoped().filter_by(
-        id=product_id, organization_id=current_user.organization_id
-    ).first()
+    product = (
+        Product.scoped()
+        .filter_by(id=product_id, organization_id=current_user.organization_id)
+        .first()
+    )
 
     if not product:
         flash("Product not found", "error")
         return redirect(url_for("products.list_products"))
 
     # Get the variant
-    variant = ProductVariant.scoped().filter_by(
-        product_id=product.id, name=variant_name
-    ).first()
+    variant = (
+        ProductVariant.scoped()
+        .filter_by(product_id=product.id, name=variant_name)
+        .first()
+    )
 
     if not variant:
         flash("Variant not found", "error")
@@ -440,11 +479,15 @@ def edit_variant(product_id, variant_name):
         )
 
     # Check if another variant has this name for the same product
-    existing = ProductVariant.scoped().filter(
-        ProductVariant.product_id == product.id,
-        ProductVariant.name == name,
-        ProductVariant.id != variant.id,
-    ).first()
+    existing = (
+        ProductVariant.scoped()
+        .filter(
+            ProductVariant.product_id == product.id,
+            ProductVariant.name == name,
+            ProductVariant.id != variant.id,
+        )
+        .first()
+    )
 
     if existing:
         flash("Another variant with this name already exists for this product", "error")
@@ -478,29 +521,37 @@ def delete_variant(product_id, variant_name):
     from ...models.product import Product, ProductVariant
 
     # Get the product using the new Product model
-    product = Product.scoped().filter_by(
-        id=product_id, organization_id=current_user.organization_id
-    ).first()
+    product = (
+        Product.scoped()
+        .filter_by(id=product_id, organization_id=current_user.organization_id)
+        .first()
+    )
 
     if not product:
         flash("Product not found", "error")
         return redirect(url_for("products.list_products"))
 
     # Get the variant
-    variant = ProductVariant.scoped().filter_by(
-        product_id=product.id, name=variant_name
-    ).first()
+    variant = (
+        ProductVariant.scoped()
+        .filter_by(product_id=product.id, name=variant_name)
+        .first()
+    )
 
     if not variant:
         flash("Variant not found", "error")
         return redirect(url_for("products.view_product", product_id=product_id))
 
     # Get all SKUs for this variant
-    skus = ProductSKU.scoped().filter_by(
-        product_id=product.id,
-        variant_id=variant.id,
-        organization_id=current_user.organization_id,
-    ).all()
+    skus = (
+        ProductSKU.scoped()
+        .filter_by(
+            product_id=product.id,
+            variant_id=variant.id,
+            organization_id=current_user.organization_id,
+        )
+        .all()
+    )
 
     if not skus:
         flash("Variant not found", "error")
@@ -526,9 +577,9 @@ def delete_variant(product_id, variant_name):
     db.session.commit()
 
     # Check if this was the last variant for the product
-    remaining_variants = ProductVariant.scoped().filter_by(
-        product_id=product.id, is_active=True
-    ).count()
+    remaining_variants = (
+        ProductVariant.scoped().filter_by(product_id=product.id, is_active=True).count()
+    )
 
     if remaining_variants == 0:
         # Create a Base variant

@@ -9,6 +9,7 @@ Glossary:
 """
 
 from __future__ import annotations
+
 import logging
 
 from flask import jsonify, render_template, request, url_for
@@ -21,7 +22,6 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 logger = logging.getLogger(__name__)
-
 
 
 # --- Dashboard ---
@@ -70,7 +70,10 @@ def marketing_admin_save():
         DeveloperDashboardService.save_marketing_payload(data)
         return jsonify({"success": True})
     except Exception as exc:  # pragma: no cover - defensive
-        logger.warning("Suppressed exception fallback at app/blueprints/developer/views/dashboard_routes.py:68", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/developer/views/dashboard_routes.py:68",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(exc)}), 500
 
 

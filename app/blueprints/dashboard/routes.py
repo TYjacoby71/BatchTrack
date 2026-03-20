@@ -71,7 +71,10 @@ def dashboard():
                 )
                 return redirect(url_for("developer.dashboard"))
         except Exception as org_error:
-            logger.warning("Suppressed exception fallback at app/blueprints/dashboard/routes.py:74", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/dashboard/routes.py:74",
+                exc_info=True,
+            )
             print("---!!! ORGANIZATION QUERY ERROR (ORIGINAL SIN?) !!!---")
             print(f"Error: {org_error}")
             print("----------------------------------------------------")
@@ -102,7 +105,10 @@ def dashboard():
                 )
             active_batch = batch_query.first()
         except Exception as batch_error:
-            logger.warning("Suppressed exception fallback at app/blueprints/dashboard/routes.py:105", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/dashboard/routes.py:105",
+                exc_info=True,
+            )
             print("---!!! BATCH QUERY ERROR (ORIGINAL SIN?) !!!---")
             print(f"Error: {batch_error}")
             print("-----------------------------------------------")
@@ -115,7 +121,10 @@ def dashboard():
                 CombinedInventoryAlertService.get_low_stock_ingredients()
             )
         except Exception as inv_error:
-            logger.warning("Suppressed exception fallback at app/blueprints/dashboard/routes.py:132", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/dashboard/routes.py:132",
+                exc_info=True,
+            )
             print("---!!! INVENTORY ALERTS ERROR (ORIGINAL SIN?) !!!---")
             print(f"Error: {inv_error}")
             print("----------------------------------------------------")
@@ -126,7 +135,10 @@ def dashboard():
         try:
             expiration_summary = ExpirationService.get_expiration_summary()
         except Exception as exp_error:
-            logger.warning("Suppressed exception fallback at app/blueprints/dashboard/routes.py:142", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/dashboard/routes.py:142",
+                exc_info=True,
+            )
             print("---!!! EXPIRATION SERVICE ERROR (ORIGINAL SIN?) !!!---")
             print(f"Error: {exp_error}")
             print("------------------------------------------------------")
@@ -139,7 +151,10 @@ def dashboard():
             }
 
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/dashboard/routes.py:154", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/dashboard/routes.py:154",
+            exc_info=True,
+        )
         print("---!!! GENERAL DASHBOARD ERROR !!!---")
         print(f"Error: {exc}")
         print("------------------------------------")
@@ -220,7 +235,10 @@ def view_fault_log():
 
         return render_template("fault_log.html", faults=faults)
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/dashboard/routes.py:290", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/dashboard/routes.py:290",
+            exc_info=True,
+        )
         flash(f"Error loading fault log: {str(exc)}", "error")
         return render_template("fault_log.html", faults=[])
 

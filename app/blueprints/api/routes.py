@@ -225,7 +225,10 @@ def get_dashboard_alerts():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:203", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/routes.py:203",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -258,9 +261,11 @@ def get_inventory_item(item_id):
     """Get inventory item details for editing"""
     from ...models import InventoryItem
 
-    item = InventoryItem.scoped().filter_by(
-        id=item_id, organization_id=current_user.organization_id
-    ).first_or_404()
+    item = (
+        InventoryItem.scoped()
+        .filter_by(id=item_id, organization_id=current_user.organization_id)
+        .first_or_404()
+    )
 
     return jsonify(
         {
@@ -309,7 +314,7 @@ def get_fifo_details(inventory_id):
 @login_required
 @require_permission("products.view")
 def get_category(cat_id):
-    c = ProductCategory.query.get_or_404(cat_id)
+    c = db.get_or_404(ProductCategory, cat_id)
     return jsonify(
         {
             "id": c.id,
@@ -392,7 +397,10 @@ def create_unit():
             }
         )
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:388", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/routes.py:388",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -448,7 +456,10 @@ def get_container_suggestions():
         }
         return jsonify({"success": True, "suggestions": payload})
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:443", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/routes.py:443",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -527,7 +538,10 @@ def get_ingredients():
         )
         return jsonify(payload)
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/routes.py:521", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/routes.py:521",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -559,7 +573,8 @@ def bootstrap_recipes():
             )
 
     masters = (
-        Recipe.scoped().options(
+        Recipe.scoped()
+        .options(
             load_only(
                 Recipe.id,
                 Recipe.name,
@@ -579,22 +594,26 @@ def bootstrap_recipes():
         .order_by(Recipe.name.asc())
     )
 
-    variations_query = Recipe.scoped().options(
-        load_only(
-            Recipe.id,
-            Recipe.name,
-            Recipe.label_prefix,
-            Recipe.status,
-            Recipe.recipe_group_id,
-            Recipe.parent_recipe_id,
-        ),
-    ).filter(
-        Recipe.organization_id == org_id,
-        Recipe.is_master.is_(False),
-        Recipe.test_sequence.is_(None),
-        Recipe.status == "published",
-        Recipe.is_archived.is_(False),
-        Recipe.is_current.is_(True),
+    variations_query = (
+        Recipe.scoped()
+        .options(
+            load_only(
+                Recipe.id,
+                Recipe.name,
+                Recipe.label_prefix,
+                Recipe.status,
+                Recipe.recipe_group_id,
+                Recipe.parent_recipe_id,
+            ),
+        )
+        .filter(
+            Recipe.organization_id == org_id,
+            Recipe.is_master.is_(False),
+            Recipe.test_sequence.is_(None),
+            Recipe.status == "published",
+            Recipe.is_archived.is_(False),
+            Recipe.is_current.is_(True),
+        )
     )
 
     variations_by_group = {}
@@ -664,7 +683,8 @@ def bootstrap_products():
             return jsonify({**cached, "cache": "hit", "version": 1})
 
     products = (
-        Product.scoped().options(load_only(Product.id, Product.name))
+        Product.scoped()
+        .options(load_only(Product.id, Product.name))
         .filter(
             Product.organization_id == org_id,
             Product.is_active.is_(True),
@@ -675,7 +695,8 @@ def bootstrap_products():
     )
 
     sku_rows = (
-        ProductSKU.scoped().options(load_only(ProductSKU.inventory_item_id))
+        ProductSKU.scoped()
+        .options(load_only(ProductSKU.inventory_item_id))
         .filter(
             ProductSKU.organization_id == org_id,
             ProductSKU.is_active.is_(True),

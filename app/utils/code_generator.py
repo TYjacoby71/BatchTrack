@@ -9,6 +9,7 @@ Glossary:
 """
 
 from __future__ import annotations
+
 import logging
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -55,7 +56,10 @@ def generate_batch_label_code(recipe: Recipe) -> str:
             if current_user and current_user.is_authenticated:
                 org_id = current_user.organization_id
         except Exception:
-            logger.warning("Suppressed exception fallback at app/utils/code_generator.py:53", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/utils/code_generator.py:53",
+                exc_info=True,
+            )
             org_id = None
     if not org_id:
         raise ValueError("Batch label generation requires a valid organization id.")

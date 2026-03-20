@@ -15,8 +15,8 @@ from typing import Optional, Tuple
 
 from ..models import Organization, PendingSignup, Role, SubscriptionTier, User, db
 from ..utils.timezone_utils import TimezoneUtils
-from .analytics_tracking_service import AnalyticsTrackingService
 from .affiliate_service import AffiliateService
+from .analytics_tracking_service import AnalyticsTrackingService
 from .batchbot_credit_service import BatchBotCreditService
 from .email_service import EmailService
 
@@ -154,7 +154,9 @@ class SignupService:
             raise ValueError("Stripe checkout session missing customer email")
         email = User.normalize_email(email) or email
         if User.find_by_email(email):
-            raise ValueError("An account with that email already exists. Please log in instead.")
+            raise ValueError(
+                "An account with that email already exists. Please log in instead."
+            )
 
         phone = SignupService._first_non_empty(
             customer_details.get("phone"),
@@ -348,7 +350,10 @@ class SignupService:
             return org, owner_user
 
         except Exception as exc:
-            logger.warning("Suppressed exception fallback at app/services/signup_service.py:344", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/signup_service.py:344",
+                exc_info=True,
+            )
             db.session.rollback()
             logger.error(
                 "Failed to complete pending signup %s: %s", pending_signup.id, exc
@@ -375,7 +380,10 @@ class SignupService:
             try:
                 return dict(obj)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/signup_service.py:370", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/signup_service.py:370",
+                    exc_info=True,
+                )
                 return {}
 
     @staticmethod
@@ -433,6 +441,9 @@ class SignupService:
                 if isinstance(payload, dict):
                     return payload.get("value")
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/signup_service.py:427", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/signup_service.py:427",
+                exc_info=True,
+            )
             return None
         return None

@@ -7,8 +7,8 @@ Glossary:
 - Product: Parent entity grouping variants and SKUs.
 - Variant: Option set under a product (size, scent, etc.).
 """
-import logging
 
+import logging
 from datetime import datetime, timezone
 
 from sqlalchemy import event, func
@@ -21,7 +21,6 @@ from ..extensions import db
 from .mixins import ScopedModelMixin
 
 logger = logging.getLogger(__name__)
-
 
 
 class Product(ScopedModelMixin, db.Model):
@@ -176,7 +175,17 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
     # FIFO REFERENCE
     fifo_id = db.Column(db.String(32), nullable=True)
-    batch_id = db.Column(db.Integer, db.ForeignKey("batch.id"), nullable=True)
+    # Mark one side of the bidirectional Batch/ProductSKU FK pair as ALTER-managed
+    # to avoid cyclic drop-order warnings in metadata teardown.
+    batch_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "batch.id",
+            name="fk_product_sku_batch_id",
+            use_alter=True,
+        ),
+        nullable=True,
+    )
     container_id = db.Column(
         db.Integer, db.ForeignKey("inventory_item.id"), nullable=True
     )
@@ -318,7 +327,10 @@ class ProductSKU(db.Model, ScopedModelMixin):
                 qty = float(lot.remaining_quantity or 0.0)
                 cost = float(lot.unit_cost or 0.0)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/models/product.py:316", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/models/product.py:316",
+                    exc_info=True,
+                )
                 qty = 0.0
                 cost = 0.0
 
@@ -353,7 +365,10 @@ class ProductSKU(db.Model, ScopedModelMixin):
         try:
             return float(total_reserved or 0.0)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/models/product.py:350", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/models/product.py:350",
+                exc_info=True,
+            )
             return 0.0
 
     @property
@@ -477,7 +492,10 @@ class ProductSKU(db.Model, ScopedModelMixin):
                 _sz = "Bulk"
             _sz = " ".join(_sz.split())[:64]
         except Exception:
-            logger.warning("Suppressed exception fallback at app/models/product.py:473", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/models/product.py:473",
+                exc_info=True,
+            )
             _sz = "Bulk"
         self.size_label = _sz
         self.sku_code = sku_code

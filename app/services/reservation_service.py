@@ -151,7 +151,10 @@ class ReservationService:
             db.session.commit()
             return True, f"Released {total_released} units for order {order_id}"
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/services/reservation_service.py:157", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/reservation_service.py:157",
+                exc_info=True,
+            )
             db.session.rollback()
             return False, f"Error releasing reservations: {str(e)}"
 
@@ -192,7 +195,10 @@ class ReservationService:
             db.session.commit()
             return True, None
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/services/reservation_service.py:197", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/reservation_service.py:197",
+                exc_info=True,
+            )
             db.session.rollback()
             return False, str(e)
 
@@ -230,7 +236,10 @@ class ReservationService:
             db.session.commit()
             return True, None
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/services/reservation_service.py:234", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/reservation_service.py:234",
+                exc_info=True,
+            )
             db.session.rollback()
             return False, str(e)
 

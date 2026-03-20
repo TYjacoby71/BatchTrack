@@ -2,9 +2,9 @@
 """Seed app settings defaults."""
 
 from __future__ import annotations
-import logging
 
 import copy
+import logging
 
 from app.extensions import db
 from app.models.app_setting import AppSetting
@@ -12,7 +12,6 @@ from app.utils.settings import DEFAULT_SETTINGS_KEY
 from app.utils.settings_defaults import DEFAULT_APP_SETTINGS, merge_settings_defaults
 
 logger = logging.getLogger(__name__)
-
 
 
 def seed_app_settings() -> None:
@@ -34,7 +33,10 @@ def seed_app_settings() -> None:
         db.session.commit()
         print("✅ App settings seeded")
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/seeders/app_settings_seeder.py:32", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/seeders/app_settings_seeder.py:32",
+            exc_info=True,
+        )
         db.session.rollback()
         print(f"❌ Error seeding app settings: {exc}")
         raise

@@ -40,10 +40,14 @@ register_drawer_action(
 @require_permission("inventory.view")
 def conversion_density_modal(ingredient_id):
     """Render the density fix drawer for the requested ingredient."""
-    ingredient = InventoryItem.scoped().filter_by(
-        id=ingredient_id,
-        organization_id=current_user.organization_id,
-    ).first()
+    ingredient = (
+        InventoryItem.scoped()
+        .filter_by(
+            id=ingredient_id,
+            organization_id=current_user.organization_id,
+        )
+        .first()
+    )
 
     if not ingredient:
         return jsonify({"error": "Ingredient not found"}), 404

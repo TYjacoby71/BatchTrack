@@ -9,6 +9,7 @@ Glossary:
 """
 
 from __future__ import annotations
+
 import logging
 
 from flask import jsonify, redirect, request, url_for
@@ -18,7 +19,6 @@ from .extensions import db, login_manager
 from .services.session_service import SessionService
 
 logger = logging.getLogger(__name__)
-
 
 
 # --- Configure login manager ---
@@ -91,5 +91,7 @@ def _rollback_safely() -> None:
     try:
         db.session.rollback()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/authz.py:89", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/authz.py:89", exc_info=True
+        )
         pass

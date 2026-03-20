@@ -104,7 +104,9 @@ def _parse_legacy_bullets(description: str) -> tuple[str, list[str]]:
         if _BULLET_PREFIX_RE.match(line)
     ]
     if explicit_multiline_bullets:
-        non_bullet_lines = [line for line in multiline_lines if not _BULLET_PREFIX_RE.match(line)]
+        non_bullet_lines = [
+            line for line in multiline_lines if not _BULLET_PREFIX_RE.match(line)
+        ]
         summary = _truncate_summary(non_bullet_lines[0] if non_bullet_lines else "")
         bullets = explicit_multiline_bullets
 
@@ -174,7 +176,9 @@ def build_marketing_copy(
     legacy_description_text = _clean_text(legacy_description)
 
     if not summary or not bullets:
-        fallback_summary, fallback_bullets = _parse_legacy_bullets(legacy_description_text)
+        fallback_summary, fallback_bullets = _parse_legacy_bullets(
+            legacy_description_text
+        )
         if not summary:
             summary = fallback_summary
         if not bullets:
@@ -192,7 +196,10 @@ def build_marketing_copy(
         "summary_html": render_inline_marketing(summary),
         "bullets_html": [render_inline_marketing(item) for item in bullets],
         "uses_legacy_description": bool(
-            legacy_description_text and (not _clean_text(marketing_summary) or not parse_marketing_bullets(marketing_bullets))
+            legacy_description_text
+            and (
+                not _clean_text(marketing_summary)
+                or not parse_marketing_bullets(marketing_bullets)
+            )
         ),
     }
-

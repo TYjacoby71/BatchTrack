@@ -137,6 +137,7 @@ def test_prompt_mode_old_unverified_accounts_queue_post_login_modal(
         flashes = [message for _category, message in sess.get("_flashes", [])]
         assert any("older than 10 days" in msg for msg in flashes)
 
+
 # --- Forced resend modal rendering ---
 # Purpose: Verify forced-lock query flags render modal guidance on resend page.
 def test_resend_verification_renders_forced_age_modal(client, app):
@@ -180,7 +181,10 @@ def test_login_handles_naive_verification_timestamp_without_send_crash(client, a
         follow_redirects=False,
     )
     assert response.status_code == 302
-    assert "/dashboard" in response.headers["Location"] or "/user_dashboard" in response.headers["Location"]
+    assert (
+        "/dashboard" in response.headers["Location"]
+        or "/user_dashboard" in response.headers["Location"]
+    )
 
     with client.session_transaction() as sess:
         assert sess.get("_user_id") is not None
@@ -188,7 +192,9 @@ def test_login_handles_naive_verification_timestamp_without_send_crash(client, a
 
 # --- Authenticated resend messaging ---
 # Purpose: Verify authenticated resend uses specific user-facing confirmation copy.
-def test_authenticated_resend_verification_uses_specific_message(client, app, monkeypatch):
+def test_authenticated_resend_verification_uses_specific_message(
+    client, app, monkeypatch
+):
     app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
     app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
 
@@ -259,7 +265,9 @@ def test_verify_email_head_does_not_consume_token(client, app):
 
 # --- Invalid token behavior for verified sessions ---
 # Purpose: Avoid scary invalid-link flashes for already-verified authenticated users.
-def test_verify_email_invalid_token_for_verified_session_redirects_to_dashboard(client, app):
+def test_verify_email_invalid_token_for_verified_session_redirects_to_dashboard(
+    client, app
+):
     app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "prompt"
     app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
 
@@ -356,7 +364,10 @@ def test_login_rejects_unknown_identifier(client, app):
 
     response = client.post(
         "/auth/login",
-        data={"username": f"missing_{uuid.uuid4().hex[:6]}", "password": "does-not-matter"},
+        data={
+            "username": f"missing_{uuid.uuid4().hex[:6]}",
+            "password": "does-not-matter",
+        },
         follow_redirects=True,
     )
     assert response.status_code == 200
@@ -544,7 +555,9 @@ def test_login_blocks_unverified_when_required_mode(client, app):
 
 # --- Required mode send-failure messaging ---
 # Purpose: Verify required-mode login does not claim delivery when verification send fails.
-def test_required_mode_login_message_handles_verification_send_failure(client, app, monkeypatch):
+def test_required_mode_login_message_handles_verification_send_failure(
+    client, app, monkeypatch
+):
     app.config["AUTH_EMAIL_VERIFICATION_MODE"] = "required"
     app.config["AUTH_EMAIL_REQUIRE_PROVIDER"] = False
 
@@ -610,7 +623,10 @@ def test_prompt_mode_login_message_handles_verification_send_failure(
         follow_redirects=False,
     )
     assert response.status_code == 302
-    assert "/dashboard" in response.headers["Location"] or "/user_dashboard" in response.headers["Location"]
+    assert (
+        "/dashboard" in response.headers["Location"]
+        or "/user_dashboard" in response.headers["Location"]
+    )
 
     with client.session_transaction() as sess:
         flashes = [message for _category, message in sess.get("_flashes", [])]

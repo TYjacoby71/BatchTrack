@@ -29,7 +29,10 @@ def safe_db_operation(operation_name, operation_func):
         db.session.commit()
         return result, None
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/seeders/subscription_seeder.py:31", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/seeders/subscription_seeder.py:31",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.warning(f"⚠️ {operation_name} failed: {e}")
         return None, str(e)
@@ -372,7 +375,10 @@ def seed_subscription_tiers():
             if tier:
                 successful_tiers.append(tier_name)
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/seeders/subscription_seeder.py:373", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/subscription_seeder.py:373",
+                exc_info=True,
+            )
             print(f"⚠️ Failed to create {tier_name}: {e}")
 
     try:
@@ -381,7 +387,10 @@ def seed_subscription_tiers():
             f"   ✅ Subscription tiers: {len(successful_tiers)} tiers created/updated"
         )
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/seeders/subscription_seeder.py:381", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/seeders/subscription_seeder.py:381",
+            exc_info=True,
+        )
         print(f"⚠️ Subscription tiers failed: {e}")
         db.session.rollback()
 

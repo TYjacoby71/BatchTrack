@@ -9,6 +9,7 @@ Glossary:
 - Allowed containers: Recipe-linked container ids considered in the drawer.
 - Yield update action: POST handler that persists recipe yield/unit edits.
 """
+
 import logging
 
 from flask import jsonify, render_template, request
@@ -51,10 +52,14 @@ def container_unit_mismatch_modal():
     if not recipe_id:
         return jsonify({"success": False, "error": "Recipe ID required"}), 400
 
-    recipe = Recipe.scoped().filter_by(
-        id=recipe_id,
-        organization_id=current_user.organization_id,
-    ).first()
+    recipe = (
+        Recipe.scoped()
+        .filter_by(
+            id=recipe_id,
+            organization_id=current_user.organization_id,
+        )
+        .first()
+    )
 
     if not recipe:
         return jsonify({"success": False, "error": "Recipe not found"}), 404
@@ -64,10 +69,14 @@ def container_unit_mismatch_modal():
     container_items = []
     allowed_ids = getattr(recipe, "allowed_containers", []) or []
     if allowed_ids:
-        containers = InventoryItem.scoped().filter(
-            InventoryItem.id.in_(allowed_ids),
-            InventoryItem.organization_id == current_user.organization_id,
-        ).all()
+        containers = (
+            InventoryItem.scoped()
+            .filter(
+                InventoryItem.id.in_(allowed_ids),
+                InventoryItem.organization_id == current_user.organization_id,
+            )
+            .all()
+        )
         for container in containers:
             container_items.append(
                 {
@@ -100,10 +109,14 @@ def container_unit_mismatch_modal():
 @require_permission("recipes.plan_production")
 def container_unit_mismatch_update_yield(recipe_id):
     """Quickly update a recipe's predicted yield and unit from the drawer."""
-    recipe = Recipe.scoped().filter_by(
-        id=recipe_id,
-        organization_id=current_user.organization_id,
-    ).first()
+    recipe = (
+        Recipe.scoped()
+        .filter_by(
+            id=recipe_id,
+            organization_id=current_user.organization_id,
+        )
+        .first()
+    )
 
     if not recipe:
         return jsonify({"success": False, "error": "Recipe not found"}), 404
@@ -112,7 +125,10 @@ def container_unit_mismatch_update_yield(recipe_id):
     try:
         validate_csrf(data.get("csrf_token"))
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py:110", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py:110",
+            exc_info=True,
+        )
         return jsonify({"success": False, "error": "Invalid CSRF token"}), 400
 
     try:
@@ -130,7 +146,10 @@ def container_unit_mismatch_update_yield(recipe_id):
     try:
         db.session.commit()
     except Exception as exc:  # pragma: no cover - rollback guard
-        logger.warning("Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py:127", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py:127",
+            exc_info=True,
+        )
         db.session.rollback()
         return (
             jsonify({"success": False, "error": f"Failed to update recipe: {exc}"}),

@@ -15,7 +15,10 @@ from __future__ import annotations
 import logging
 from typing import Any, Mapping
 
-from .analytics_event_registry import ANALYTICS_EVENT_REGISTRY, missing_required_properties
+from .analytics_event_registry import (
+    ANALYTICS_EVENT_REGISTRY,
+    missing_required_properties,
+)
 from .event_emitter import EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -734,4 +737,3 @@ class AnalyticsTrackingService:
                 entity_id=entity_id,
                 auto_commit=True,
             )
-

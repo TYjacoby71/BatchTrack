@@ -1,4 +1,5 @@
 import logging
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
 
@@ -25,7 +26,10 @@ def get_product_from_sku(sku_id):
         return jsonify(result)
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/api.py:23", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/api.py:23",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -46,7 +50,10 @@ def get_products():
                 if primary_sku:
                     unit = primary_sku.unit
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/products/api.py:43", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/products/api.py:43",
+                    exc_info=True,
+                )
                 unit = None
 
             product_list.append(
@@ -56,7 +63,10 @@ def get_products():
         return jsonify(product_list)
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/api.py:52", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/api.py:52",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -79,7 +89,10 @@ def get_product_variants(product_id):
         return jsonify({"variants": variant_list})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/api.py:74", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/api.py:74",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -109,7 +122,10 @@ def search_products():
             )
         return jsonify(results)
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/api.py:103", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/api.py:103",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -138,7 +154,10 @@ def get_low_stock():
             )
         return jsonify(results)
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/api.py:131", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/api.py:131",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -153,7 +172,10 @@ def get_product_inventory_summary_api(product_id):
             return jsonify({"error": "Product not found"}), 404
         return jsonify(summary)
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/api.py:145", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/api.py:145",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -181,7 +203,10 @@ def quick_add_product():
         return jsonify(result)
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/products/api.py:172", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/products/api.py:172",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 

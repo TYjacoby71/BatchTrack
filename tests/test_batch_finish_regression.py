@@ -197,9 +197,11 @@ def test_complete_batch_creates_separate_bulk_sku_for_incompatible_unit(app):
         assert success is True, f"Complete batch failed unexpectedly: {message}"
         assert batch.status == "completed"
 
-        refreshed_bulk_skus = ProductSKU.query.filter_by(
-            product_id=product.id, variant_id=variant.id
-        ).filter(ProductSKU.size_label.ilike("Bulk%")).all()
+        refreshed_bulk_skus = (
+            ProductSKU.query.filter_by(product_id=product.id, variant_id=variant.id)
+            .filter(ProductSKU.size_label.ilike("Bulk%"))
+            .all()
+        )
         assert len(refreshed_bulk_skus) >= 2
         units = {sku.unit for sku in refreshed_bulk_skus}
         assert "oz" in units

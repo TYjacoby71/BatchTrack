@@ -8,7 +8,6 @@ from .mixins import ScopedModelMixin
 logger = logging.getLogger(__name__)
 
 
-
 class UserPreferences(ScopedModelMixin, db.Model):
     """Store individual user preferences for alerts and display settings"""
 
@@ -86,7 +85,10 @@ class UserPreferences(ScopedModelMixin, db.Model):
 
             return preferences
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/models/user_preferences.py:84", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/models/user_preferences.py:84",
+                exc_info=True,
+            )
             print(f"Error getting user preferences for user {user_id}: {e}")
             db.session.rollback()
             return None
@@ -95,7 +97,9 @@ class UserPreferences(ScopedModelMixin, db.Model):
         """Return saved list preferences for a scope."""
         if not scope:
             return {}
-        all_prefs = self.list_preferences if isinstance(self.list_preferences, dict) else {}
+        all_prefs = (
+            self.list_preferences if isinstance(self.list_preferences, dict) else {}
+        )
         scoped = all_prefs.get(scope, {})
         return scoped if isinstance(scoped, dict) else {}
 
@@ -117,11 +121,7 @@ class UserPreferences(ScopedModelMixin, db.Model):
         )
         current_scoped = all_prefs.get(scope, {})
         current_scoped = current_scoped if isinstance(current_scoped, dict) else {}
-        next_scoped = (
-            {**current_scoped, **incoming}
-            if merge
-            else dict(incoming)
-        )
+        next_scoped = {**current_scoped, **incoming} if merge else dict(incoming)
         all_prefs[scope] = next_scoped
         self.list_preferences = all_prefs
         return next_scoped

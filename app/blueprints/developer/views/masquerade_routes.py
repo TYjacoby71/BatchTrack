@@ -28,7 +28,7 @@ from ..routes import developer_bp
 @require_developer_permission("dev.all_organizations")
 def select_organization(org_id):
     """Select an organization to view as developer (customer support)."""
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     session["dev_selected_org_id"] = org_id
     flash(f"Now viewing data for: {org.name} (Customer Support Mode)", "info")
     return redirect(url_for("app_routes.dashboard"))
@@ -42,7 +42,7 @@ def select_organization(org_id):
 @require_developer_permission("dev.all_organizations")
 def view_as_organization(org_id):
     """Set session to view as a specific organization (customer support)."""
-    organization = Organization.query.get_or_404(org_id)
+    organization = db.get_or_404(Organization, org_id)
 
     session.pop("dev_selected_org_id", None)
     session.pop("dev_masquerade_context", None)

@@ -171,7 +171,10 @@ def update_inventory_item(
                     rounding_decimals=conversion_precision,
                 )
             except Exception as e:
-                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:173", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:173",
+                    exc_info=True,
+                )
                 db.session.rollback()
                 return (
                     False,
@@ -261,7 +264,10 @@ def update_inventory_item(
                         total_remaining_base = 0
                     total_remaining_base += int(lot.remaining_quantity_base or 0)
                 except Exception as e:
-                    logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:262", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:262",
+                        exc_info=True,
+                    )
                     db.session.rollback()
                     return (
                         False,
@@ -300,7 +306,10 @@ def update_inventory_item(
                         density=item.density,
                     )
                 except Exception as e:
-                    logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:300", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:300",
+                        exc_info=True,
+                    )
                     db.session.rollback()
                     return (
                         False,
@@ -389,7 +398,10 @@ def update_inventory_item(
                         try:
                             setattr(item, "density_source", "category_default")
                         except Exception:
-                            logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:388", exc_info=True)
+                            logger.warning(
+                                "Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:388",
+                                exc_info=True,
+                            )
                             pass
                 except (ValueError, TypeError):
                     return False, "Invalid category ID"
@@ -488,13 +500,19 @@ def update_inventory_item(
                     try:
                         setattr(item, "density_source", "category_default")
                     except Exception:
-                        logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:486", exc_info=True)
+                        logger.warning(
+                            "Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:486",
+                            exc_info=True,
+                        )
                         pass
                     # Skip manual density handling since category selection governs density
                     pass
             except Exception:
                 # Fall back to manual handling below if any error
-                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:490", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:490",
+                    exc_info=True,
+                )
                 pass
             if is_global_locked:
                 return (
@@ -515,7 +533,10 @@ def update_inventory_item(
                     try:
                         setattr(item, "density_source", "manual")
                     except Exception:
-                        logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:511", exc_info=True)
+                        logger.warning(
+                            "Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:511",
+                            exc_info=True,
+                        )
                         pass
             except (ValueError, TypeError):
                 return (
@@ -560,7 +581,10 @@ def update_inventory_item(
         return True, success_message
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:555", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/inventory_adjustment/_edit_logic.py:555",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error updating inventory item {item_id}: {str(e)}")
         return False, f"Database error: {str(e)}"

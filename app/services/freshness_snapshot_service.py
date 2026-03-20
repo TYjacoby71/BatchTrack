@@ -7,7 +7,6 @@ from app.models import FreshnessSnapshot, InventoryItem, UnifiedInventoryHistory
 logger = logging.getLogger(__name__)
 
 
-
 class FreshnessSnapshotService:
     @staticmethod
     def compute_for_item(
@@ -33,7 +32,10 @@ class FreshnessSnapshotService:
                 if e.affected_lot and e.affected_lot.received_date and e.timestamp:
                     return max(0, (e.timestamp - e.affected_lot.received_date).days)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/freshness_snapshot_service.py:31", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/freshness_snapshot_service.py:31",
+                    exc_info=True,
+                )
                 return None
             return None
 

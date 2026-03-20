@@ -18,10 +18,14 @@ from app.services.lineage_service import generate_variation_prefix
 def create_variation_template(parent: Recipe) -> Recipe:
     variation_prefix = ""
     if parent.label_prefix:
-        existing_variations = Recipe.scoped().filter(
-            Recipe.parent_recipe_id == parent.id,
-            Recipe.test_sequence.is_(None),
-        ).count()
+        existing_variations = (
+            Recipe.scoped()
+            .filter(
+                Recipe.parent_recipe_id == parent.id,
+                Recipe.test_sequence.is_(None),
+            )
+            .count()
+        )
         variation_prefix = f"{parent.label_prefix}V{existing_variations + 1}"
 
     template = Recipe(

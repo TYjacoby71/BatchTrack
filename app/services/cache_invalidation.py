@@ -1,6 +1,6 @@
 from __future__ import annotations
-import logging
 
+import logging
 from typing import Any, Mapping
 
 from flask import has_app_context
@@ -54,7 +54,10 @@ def _safe_delete(key: str) -> None:
         cache.delete(key)
     except Exception:
         # Cache invalidation should never raise downstream.
-        logger.warning("Suppressed exception fallback at app/services/cache_invalidation.py:51", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/cache_invalidation.py:51",
+            exc_info=True,
+        )
         pass
 
 
@@ -116,14 +119,20 @@ def _namespace_version(namespace: str) -> int:
     try:
         version = cache.get(version_key)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/cache_invalidation.py:113", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/cache_invalidation.py:113",
+            exc_info=True,
+        )
         version = None
     if not version:
         version = 1
         try:
             cache.set(version_key, version)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/cache_invalidation.py:119", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/cache_invalidation.py:119",
+                exc_info=True,
+            )
             pass
     return int(version or 1)
 
@@ -140,12 +149,18 @@ def _bump_namespace(namespace: str) -> None:
     try:
         version = int(cache.get(version_key) or 1) + 1
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/cache_invalidation.py:135", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/cache_invalidation.py:135",
+            exc_info=True,
+        )
         version = 2
     try:
         cache.set(version_key, version)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/services/cache_invalidation.py:139", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/cache_invalidation.py:139",
+            exc_info=True,
+        )
         pass
 
 

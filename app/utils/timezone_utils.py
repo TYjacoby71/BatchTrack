@@ -1,6 +1,6 @@
 from __future__ import annotations
-import logging
 
+import logging
 from datetime import datetime
 from datetime import timezone as dt_timezone
 from typing import Dict, List, Set, Tuple
@@ -278,7 +278,10 @@ class TimezoneUtils:
         try:
             user = current_user
         except Exception:
-            logger.warning("Suppressed exception fallback at app/utils/timezone_utils.py:276", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/utils/timezone_utils.py:276",
+                exc_info=True,
+            )
             return DEFAULT_TIMEZONE
         if user and getattr(user, "is_authenticated", False):
             candidate = getattr(user, "timezone", DEFAULT_TIMEZONE) or DEFAULT_TIMEZONE

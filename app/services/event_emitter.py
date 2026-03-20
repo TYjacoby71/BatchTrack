@@ -35,7 +35,9 @@ class EventEmitter:
     _CORE_USAGE_EVENTS = set(CORE_USAGE_EVENT_NAMES)
 
     @staticmethod
-    def _safe_event_count(*, event_name: str, user_id: int | None, org_id: int | None) -> tuple[int | None, int | None]:
+    def _safe_event_count(
+        *, event_name: str, user_id: int | None, org_id: int | None
+    ) -> tuple[int | None, int | None]:
         user_count = None
         org_count = None
         try:
@@ -58,7 +60,10 @@ class EventEmitter:
                     .scalar()
                 ) or 0
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/event_emitter.py:60", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/event_emitter.py:60",
+                exc_info=True,
+            )
             user_count = None
             org_count = None
         return user_count, org_count
@@ -77,7 +82,10 @@ class EventEmitter:
                 .scalar()
             )
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/event_emitter.py:78", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/event_emitter.py:78",
+                exc_info=True,
+            )
             return None
 
     @staticmethod
@@ -189,6 +197,9 @@ class EventEmitter:
             try:
                 db.session.rollback()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/event_emitter.py:189", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/event_emitter.py:189",
+                    exc_info=True,
+                )
                 pass
             return None

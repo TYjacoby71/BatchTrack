@@ -1,5 +1,5 @@
-import logging
 import json
+import logging
 import os
 import re
 import sys
@@ -372,7 +372,10 @@ def seed_ingredients_from_files(selected_files):
             with open(filepath, "r") as f:
                 category_data = json.load(f)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/seeders/seed_ingredients.py:370", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/seed_ingredients.py:370",
+                exc_info=True,
+            )
             continue
 
         cat_name = category_data.get("category_name", "").strip()
@@ -564,6 +567,9 @@ if __name__ == "__main__":
             print(f"📊 Categories created: {categories_created}")
             print(f"📊 Items created: {items_created}")
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/seeders/seed_ingredients.py:561", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/seeders/seed_ingredients.py:561",
+                exc_info=True,
+            )
             db.session.rollback()
             print(f"\n❌ Seeding failed during commit: {e}")

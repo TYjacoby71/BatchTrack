@@ -13,6 +13,7 @@ Glossary:
 from flask import render_template
 from flask_login import login_required
 
+from ...extensions import db
 from ...models import Organization, User
 from ...utils.permissions import require_permission
 from . import admin_bp
@@ -40,7 +41,7 @@ def list_organizations():
 @require_permission("dev.system_admin")
 def view_organization(org_id):
     """View specific organization details"""
-    org = Organization.query.get_or_404(org_id)
+    org = db.get_or_404(Organization, org_id)
     users = User.query.filter_by(organization_id=org_id).all()
     return render_template(
         "admin/organization_detail.html", organization=org, users=users

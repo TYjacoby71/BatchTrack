@@ -16,12 +16,11 @@ from flask import (
 from flask_login import current_user
 
 from ...extensions import limiter
-from ...services.oauth_service import OAuthService
 from ...services.affiliate_service import AffiliateService
 from ...services.billing.orchestrators.public_signup_orchestrator import (
     PublicSignupOrchestrator,
 )
-from ...services.signup_checkout_service import SignupCheckoutService  # compatibility
+from ...services.oauth_service import OAuthService
 from . import auth_bp
 
 
@@ -201,7 +200,9 @@ def signup():
         oauth_providers=oauth_providers,
         canonical_url=url_for("core.signup_alias", _external=True),
     )
-    response = make_response(render_template("pages/auth/signup.html", **template_context))
+    response = make_response(
+        render_template("pages/auth/signup.html", **template_context)
+    )
     return AffiliateService.set_referral_cookie(
         response,
         signup_context.referral_code,

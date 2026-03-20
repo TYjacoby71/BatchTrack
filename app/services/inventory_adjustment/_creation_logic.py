@@ -167,7 +167,10 @@ def create_inventory_item(
             try:
                 global_item = db.session.get(GlobalItem, int(global_item_id))
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:169", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:169",
+                    exc_info=True,
+                )
                 global_item = None
 
         # Determine item type, preferring global item if provided
@@ -234,7 +237,10 @@ def create_inventory_item(
             try:
                 category_id = int(raw_category_id)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:235", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:235",
+                    exc_info=True,
+                )
                 category_id = None
 
         # Extract numeric fields with defaults
@@ -360,7 +366,10 @@ def create_inventory_item(
                 new_item.container_style = style or None
                 new_item.container_color = color or None
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:360", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:360",
+                    exc_info=True,
+                )
                 pass
 
         # Apply global item defaults after instance is created
@@ -385,7 +394,10 @@ def create_inventory_item(
                     if getattr(global_item, "container_color", None):
                         new_item.container_color = global_item.container_color
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:384", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:384",
+                    exc_info=True,
+                )
                 pass
 
             # Ingredient metadata defaults
@@ -407,7 +419,10 @@ def create_inventory_item(
                             category_name=cat.name,
                         )
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:405", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:405",
+                    exc_info=True,
+                )
                 pass
 
         # 2) If a global item was selected, ensure category linkage to matching IngredientCategory by name
@@ -424,7 +439,10 @@ def create_inventory_item(
                 if cat:
                     new_item.category_id = cat.id
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:421", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:421",
+                    exc_info=True,
+                )
                 pass
 
         # 3) If no density provided and no global item and no ref category assignment, try auto-assign based on name/category
@@ -463,13 +481,22 @@ def create_inventory_item(
                                         new_item, "density_source", "category_default"
                                     )
                                 except Exception:
-                                    logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:459", exc_info=True)
+                                    logger.warning(
+                                        "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:459",
+                                        exc_info=True,
+                                    )
                                     pass
                     except Exception:
-                        logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:461", exc_info=True)
+                        logger.warning(
+                            "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:461",
+                            exc_info=True,
+                        )
                         pass
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:463", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:463",
+                    exc_info=True,
+                )
                 pass
 
         # 4) If user provided custom density, override
@@ -480,7 +507,10 @@ def create_inventory_item(
                     new_item.density = parsed
                     new_item.density_source = "manual"
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:473", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:473",
+                    exc_info=True,
+                )
                 pass
 
         # Before saving containers, reuse an existing match if attributes align
@@ -535,7 +565,10 @@ def create_inventory_item(
                             parsed_date = parsed_date.replace(tzinfo=timezone.utc)
                         custom_expiration_date = parsed_date
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:527", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:527",
+                        exc_info=True,
+                    )
                     custom_expiration_date = None
 
             # Use the local initial stock handler (no circular dependency)
@@ -596,13 +629,19 @@ def create_inventory_item(
                 auto_commit=auto_commit,
             )
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:587", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:587",
+                exc_info=True,
+            )
             pass
 
         return True, f"Created {new_item.name}", new_item.id
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:592", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/inventory_adjustment/_creation_logic.py:592",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error(f"Error creating inventory item: {str(e)}")
         return False, f"Failed to create inventory item: {str(e)}", None

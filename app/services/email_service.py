@@ -272,9 +272,9 @@ class EmailService:
 
     @staticmethod
     def _smtp_configured() -> bool:
-        default_sender = current_app.config.get("MAIL_DEFAULT_SENDER") or current_app.config.get(
-            "DEFAULT_FROM_EMAIL"
-        )
+        default_sender = current_app.config.get(
+            "MAIL_DEFAULT_SENDER"
+        ) or current_app.config.get("DEFAULT_FROM_EMAIL")
         mail_server = current_app.config.get("MAIL_SERVER")
         if not default_sender or not mail_server:
             return False
@@ -352,7 +352,9 @@ class EmailService:
             if 200 <= status_code < 300:
                 logger.info(f"Email sent to {recipient} via Postmark")
                 return True
-            logger.error(f"Postmark error {status_code}: {response_text}")  # pragma: allowlist secret
+            logger.error(
+                f"Postmark error {status_code}: {response_text}"  # pragma: allowlist secret
+            )
             return False
         except Exception as e:
             logger.exception("Postmark send error: %s", e)  # pragma: allowlist secret
@@ -443,7 +445,9 @@ class EmailService:
                 "MAIL_DEFAULT_SENDER"
             ) or current_app.config.get("DEFAULT_FROM_EMAIL")
             if provider == "sendgrid":
-                return bool(current_app.config.get("SENDGRID_API_KEY") and default_sender)
+                return bool(
+                    current_app.config.get("SENDGRID_API_KEY") and default_sender
+                )
             if provider == "postmark":
                 return bool(
                     current_app.config.get("POSTMARK_SERVER_TOKEN") and default_sender
@@ -464,7 +468,10 @@ class EmailService:
                 and current_app.config.get("MAIL_PASSWORD")
             )
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/email_service.py:400", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/email_service.py:400",
+                exc_info=True,
+            )
             return False
 
     @staticmethod
@@ -532,16 +539,17 @@ class EmailService:
             return False
 
         try:
-            resolved_waitlist_label = (waitlist_label or "BatchTrack").strip() or "BatchTrack"
+            resolved_waitlist_label = (
+                waitlist_label or "BatchTrack"
+            ).strip() or "BatchTrack"
             resolved_signup_url = signup_url or url_for(
                 "core.signup_alias",
                 source="waitlist_confirmation_email",
                 _external=True,
             )
             resolved_signup_cta_label = (
-                (signup_cta_label or "Start with Hobbyist while you wait").strip()
-                or "Start with Hobbyist while you wait"
-            )
+                signup_cta_label or "Start with Hobbyist while you wait"
+            ).strip() or "Start with Hobbyist while you wait"
 
             subject = f"You're on the {resolved_waitlist_label} waitlist!"
 

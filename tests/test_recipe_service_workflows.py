@@ -676,10 +676,7 @@ def test_batch_counts_are_recipe_scoped_per_version_and_test():
     db.session.add_all([master_batch, test_batch])
     db.session.commit()
 
-    assert (
-        count_batches_for_recipe(master, organization_id=master.organization_id)
-        == 1
-    )
+    assert count_batches_for_recipe(master, organization_id=master.organization_id) == 1
     assert (
         count_batches_for_recipe(
             test_recipe, organization_id=test_recipe.organization_id
@@ -1208,7 +1205,9 @@ def test_repair_test_sequences_fixes_interleaved_variation_tests():
     for row in repaired_group_versions:
         if row.test_sequence is None or row.is_master:
             continue
-        version_tests.setdefault(int(row.version_number), []).append(int(row.test_sequence))
+        version_tests.setdefault(int(row.version_number), []).append(
+            int(row.test_sequence)
+        )
     for seqs in version_tests.values():
         assert sorted(seqs) == [1, 2]
 
@@ -1324,12 +1323,14 @@ def test_view_recipe_cost_card_shows_total_when_item_cost_exists(app, client):
     assert "Total Recipe Cost:" in body
     assert '<h5 class="text-success mb-0">$0.06</h5>' in body
     assert (
-        "Total Recipe Cost:</strong>\n          <span class=\"text-muted\">Not available</span>"
+        'Total Recipe Cost:</strong>\n          <span class="text-muted">Not available</span>'
         not in body
     )
 
 
-def test_create_test_route_allows_all_published_variations_and_blocks_tests(app, client):
+def test_create_test_route_allows_all_published_variations_and_blocks_tests(
+    app, client
+):
     with app.app_context():
         user_id = User.query.first().id
         category = _create_category("TestRouteGuard")
@@ -1373,7 +1374,9 @@ def test_create_test_route_allows_all_published_variations_and_blocks_tests(app,
             target_status="published",
         )
         assert variation_test_ok, variation_test
-        promote_variation_ok, promoted_variation = promote_test_to_current(variation_test.id)
+        promote_variation_ok, promoted_variation = promote_test_to_current(
+            variation_test.id
+        )
         assert promote_variation_ok, promoted_variation
 
         test_ok, test_recipe = create_test_version(

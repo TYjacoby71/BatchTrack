@@ -71,14 +71,14 @@ def build_test_template(base: Recipe, *, test_sequence: int | None = None) -> Re
     if test_sequence:
         template.test_sequence = test_sequence
     template.version_number = base.version_number
+    # Keep transient templates detached: assigning relationship objects here
+    # can trigger backref unit-of-work warnings during unrelated autoflush.
     template.recipe_group_id = base.recipe_group_id
-    template.recipe_group = base.recipe_group
     template.is_master = base.is_master
     template.variation_name = base.variation_name
     template.variation_prefix = base.variation_prefix
     template.parent_recipe_id = base.id
     template.parent_master_id = base.parent_master_id
-    template.parent_master = base.parent_master
     template.portioning_data = (
         base.portioning_data.copy()
         if isinstance(base.portioning_data, dict)

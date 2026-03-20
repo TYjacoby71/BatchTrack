@@ -94,7 +94,10 @@ def forgot_password():
                         user.first_name or user.username,
                     )
             except Exception as exc:
-                logger.warning("Suppressed exception fallback at app/blueprints/auth/password_routes.py:95", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/auth/password_routes.py:95",
+                    exc_info=True,
+                )
                 db.session.rollback()
                 logger.warning("Forgot-password request failed for %s: %s", email, exc)
 
@@ -172,7 +175,10 @@ def reset_password(token):
                 identifiers=[user.username or "", user.email or ""],
             )
         except Exception as exc:
-            logger.warning("Suppressed exception fallback at app/blueprints/auth/password_routes.py:168", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/blueprints/auth/password_routes.py:168",
+                exc_info=True,
+            )
             db.session.rollback()
             logger.error(
                 "Password reset failed for user %s: %s", getattr(user, "id", None), exc

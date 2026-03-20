@@ -9,6 +9,7 @@ Glossary:
 - Adjustment request: API payload describing container change intent/details.
 - Batch integration service: Service layer that executes container operations.
 """
+
 import logging
 
 from flask import Blueprint, jsonify, request
@@ -49,7 +50,10 @@ def get_batch_containers(batch_id):
         return jsonify(result["data"])
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/container_routes.py:47", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/container_routes.py:47",
+            exc_info=True,
+        )
         return jsonify({"error": str(e)}), 500
 
 
@@ -84,7 +88,10 @@ def remove_batch_container(batch_id, container_id):
             )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/container_routes.py:81", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/container_routes.py:81",
+            exc_info=True,
+        )
         return jsonify({"success": False, "message": str(e)}), 500
 
 
@@ -129,5 +136,8 @@ def adjust_batch_container(batch_id, container_id):
             )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/api/container_routes.py:125", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/api/container_routes.py:125",
+            exc_info=True,
+        )
         return jsonify({"success": False, "message": str(e)}), 500

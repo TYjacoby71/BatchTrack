@@ -29,7 +29,10 @@ def _resolve_scoped_org_context(
             if existing_recipe and scoped_org_id is None:
                 scoped_org_id = existing_recipe.organization_id
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/recipe_service/_validation.py:31", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/recipe_service/_validation.py:31",
+                exc_info=True,
+            )
             existing_recipe = None
 
     if scoped_org_id is None:
@@ -40,7 +43,10 @@ def _resolve_scoped_org_context(
                 else:
                     scoped_org_id = getattr(current_user, "organization_id", None)
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/recipe_service/_validation.py:41", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/recipe_service/_validation.py:41",
+                exc_info=True,
+            )
             scoped_org_id = None
 
     return scoped_org_id, existing_recipe
@@ -105,7 +111,10 @@ def validate_recipe_data(
                 byq = float(portioning_data.get("bulk_yield_quantity") or 0)
                 bulk_yield_ok = byq > 0
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/recipe_service/_validation.py:105", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/recipe_service/_validation.py:105",
+                exc_info=True,
+            )
             bulk_yield_ok = False
 
         has_valid_yield = has_direct_yield or bulk_yield_ok
@@ -124,7 +133,10 @@ def validate_recipe_data(
             try:
                 portion_count_candidate = int(portioning_data.get("portion_count") or 0)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/services/recipe_service/_validation.py:123", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/services/recipe_service/_validation.py:123",
+                    exc_info=True,
+                )
                 portion_count_candidate = 0
         elif existing_recipe and existing_recipe.is_portioned:
             portion_requires_count = True
@@ -211,7 +223,9 @@ def validate_recipe_name(
             organization_id, recipe_id
         )
         current_group_id = (
-            getattr(existing_recipe, "recipe_group_id", None) if existing_recipe else None
+            getattr(existing_recipe, "recipe_group_id", None)
+            if existing_recipe
+            else None
         )
 
         # Master recipe names are unique at the recipe-group level.

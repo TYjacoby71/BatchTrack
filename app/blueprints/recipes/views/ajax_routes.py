@@ -27,10 +27,14 @@ def quick_add_ingredient():
         if not name:
             return jsonify({"error": "Ingredient name is required"}), 400
 
-        existing = InventoryItem.scoped().filter_by(
-            name=name,
-            organization_id=current_user.organization_id,
-        ).first()
+        existing = (
+            InventoryItem.scoped()
+            .filter_by(
+                name=name,
+                organization_id=current_user.organization_id,
+            )
+            .first()
+        )
 
         if existing:
             return jsonify(
@@ -68,7 +72,10 @@ def quick_add_ingredient():
         )
 
     except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/ajax_routes.py:131", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/recipes/views/ajax_routes.py:131",
+            exc_info=True,
+        )
         db.session.rollback()
         logger.error("Error quick-adding ingredient: %s", exc)
         return jsonify({"error": str(exc)}), 500

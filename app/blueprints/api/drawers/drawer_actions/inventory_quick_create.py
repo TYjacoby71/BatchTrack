@@ -41,7 +41,9 @@ register_drawer_action(
 def inventory_quick_create_modal_get():
     """Return the quick-create inventory drawer."""
     units = get_global_unit_list()
-    categories = IngredientCategory.scoped().order_by(IngredientCategory.name.asc()).all()
+    categories = (
+        IngredientCategory.scoped().order_by(IngredientCategory.name.asc()).all()
+    )
     modal_html = render_template(
         "components/drawer/quick_create_inventory_drawer.html",
         inventory_units=units,

@@ -9,6 +9,7 @@ Glossary:
 - Catalog metadata: Consolidated permission descriptions/categories from seeder.
 - Role management: Creation/update helpers for organization/system roles.
 """
+
 import logging
 
 from flask import jsonify, render_template, request
@@ -22,7 +23,6 @@ from app.utils.permissions import clear_permission_scope_cache, require_permissi
 from . import auth_bp
 
 logger = logging.getLogger(__name__)
-
 
 
 # --- Get tier permissions ---
@@ -57,7 +57,10 @@ def _load_permission_catalog():
 
         data = load_consolidated_permissions()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:55", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/auth/permissions.py:55",
+            exc_info=True,
+        )
         return {}
 
     catalog = {}
@@ -267,7 +270,10 @@ def update_permission_matrix():
                 for tier in org_perm.tiers.all():
                     org_perm.tiers.remove(tier)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:264", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/auth/permissions.py:264",
+                    exc_info=True,
+                )
                 pass
             db.session.delete(org_perm)
 
@@ -303,7 +309,10 @@ def update_permission_matrix():
             }
         )
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:299", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/auth/permissions.py:299",
+            exc_info=True,
+        )
         db.session.rollback()
         return (
             jsonify(
@@ -328,9 +337,9 @@ def toggle_permission_status():
 
     try:
         if permission_table == "developer_permission":
-            permission = DeveloperPermission.query.get_or_404(permission_id)
+            permission = db.get_or_404(DeveloperPermission, permission_id)
         elif permission_table == "permission":
-            permission = Permission.query.get_or_404(permission_id)
+            permission = db.get_or_404(Permission, permission_id)
         else:
             return jsonify({"success": False, "message": "Invalid permission table"})
 
@@ -347,7 +356,10 @@ def toggle_permission_status():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:342", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/auth/permissions.py:342",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify(
             {"success": False, "message": f"Error updating permission: {str(e)}"}
@@ -433,7 +445,10 @@ def create_role():
         return jsonify({"success": True, "message": "Role created successfully"})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:427", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/auth/permissions.py:427",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -447,7 +462,7 @@ def create_role():
 def update_role(role_id):
     """Update role"""
     try:
-        role = Role.query.get_or_404(role_id)
+        role = db.get_or_404(Role, role_id)
 
         # Check permissions
         if role.is_system_role and current_user.user_type != "developer":
@@ -482,6 +497,9 @@ def update_role(role_id):
         return jsonify({"success": True, "message": "Role updated successfully"})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/auth/permissions.py:475", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/auth/permissions.py:475",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})

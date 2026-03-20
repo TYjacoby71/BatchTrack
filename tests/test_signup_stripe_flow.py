@@ -131,7 +131,7 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         response = client.post(
             "/auth/signup",
             data={
-                    "selected_tier": str(solo_id),
+                "selected_tier": str(solo_id),
                 "contact_email": "solo@applicant.com",
                 "contact_phone": "555-0100",
             },
@@ -171,7 +171,9 @@ def test_signup_flow_end_to_end(app, client, monkeypatch, request):
         # Simulate success route
         def fake_finalize(session_id):
             assert session_id == "cs_live"
-            return db.session.get(type(org), org_id), db.session.get(type(user), user_id)
+            return db.session.get(type(org), org_id), db.session.get(
+                type(user), user_id
+            )
 
         monkeypatch.setattr(BillingService, "finalize_checkout_session", fake_finalize)
 

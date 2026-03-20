@@ -51,7 +51,10 @@ def _rollback_if_inactive() -> None:
         if not getattr(db.session, "is_active", True):
             db.session.rollback()
     except Exception:
-        logger.warning("Suppressed exception fallback at app/utils/permissions.py:53", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/utils/permissions.py:53",
+            exc_info=True,
+        )
         pass
 
 
@@ -123,7 +126,10 @@ def _record_required_permissions(func, permissions: Iterable[str]):
                 required.add(permission)
         func._required_permissions = required
     except Exception:
-        logger.warning("Suppressed exception fallback at app/utils/permissions.py:124", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/utils/permissions.py:124",
+            exc_info=True,
+        )
         pass
     return func
 
@@ -203,7 +209,10 @@ def _safe_referrer() -> str | None:
         ):
             return referrer
     except Exception:
-        logger.warning("Suppressed exception fallback at app/utils/permissions.py:203", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/utils/permissions.py:203",
+            exc_info=True,
+        )
         return None
     return None
 
@@ -498,7 +507,10 @@ def has_tier_permission(
         tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(org)
         return permission_name in tier_permissions
     except Exception:
-        logger.warning("Suppressed exception fallback at app/utils/permissions.py:497", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/utils/permissions.py:497",
+            exc_info=True,
+        )
         return False
 
 
@@ -547,14 +559,20 @@ def get_effective_organization():
                         return None
                     return org
                 except Exception as e:
-                    logger.warning("Suppressed exception fallback at app/utils/permissions.py:545", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/utils/permissions.py:545",
+                        exc_info=True,
+                    )
                     print("---!!! DEVELOPER ORG QUERY ERROR !!!---")
                     print(f"Error: {e}")
                     print("--------------------------------------")
                     try:
                         db.session.rollback()
                     except Exception:
-                        logger.warning("Suppressed exception fallback at app/utils/permissions.py:551", exc_info=True)
+                        logger.warning(
+                            "Suppressed exception fallback at app/utils/permissions.py:551",
+                            exc_info=True,
+                        )
                         pass
                     return None
             return None
@@ -563,25 +581,37 @@ def get_effective_organization():
             try:
                 return current_user.organization
             except Exception as e:
-                logger.warning("Suppressed exception fallback at app/utils/permissions.py:559", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/utils/permissions.py:559",
+                    exc_info=True,
+                )
                 print("---!!! USER ORGANIZATION QUERY ERROR !!!---")
                 print(f"Error: {e}")
                 print("-------------------------------------------")
                 try:
                     db.session.rollback()
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/utils/permissions.py:565", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/utils/permissions.py:565",
+                        exc_info=True,
+                    )
                     pass
                 return None
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/utils/permissions.py:568", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/utils/permissions.py:568",
+            exc_info=True,
+        )
         print("---!!! GENERAL ORGANIZATION ACCESS ERROR !!!---")
         print(f"Error: {e}")
         print("-----------------------------------------------")
         try:
             db.session.rollback()
         except Exception:
-            logger.warning("Suppressed exception fallback at app/utils/permissions.py:574", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/utils/permissions.py:574",
+                exc_info=True,
+            )
             pass
         return None
 
@@ -620,7 +650,10 @@ def has_role(role_name):
             roles = current_user.get_active_roles()
             return any(role.name == role_name for role in roles)
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/utils/permissions.py:612", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/utils/permissions.py:612",
+            exc_info=True,
+        )
         print(f"Error checking role {role_name}: {e}")
 
     return False
@@ -705,7 +738,10 @@ class AuthorizationHierarchy:
             )
             permissions = [name for (name,) in rows]
         except Exception:
-            logger.warning("Suppressed exception fallback at app/utils/permissions.py:721", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/utils/permissions.py:721",
+                exc_info=True,
+            )
             permissions = []
 
         tier = getattr(organization, "tier", None)
@@ -728,7 +764,10 @@ class AuthorizationHierarchy:
                     if p not in addon_perm_names or p in included_perm_names
                 ]
         except Exception:
-            logger.warning("Suppressed exception fallback at app/utils/permissions.py:743", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/utils/permissions.py:743",
+                exc_info=True,
+            )
             pass
 
         if cache is not None and cache_key is not None:
@@ -825,21 +864,30 @@ class AuthorizationHierarchy:
                 try:
                     db.session.rollback()
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/utils/permissions.py:839", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/utils/permissions.py:839",
+                        exc_info=True,
+                    )
                     pass
                 return False
 
             return False
 
         except Exception as e:
-            logger.warning("Suppressed exception fallback at app/utils/permissions.py:845", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/utils/permissions.py:845",
+                exc_info=True,
+            )
             print("---!!! AUTHORIZATION CHECK ERROR !!!---")
             print(f"Error: {e}")
             print("--------------------------------------")
             try:
                 db.session.rollback()
             except Exception:
-                logger.warning("Suppressed exception fallback at app/utils/permissions.py:851", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/utils/permissions.py:851",
+                    exc_info=True,
+                )
                 pass
             return False
 
@@ -909,7 +957,10 @@ class AuthorizationHierarchy:
                     if a and a.permission_name:
                         addon_permissions.append(a.permission_name)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/utils/permissions.py:920", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/utils/permissions.py:920",
+                    exc_info=True,
+                )
                 pass
             # Purchased add-ons
             from app.models.addon import OrganizationAddon

@@ -23,7 +23,7 @@ from typing import Any
 
 from flask import current_app, session
 
-from app.services.ai import GoogleAIClient, GoogleAIClientError
+from app.services.ai import GoogleAIClient
 from app.utils.json_store import read_json_file, write_json_file
 
 _VALID_STATUSES = {"draft", "active", "archived"}
@@ -74,7 +74,9 @@ class SignupInfoPartialService:
                 partial for partial in partials if partial.get("status") != "archived"
             ]
         partials.sort(
-            key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""),
+            key=lambda item: str(
+                item.get("updated_at") or item.get("created_at") or ""
+            ),
             reverse=True,
         )
         return partials
@@ -168,7 +170,9 @@ class SignupInfoPartialService:
             raise SignupInfoPartialServiceError("Partial not found.")
 
         if name is not None:
-            clean_name = str(name).strip() or target.get("name") or "Signup Info Partial"
+            clean_name = (
+                str(name).strip() or target.get("name") or "Signup Info Partial"
+            )
             target["name"] = clean_name
             target["slug"] = cls._slugify(clean_name)
         if status is not None:
@@ -193,9 +197,9 @@ class SignupInfoPartialService:
         base = cls.get_partial(partial_id)
         if not base:
             raise SignupInfoPartialServiceError("Base partial not found.")
-        lineage_key = str(base.get("lineage_key") or base.get("id") or "").strip() or str(
-            base.get("id") or ""
-        )
+        lineage_key = str(
+            base.get("lineage_key") or base.get("id") or ""
+        ).strip() or str(base.get("id") or "")
         next_version = cls._next_lineage_version(lineage_key=lineage_key)
         clone_name = (
             str(as_name).strip()
@@ -242,14 +246,15 @@ class SignupInfoPartialService:
             prompt=clean_prompt,
             tier_names=tier_names or [],
         )
-        lineage_key = str(base.get("lineage_key") or base.get("id") or "").strip() or str(
-            base.get("id") or ""
-        )
+        lineage_key = str(
+            base.get("lineage_key") or base.get("id") or ""
+        ).strip() or str(base.get("id") or "")
         next_version = cls._next_lineage_version(lineage_key=lineage_key)
         return cls.create_partial(
             name=ai_payload.get("name")
             or f"{base.get('name') or 'Signup Info Partial'} v{next_version}",
-            html_content=ai_payload.get("html_content") or str(base.get("html_content") or ""),
+            html_content=ai_payload.get("html_content")
+            or str(base.get("html_content") or ""),
             status="draft",
             parent_partial_id=str(base.get("id") or ""),
             lineage_key=lineage_key,
@@ -291,7 +296,8 @@ class SignupInfoPartialService:
         updated = cls.update_partial(
             partial_id=str(partial_id),
             name=ai_payload.get("name") if allow_name_update else None,
-            html_content=ai_payload.get("html_content") or str(base.get("html_content") or ""),
+            html_content=ai_payload.get("html_content")
+            or str(base.get("html_content") or ""),
         )
         updated["source_prompt"] = clean_prompt
         updated["ai_model"] = model_name
@@ -513,7 +519,9 @@ class SignupInfoPartialService:
         assignments_raw = raw.get("assignments") if isinstance(raw, dict) else {}
         if not isinstance(assignments_raw, dict):
             assignments_raw = {}
-        default_assignment = cls._normalize_assignment(assignments_raw.get("default") or {})
+        default_assignment = cls._normalize_assignment(
+            assignments_raw.get("default") or {}
+        )
         if not default_assignment.get("primary_partial_id"):
             default_assignment["primary_partial_id"] = str(
                 normalized_partials[0].get("id") or ""
@@ -527,7 +535,9 @@ class SignupInfoPartialService:
                     continue
                 tier_assignments[tier_key] = cls._normalize_assignment(assignment or {})
 
-        posthog = cls._normalize_posthog(raw.get("posthog") if isinstance(raw, dict) else {})
+        posthog = cls._normalize_posthog(
+            raw.get("posthog") if isinstance(raw, dict) else {}
+        )
         return {
             "partials": normalized_partials,
             "assignments": {
@@ -539,9 +549,7 @@ class SignupInfoPartialService:
         }
 
     @classmethod
-    def _normalize_partial(
-        cls, raw: dict[str, Any], *, index: int
-    ) -> dict[str, Any]:
+    def _normalize_partial(cls, raw: dict[str, Any], *, index: int) -> dict[str, Any]:
         source = raw if isinstance(raw, dict) else {}
         now_iso = cls._utc_now_iso()
         name = str(source.get("name") or f"Signup Info Partial {index + 1}").strip()
@@ -565,7 +573,8 @@ class SignupInfoPartialService:
             "status": cls._normalize_status(source.get("status")),
             "version": version_value,
             "lineage_key": lineage_key,
-            "parent_partial_id": str(source.get("parent_partial_id") or "").strip() or None,
+            "parent_partial_id": str(source.get("parent_partial_id") or "").strip()
+            or None,
             "html_content": html_content,
             "source_prompt": str(source.get("source_prompt") or "").strip() or None,
             "ai_model": str(source.get("ai_model") or "").strip() or None,
@@ -753,7 +762,9 @@ class SignupInfoPartialService:
         context_payload = {
             "base_partial_name": str(base_partial.get("name") or ""),
             "base_partial_html": str(base_partial.get("html_content") or ""),
-            "tier_names": [str(name).strip() for name in tier_names if str(name).strip()],
+            "tier_names": [
+                str(name).strip() for name in tier_names if str(name).strip()
+            ],
             "task_prompt": prompt,
             "constraints": {
                 "max_words": 220,
@@ -791,7 +802,9 @@ class SignupInfoPartialService:
         name = str(parsed.get("name") or "").strip()
         if not html_content:
             fallback_text = str(result.text or "").strip()
-            html_content = f"<div class='signup-info-block'><p>{fallback_text}</p></div>"
+            html_content = (
+                f"<div class='signup-info-block'><p>{fallback_text}</p></div>"
+            )
         if not name:
             random_suffix = random.randint(100, 999)
             name = f"{base_partial.get('name') or 'Signup Info Partial'} AI Draft {random_suffix}"

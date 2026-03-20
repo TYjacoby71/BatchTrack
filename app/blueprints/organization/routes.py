@@ -16,7 +16,11 @@ from flask_login import current_user, login_required
 from app.extensions import db
 from app.models import Role, User
 from app.services.affiliate_service import AffiliateService
-from app.utils.permissions import any_permission_required, has_permission, require_permission
+from app.utils.permissions import (
+    any_permission_required,
+    has_permission,
+    require_permission,
+)
 from app.utils.settings import is_feature_enabled
 
 logger = logging.getLogger(__name__)
@@ -67,7 +71,10 @@ def dashboard():
             for t in db_tiers
         }
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:60", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:60",
+            exc_info=True,
+        )
         tiers_config = {}
 
     # Get organization data - handle developer customer view
@@ -185,8 +192,12 @@ def affiliate_dashboard():
     affiliate_context = AffiliateService.build_organization_dashboard_context(
         organization, page=affiliate_page, per_page=25
     )
-    affiliate_analytics = AffiliateService.build_organization_analytics_context(organization)
-    affiliate_payout_account = AffiliateService.get_or_create_payout_account(organization)
+    affiliate_analytics = AffiliateService.build_organization_analytics_context(
+        organization
+    )
+    affiliate_payout_account = AffiliateService.get_or_create_payout_account(
+        organization
+    )
 
     return render_template(
         "pages/organization/affiliate_dashboard.html",
@@ -242,7 +253,10 @@ def create_role():
         return jsonify({"success": True, "message": "Role created successfully"})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:178", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:178",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -302,7 +316,10 @@ def update_organization_settings():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:237", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:237",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -363,7 +380,10 @@ def update_subscription_tier():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:297", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:297",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -469,7 +489,10 @@ def invite_user():
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:413", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:413",
+            exc_info=True,
+        )
         db.session.rollback()
         print(f"Error inviting user: {str(e)}")  # For debugging
         return jsonify({"success": False, "error": f"Failed to invite user: {str(e)}"})
@@ -504,7 +527,10 @@ def update_organization():
         return jsonify({"success": True, "message": "Organization settings updated"})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:447", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:447",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -545,7 +571,10 @@ def export_report(report_type):
         return redirect(url_for("organization.dashboard"))
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:487", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:487",
+            exc_info=True,
+        )
         flash(f"Export error: {str(e)}", "error")
         return redirect(url_for("organization.dashboard"))
 
@@ -610,7 +639,10 @@ def add_user():
         return jsonify({"success": True, "message": "User added successfully"})
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:551", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:551",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -742,9 +774,11 @@ def update_user(user_id):
 
                 from app.models.role import Role
 
-                org_owner_role = Role.scoped().filter_by(
-                    name="organization_owner", is_system_role=True
-                ).first()
+                org_owner_role = (
+                    Role.scoped()
+                    .filter_by(name="organization_owner", is_system_role=True)
+                    .first()
+                )
 
                 for other_owner in other_owners:
                     other_owner.is_organization_owner = False
@@ -766,9 +800,11 @@ def update_user(user_id):
                 # Remove the organization owner role
                 from app.models.role import Role
 
-                org_owner_role = Role.scoped().filter_by(
-                    name="organization_owner", is_system_role=True
-                ).first()
+                org_owner_role = (
+                    Role.scoped()
+                    .filter_by(name="organization_owner", is_system_role=True)
+                    .first()
+                )
                 if org_owner_role:
                     user.remove_role(org_owner_role)
 
@@ -794,7 +830,10 @@ def update_user(user_id):
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:734", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:734",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -860,7 +899,10 @@ def toggle_user_status(user_id):
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:799", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:799",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -913,7 +955,10 @@ def delete_user(user_id):
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:851", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:851",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
@@ -957,6 +1002,9 @@ def restore_user(user_id):
         )
 
     except Exception as e:
-        logger.warning("Suppressed exception fallback at app/blueprints/organization/routes.py:894", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/organization/routes.py:894",
+            exc_info=True,
+        )
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})

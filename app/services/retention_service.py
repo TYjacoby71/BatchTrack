@@ -10,7 +10,6 @@ from ..models.retention import RetentionDeletionQueue
 logger = logging.getLogger(__name__)
 
 
-
 class RetentionService:
     """Tier-driven data retention evaluation and deletion queueing."""
 
@@ -27,7 +26,10 @@ class RetentionService:
             ):
                 return None
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/retention_service.py:25", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/retention_service.py:25",
+                exc_info=True,
+            )
             pass
 
         try:
@@ -48,7 +50,10 @@ class RetentionService:
                 if has_retention_addon:
                     return None
         except Exception:
-            logger.warning("Suppressed exception fallback at app/services/retention_service.py:45", exc_info=True)
+            logger.warning(
+                "Suppressed exception fallback at app/services/retention_service.py:45",
+                exc_info=True,
+            )
             pass
 
         # Default baseline: without a retention add-on (included or purchased), keep 1-year retention
@@ -209,7 +214,10 @@ class RetentionService:
                     entry.status = "deleted"
                     deleted += 1
                 except Exception:
-                    logger.warning("Suppressed exception fallback at app/services/retention_service.py:205", exc_info=True)
+                    logger.warning(
+                        "Suppressed exception fallback at app/services/retention_service.py:205",
+                        exc_info=True,
+                    )
                     entry.status = "canceled"
 
         db.session.commit()

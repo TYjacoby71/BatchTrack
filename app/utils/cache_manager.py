@@ -30,7 +30,9 @@ try:  # optional dependency
     import redis  # type: ignore
     from redis.exceptions import RedisError  # type: ignore
 except Exception:  # pragma: no cover - optional dependency missing
-    logger.warning("Suppressed exception fallback at app/utils/cache_manager.py:27", exc_info=True)
+    logger.warning(
+        "Suppressed exception fallback at app/utils/cache_manager.py:27", exc_info=True
+    )
     redis = None
     RedisError = Exception  # type: ignore[misc,assignment]
 
@@ -211,7 +213,12 @@ class RedisCache:
                     return None
                 try:
                     value = _deserialize_cache_value(raw)
-                except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+                except (
+                    UnicodeDecodeError,
+                    json.JSONDecodeError,
+                    TypeError,
+                    ValueError,
+                ):
                     logger.warning(
                         "Invalid non-JSON Redis payload for %s; treating as cache miss.",
                         redis_key,
@@ -225,7 +232,10 @@ class RedisCache:
             except RedisError as exc:  # type: ignore[arg-type]
                 self._handle_redis_failure("get", exc)
             except Exception:
-                logger.warning("Suppressed exception fallback at app/utils/cache_manager.py:166", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/utils/cache_manager.py:166",
+                    exc_info=True,
+                )
                 pass
         return self._fallback.get(key)
 

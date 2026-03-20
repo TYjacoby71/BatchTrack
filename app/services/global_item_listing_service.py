@@ -1,6 +1,6 @@
 from __future__ import annotations
-import logging
 
+import logging
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional
 
@@ -59,7 +59,10 @@ def _attach_search_filter(query, search_query: str):
             "global_item_alias", db.metadata, autoload_with=db.engine
         )
     except Exception:  # pragma: no cover - defensive
-        logger.warning("Suppressed exception fallback at app/services/global_item_listing_service.py:57", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/global_item_listing_service.py:57",
+            exc_info=True,
+        )
         alias_table = None
 
     if alias_table is None:
@@ -99,7 +102,10 @@ def _fetch_categories() -> List[str]:
         if categories:
             return categories
     except Exception:  # pragma: no cover - defensive
-        logger.warning("Suppressed exception fallback at app/services/global_item_listing_service.py:96", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/services/global_item_listing_service.py:96",
+            exc_info=True,
+        )
         pass
 
     fallback = (

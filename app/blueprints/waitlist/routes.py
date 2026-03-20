@@ -1,14 +1,14 @@
 """Public waitlist capture routes."""
-import logging
 
+import logging
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from flask import Blueprint, jsonify, render_template, request, url_for
 
-from app.services.marketing_content_service import MarketingContentService
 from app.services.email_service import EmailService
+from app.services.marketing_content_service import MarketingContentService
 from app.services.marketing_lead_service import MarketingLeadService
 from app.services.public_bot_trap_service import PublicBotTrapService
 
@@ -185,9 +185,7 @@ def join_waitlist():
 
         if _should_send_waitlist_confirmation(metadata["waitlist_key"]):
             try:
-                signup_source = (
-                    f"waitlist_email_{_normalize_waitlist_key(metadata['waitlist_key'])}"
-                )
+                signup_source = f"waitlist_email_{_normalize_waitlist_key(metadata['waitlist_key'])}"
                 EmailService.send_waitlist_confirmation(
                     email=email,
                     first_name=first_name or None,
@@ -208,7 +206,10 @@ def join_waitlist():
         return jsonify({"message": "Successfully joined waitlist"}), 200
 
     except Exception as exc:  # pragma: no cover - defensive
-        logger.warning("Suppressed exception fallback at app/blueprints/waitlist/routes.py:156", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/waitlist/routes.py:156",
+            exc_info=True,
+        )
         import traceback
 
         print("Waitlist error:", exc)

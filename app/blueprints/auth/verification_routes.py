@@ -71,7 +71,10 @@ def _safe_local_path(candidate: str | None) -> str | None:
     try:
         parsed = urlparse(candidate)
     except Exception:
-        logger.warning("Suppressed exception fallback at app/blueprints/auth/verification_routes.py:73", exc_info=True)
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/auth/verification_routes.py:73",
+            exc_info=True,
+        )
         return None
 
     if not parsed.path.startswith("/") or parsed.path.startswith("//"):
@@ -90,7 +93,9 @@ def _safe_local_path(candidate: str | None) -> str | None:
 # Inputs: Form/query `next` candidate and current auth context.
 # Outputs: Relative redirect path string.
 def _resolve_resend_redirect_target() -> str:
-    next_candidate = _safe_local_path(request.form.get("next") or request.args.get("next"))
+    next_candidate = _safe_local_path(
+        request.form.get("next") or request.args.get("next")
+    )
     if next_candidate:
         return next_candidate
 
@@ -198,11 +203,15 @@ def resend_verification():
 
     if request.method == "POST":
         email = (
-            (current_user.email if current_user.is_authenticated else "")
-            or request.form.get("email")
-            or prefill_email
-            or ""
-        ).strip().lower()
+            (
+                (current_user.email if current_user.is_authenticated else "")
+                or request.form.get("email")
+                or prefill_email
+                or ""
+            )
+            .strip()
+            .lower()
+        )
         generic_message = "If an account with that email exists and is unverified, a verification email has been sent."
         sent = False
 
@@ -222,7 +231,10 @@ def resend_verification():
                         user.email_verification_sent_at = None
                         db.session.commit()
             except Exception as exc:
-                logger.warning("Suppressed exception fallback at app/blueprints/auth/verification_routes.py:220", exc_info=True)
+                logger.warning(
+                    "Suppressed exception fallback at app/blueprints/auth/verification_routes.py:220",
+                    exc_info=True,
+                )
                 db.session.rollback()
                 logger.warning("Resend verification failed for %s: %s", email, exc)
 
