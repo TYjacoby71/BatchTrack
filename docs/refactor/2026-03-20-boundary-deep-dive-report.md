@@ -9,7 +9,7 @@
 | Boundary | Grade | Why |
 | --- | --- | --- |
 | Service authority | 6.5/10 | Canonical design exists, but active route/data flows still bypass service boundaries in multiple blueprints. |
-| Controller vs business logic | 5.8/10 | 60 blueprint modules still contain direct query/session logic. |
+| Controller vs business logic | 5.8/10 | 56 blueprint modules still contain direct query/session logic. |
 | Data access ownership | 5.8/10 | Persistence logic remains mixed into route layers instead of service/repository surfaces. |
 | Tenant isolation | 8.6/10 | Major scoped-query hardening is complete, with residual review needed on heuristic-risk files. |
 | Permission boundary | 7.1/10 | Core model is strong, but two real missing decorators and one `role_required` TODO remain. |
@@ -26,14 +26,14 @@
 - Completion signal: structural cleanup section is still 0/25 complete in hardening checklist.
 
 ## Boundary 2: Controller vs business logic
-- Total blueprint files with direct query/session access: **60**.
+- Total blueprint files with direct query/session access: **56**.
 ### Top offenders (direct query count)
 - `app/blueprints/developer/system_roles.py`: 50
-- `app/blueprints/developer/views/reference_routes.py`: 40
-- `app/blueprints/developer/views/global_item_routes.py`: 36
+- `app/blueprints/developer/views/reference_routes.py`: 38
 - `app/blueprints/developer/subscription_tiers.py`: 34
 - `app/blueprints/organization/routes.py`: 33
-- `app/blueprints/auth/permissions.py`: 31
+- `app/blueprints/developer/views/global_item_routes.py`: 32
+- `app/blueprints/auth/permissions.py`: 28
 - `app/blueprints/conversion/routes.py`: 24
 - `app/blueprints/inventory/routes.py`: 24
 - `app/blueprints/auth/login_routes.py`: 19
@@ -43,14 +43,14 @@
 - `app/blueprints/batches/finish_batch.py`: 14
 - `app/blueprints/expiration/services.py`: 14
 - `app/blueprints/products/products.py`: 13
-- `app/blueprints/developer/views/product_category_routes.py`: 12
-- `app/blueprints/api/ingredient_routes.py`: 11
-- `app/blueprints/api/reservation_routes.py`: 11
-- `app/blueprints/developer/views/user_routes.py`: 10
+- `app/blueprints/api/ingredient_routes.py`: 10
+- `app/blueprints/developer/views/product_category_routes.py`: 10
 - `app/blueprints/developer/addons.py`: 9
+- `app/blueprints/products/product_inventory_routes.py`: 9
+- `app/blueprints/billing/routes.py`: 8
 
 ## Boundary 3: Data access ownership
-- Data access findings overlap controller/business findings: persistence logic is still route-adjacent in 60 files.
+- Data access findings overlap controller/business findings: persistence logic is still route-adjacent in 56 files.
 - Drawers/actions endpoints and several developer/admin modules still perform direct `db.session` mutations in route scope.
 
 ## Boundary 4: Tenant isolation
@@ -76,10 +76,10 @@
   - `/settings/api/list-preferences/<string:scope> [POST] -> settings.update_list_preferences`
 
 ### Risk concentration
-- Direct `current_user.user_type` gate occurrences detected in 9 files (28 occurrences total).
+- Direct `current_user.user_type` gate occurrences detected in 9 files (29 occurrences total).
 - `app/blueprints/organization/routes.py`: 11 occurrences
 - `app/blueprints/auth/permissions.py`: 5 occurrences
-- `app/blueprints/conversion/routes.py`: 3 occurrences
+- `app/blueprints/conversion/routes.py`: 4 occurrences
 - `app/blueprints/settings/routes.py`: 3 occurrences
 - `app/blueprints/dashboard/routes.py`: 2 occurrences
 - `app/blueprints/core/routes.py`: 1 occurrences
@@ -104,17 +104,7 @@
 ## Boundary 7: UI/product completion boundary
 ### High-signal placeholders (non-form-field placeholders)
 - `app/templates/tools/lotions.html` L8: <span class="badge bg-secondary">Coming Soon</span>
-- `app/templates/tools/index.html` L11: {% set page_description = "Free batch tools for makers: soap formulator live now, candle, cosmetic, and fermentation tools coming soon. Batch-first and neurodivergent-friendly." %}
-- `app/templates/tools/index.html` L57: <span class="badge bg-secondary">Coming Soon</span>
-- `app/templates/tools/index.html` L75: <span class="badge bg-light text-dark border">Coming Soon</span>
-- `app/templates/tools/index.html` L92: <span class="badge bg-secondary">Coming Soon</span>
-- `app/templates/tools/index.html` L110: <span class="badge bg-light text-dark border">Coming Soon</span>
-- `app/templates/tools/index.html` L127: <span class="badge bg-secondary">Coming Soon</span>
-- `app/templates/tools/index.html` L145: <span class="badge bg-light text-dark border">Coming Soon</span>
-- `app/templates/tools/index.html` L162: <span class="badge bg-secondary">Coming Soon</span>
-- `app/templates/tools/index.html` L180: <span class="badge bg-light text-dark border">Coming Soon</span>
-- `app/templates/tools/index.html` L197: <span class="badge bg-secondary">Coming Soon</span>
-- `app/templates/tools/index.html` L215: <span class="badge bg-light text-dark border">Coming Soon</span>
+- `app/templates/tools/index.html` L8: {% set page_description = "Free batch tools for makers: soap formulator live now, candle, cosmetic, and fermentation tools coming soon. Batch-first and neurodivergent-friendly." %}
 - `app/templates/tools/baker.html` L8: <span class="badge bg-secondary">Coming Soon</span>
 - `app/templates/tools/candles.html` L8: <span class="badge bg-secondary">Coming Soon</span>
 - `app/templates/tools/herbal.html` L8: <span class="badge bg-secondary">Coming Soon</span>
@@ -125,10 +115,10 @@
 - `app/templates/pages/public/landing_hormozi.html` L255: <li>Shopify and Etsy integrations marked as coming soon.</li>
 - `app/templates/pages/public/landing_robbins.html` L260: <li>Shopify and Etsy integrations flagged as coming soon.</li>
 - `app/marketing/content/pages/index.mdx` L25: ## Pricing (placeholder)
-- `app/static/js/organization/dashboard.js` L449: showMessage('Role editing functionality coming soon', 'info');
-- `app/static/js/organization/dashboard.js` L456: showMessage('Role deletion functionality coming soon', 'info');
-- `app/static/js/organization/dashboard.js` L460: showMessage('Audit log functionality coming soon', 'info');
-- `app/static/js/organization/dashboard.js` L464: showMessage('User activity view functionality coming soon', 'info');
+- `app/static/js/organization/dashboard.js` L484: showMessage('Role editing functionality coming soon', 'info');
+- `app/static/js/organization/dashboard.js` L497: showMessage('Role deletion functionality coming soon', 'info');
+- `app/static/js/organization/dashboard.js` L501: showMessage('Audit log functionality coming soon', 'info');
+- `app/static/js/organization/dashboard.js` L505: showMessage('User activity view functionality coming soon', 'info');
 - `app/static/js/tools/soaps/soap_tool_events_exports.js` L340: SoapTool.ui.showSoapAlert('info', 'Recipe payload is ready. Push is stubbed for now; no data has been sent.', { dismissible: true, timeoutMs: 7000 });
 
 ## Scheduled vs unscheduled map
@@ -172,11 +162,11 @@
 
 ## Appendix A: all controller/data-access offenders
 - `app/blueprints/developer/system_roles.py`: 50
-- `app/blueprints/developer/views/reference_routes.py`: 40
-- `app/blueprints/developer/views/global_item_routes.py`: 36
+- `app/blueprints/developer/views/reference_routes.py`: 38
 - `app/blueprints/developer/subscription_tiers.py`: 34
 - `app/blueprints/organization/routes.py`: 33
-- `app/blueprints/auth/permissions.py`: 31
+- `app/blueprints/developer/views/global_item_routes.py`: 32
+- `app/blueprints/auth/permissions.py`: 28
 - `app/blueprints/conversion/routes.py`: 24
 - `app/blueprints/inventory/routes.py`: 24
 - `app/blueprints/auth/login_routes.py`: 19
@@ -186,48 +176,44 @@
 - `app/blueprints/batches/finish_batch.py`: 14
 - `app/blueprints/expiration/services.py`: 14
 - `app/blueprints/products/products.py`: 13
-- `app/blueprints/developer/views/product_category_routes.py`: 12
-- `app/blueprints/api/ingredient_routes.py`: 11
-- `app/blueprints/api/reservation_routes.py`: 11
-- `app/blueprints/developer/views/user_routes.py`: 10
+- `app/blueprints/api/ingredient_routes.py`: 10
+- `app/blueprints/developer/views/product_category_routes.py`: 10
 - `app/blueprints/developer/addons.py`: 9
 - `app/blueprints/products/product_inventory_routes.py`: 9
 - `app/blueprints/billing/routes.py`: 8
 - `app/blueprints/auth/verification_routes.py`: 7
 - `app/blueprints/dashboard/routes.py`: 7
 - `app/blueprints/developer/views/integration_routes.py`: 7
-- `app/blueprints/recipe_library/routes.py`: 7
 - `app/blueprints/recipes/form_parsing.py`: 7
-- `app/blueprints/recipes/views/ajax_routes.py`: 7
 - `app/blueprints/api/drawers/drawer_actions/global_link.py`: 6
-- `app/blueprints/api/routes.py`: 6
 - `app/blueprints/auth/password_routes.py`: 6
 - `app/blueprints/onboarding/routes.py`: 6
 - `app/blueprints/products/sku.py`: 6
-- `app/blueprints/developer/views/organization_routes.py`: 5
-- `app/blueprints/global_library/routes.py`: 5
+- `app/blueprints/recipe_library/routes.py`: 6
 - `app/blueprints/recipes/views/create_routes.py`: 5
-- `app/blueprints/api/fifo_routes.py`: 4
 - `app/blueprints/batches/routes.py`: 4
-- `app/blueprints/products/reservation_routes.py`: 4
+- `app/blueprints/global_library/routes.py`: 4
 - `app/blueprints/recipes/form_templates.py`: 4
 - `app/blueprints/tag_manager/routes.py`: 4
 - `app/blueprints/timers/routes.py`: 4
-- `app/blueprints/admin/admin_routes.py`: 3
 - `app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py`: 3
+- `app/blueprints/api/routes.py`: 3
 - `app/blueprints/auth/whop_auth.py`: 3
 - `app/blueprints/developer/debug_routes.py`: 3
-- `app/blueprints/developer/views/masquerade_routes.py`: 3
+- `app/blueprints/recipes/views/ajax_routes.py`: 3
+- `app/blueprints/admin/admin_routes.py`: 2
 - `app/blueprints/admin/debug_routes.py`: 2
 - `app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py`: 2
 - `app/blueprints/api/public.py`: 2
-- `app/blueprints/api/unit_routes.py`: 2
 - `app/blueprints/auth/oauth_routes.py`: 2
+- `app/blueprints/developer/views/user_routes.py`: 2
 - `app/blueprints/exports/routes.py`: 2
+- `app/blueprints/products/reservation_routes.py`: 2
 - `app/blueprints/api/drawers/drawer_actions/retention.py`: 1
 - `app/blueprints/auth/whop_routes.py`: 1
 - `app/blueprints/batches/start_batch.py`: 1
-- `app/blueprints/developer/views/affiliate_routes.py`: 1
 - `app/blueprints/developer/views/dashboard_routes.py`: 1
+- `app/blueprints/developer/views/masquerade_routes.py`: 1
+- `app/blueprints/developer/views/organization_routes.py`: 1
 - `app/blueprints/expiration/routes.py`: 1
 - `app/blueprints/production_planning/routes.py`: 1
