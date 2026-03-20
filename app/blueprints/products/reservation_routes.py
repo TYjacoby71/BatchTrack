@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user, login_required
 from sqlalchemy import and_, desc
 
-from ...models import Reservation, db
+from ...models import Reservation
 from ...models.product import ProductSKU
 from ...services.pos_integration import POSIntegrationService
 from ...utils.permissions import require_permission
