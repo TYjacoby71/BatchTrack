@@ -12,7 +12,7 @@
 | Controller vs business logic | 5.8/10 | 56 blueprint modules still contain direct query/session logic. |
 | Data access ownership | 5.8/10 | Persistence logic remains mixed into route layers instead of service/repository surfaces. |
 | Tenant isolation | 8.6/10 | Major scoped-query hardening is complete, with residual review needed on heuristic-risk files. |
-| Permission boundary | 7.1/10 | Core model is strong, but two real missing decorators and one `role_required` TODO remain. |
+| Permission boundary | 7.6/10 | Non-public route permission audit is now clean; main remaining gap is `role_required` TODO fallback behavior. |
 | Integration boundaries | 5.9/10 | Stripe path is mature; Whop and Soap push remain partial/stubbed; POS file still contains embedded test mocks. |
 | UI/product completion boundary | 6.7/10 | Several user/admin surfaces still show explicit "coming soon"/placeholder states. |
 
@@ -71,9 +71,7 @@
 ## Boundary 5: Permission boundary
 ### Real offenders
 - `app/utils/permissions.py`: `role_required` still contains TODO fallback behavior.
-- Route permission audit reports missing permission decorators on:
-  - `/settings/api/list-preferences/<string:scope> [GET] -> settings.get_list_preferences`
-  - `/settings/api/list-preferences/<string:scope> [POST] -> settings.update_list_preferences`
+- Route permission audit now reports no missing non-public route decorators.
 
 ### Risk concentration
 - Direct `current_user.user_type` gate occurrences detected in 9 files (29 occurrences total).
@@ -131,7 +129,6 @@
 | Developer waitlist placeholder route | Yes | `docs/todo/CONSOLIDATED_BACKLOG.md` (Bugs & Stability) |
 | Fault-log placeholder surface | Yes | `docs/todo/CONSOLIDATED_BACKLOG.md` (Bugs & Stability) |
 | Soap push stub workflow | Yes | `docs/todo/CONSOLIDATED_BACKLOG.md` (Future Features & Growth) |
-| Missing permission decorators (`settings` list preferences) | Not explicitly | add to hardening checklist or immediate bugfix queue |
 
 ## 10/10 target state (boundary-specific)
 1. All non-public routes use permission decorators with zero audit violations.
@@ -142,7 +139,6 @@
 
 ## Fix plan (implementation order, no calendar estimates)
 ### Workstream A: Permission integrity (high leverage, low blast radius)
-- Add permission decorators for `settings.get_list_preferences` and `settings.update_list_preferences`.
 - Replace `role_required` TODO path with real role checks or migrate all callsites to canonical permission decorators and remove helper.
 - Run route-permission audit in CI-friendly mode (with deterministic test DB config).
 
