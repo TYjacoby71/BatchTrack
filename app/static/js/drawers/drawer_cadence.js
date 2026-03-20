@@ -1,3 +1,5 @@
+import { dispatchDrawerPayload } from '../core/DrawerPayloadHandler.js';
+
 (function () {
   const isAuthenticated = typeof window !== 'undefined' && Boolean(window.__IS_AUTHENTICATED__);
   if (!isAuthenticated) {
@@ -22,8 +24,14 @@
         }
         return;
       }
-      // Consume the body so fetch callers can reuse the response if needed.
-      await response.json().catch(() => ({}));
+      const payload = await response.json().catch(() => ({}));
+      const drawerPayloads = Array.isArray(payload.drawer_payloads)
+        ? payload.drawer_payloads
+        : (payload.drawer_payload ? [payload.drawer_payload] : []);
+
+      drawerPayloads.forEach((drawerPayload) => {
+        dispatchDrawerPayload(drawerPayload);
+      });
     } catch (err) {
       console.warn('DrawerCadence: request error', err);
     }

@@ -61,22 +61,9 @@ class DrawerProtocol {
     storeRetry(detail) {
         const successEvent = detail.success_event || detail.error_type || 'drawer';
         const key = this.buildRetryKey(successEvent, detail);
-
-        if (typeof detail.retry_callback === 'function') {
-            this.retryCallbacks.set(key, detail.retry_callback);
-            return;
-        }
-
         if (detail.retry && detail.retry.operation) {
             this.retryCallbacks.set(key, () => {
                 this.executeRetryOperation(detail.retry.operation, detail.retry.data || {});
-            });
-            return;
-        }
-
-        if (detail.retry_operation && detail.retry_data) {
-            this.retryCallbacks.set(key, () => {
-                this.executeRetryOperation(detail.retry_operation, detail.retry_data);
             });
         }
     }
@@ -152,25 +139,13 @@ class DrawerProtocol {
 
     rehydrateScripts(root) {
         const scripts = root.querySelectorAll('script');
-        console.log('🔧 DRAWER PROTOCOL: Found', scripts.length, 'scripts to rehydrate');
-        
-        scripts.forEach((script, index) => {
-            console.log('🔧 DRAWER PROTOCOL: Rehydrating script', index, 'with content length:', script.textContent?.length);
-            console.log('🔧 DRAWER PROTOCOL: Script content preview:', script.textContent?.substring(0, 200));
-            
+        scripts.forEach((script) => {
             const replacement = document.createElement('script');
             for (const { name, value } of Array.from(script.attributes)) {
                 replacement.setAttribute(name, value);
             }
             replacement.textContent = script.textContent;
-            
-            try {
-                script.replaceWith(replacement);
-                console.log('🔧 DRAWER PROTOCOL: Successfully rehydrated script', index);
-            } catch (error) {
-                console.error('🔧 DRAWER PROTOCOL: Error rehydrating script', index, error);
-                console.log('🔧 DRAWER PROTOCOL: Problematic script content:', script.textContent);
-            }
+            script.replaceWith(replacement);
         });
     }
 

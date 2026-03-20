@@ -182,7 +182,6 @@ POST     /recipes/<recipe_id>/set-current
 POST     /recipes/<recipe_id>/promote-to-master
 POST     /recipes/<recipe_id>/unlist
 POST     /recipes/ingredients/quick-add
-POST     /recipes/units/quick-add
 ```
 
 ---
@@ -242,12 +241,10 @@ GET  /api/drawers/global-link/check
 GET  /api/drawers/global-link/modal
 POST /api/drawers/global-link/confirm
 GET  /api/drawers/inventory/quick-create-modal
-GET  /api/drawers/units/quick-create-modal
 GET  /api/drawers/retention/check
 GET  /api/drawers/retention/modal
 POST /api/drawers/retention/acknowledge
 GET  /api/drawers/retention/export
-POST /api/drawers/retry-operation
 ```
 
 See `app/blueprints/api/drawers/` for implementation.

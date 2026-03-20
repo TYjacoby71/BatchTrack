@@ -7,44 +7,11 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.models import InventoryItem
-from app.services.unit_catalog_service import (
-    create_or_get_custom_unit,
-    serialize_unit,
-)
 from app.utils.permissions import require_permission
 
 from .. import recipes_bp
 
 logger = logging.getLogger(__name__)
-
-
-@recipes_bp.route("/units/quick-add", methods=["POST"])
-@login_required
-@require_permission("inventory.edit")
-def quick_add_unit():
-    try:
-        data = request.get_json() or {}
-        name = (data.get("name") or "").strip()
-        unit_type = (data.get("type") or data.get("unit_type") or "count").strip()
-
-        if not name:
-            return jsonify({"error": "Unit name is required"}), 400
-
-        if unit_type != "count":
-            unit_type = "count"
-        unit, created = create_or_get_custom_unit(
-            name=name,
-            unit_type=unit_type,
-            organization_id=current_user.organization_id,
-            created_by=current_user.id,
-        )
-        if created:
-            db.session.commit()
-        return jsonify(serialize_unit(unit))
-    except Exception as exc:
-        logger.warning("Suppressed exception fallback at app/blueprints/recipes/views/ajax_routes.py:73", exc_info=True)
-        db.session.rollback()
-        return jsonify({"error": str(exc)}), 400
 
 
 @recipes_bp.route("/ingredients/quick-add", methods=["POST"])
