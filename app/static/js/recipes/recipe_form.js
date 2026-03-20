@@ -117,9 +117,15 @@
 				create.textContent = 'Create "' + q + '"';
 				create.addEventListener('click', function(ev){
 					ev.preventDefault();
-                    fetch('/recipes/units/quick-add', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:q, type:'count'})})
+                    fetch('/api/units', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:q, unit_type:'count'})})
                     .then(function(r){return r.json();})
-                    .then(function(data){ if (data && !data.error){ input.value = data.name || q; list.classList.add('d-none'); }});
+                    .then(function(data){
+                        var payload = (data && data.data) ? data.data : data;
+                        if (payload && !payload.error){
+                            input.value = payload.name || q;
+                            list.classList.add('d-none');
+                        }
+                    });
 				});
 				list.appendChild(create);
 				any = true;

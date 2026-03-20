@@ -31,9 +31,10 @@ const ENTRY_SPECS = [
   { request: 'js/global_item_stats.js', source: 'js/global_item_stats.js', format: 'esm', scope: 'core' },
   { request: 'js/core/SessionGuard.js', source: 'js/core/SessionGuard.js', format: 'esm', scope: 'core' },
   { request: 'js/core/DrawerProtocol.js', source: 'js/core/DrawerProtocol.js', format: 'esm', scope: 'core' },
-  { request: 'js/core/DrawerInterceptor.js', source: 'js/core/DrawerInterceptor.js', format: 'esm', scope: 'core' },
+  { request: 'js/core/DrawerPayloadHandler.js', source: 'js/core/DrawerPayloadHandler.js', format: 'esm', scope: 'core' },
   { request: 'js/main.js', source: 'js/main.js', format: 'esm', scope: 'core' },
   { request: 'js/drawers/drawer_cadence.js', source: 'js/drawers/drawer_cadence.js', format: 'esm', scope: 'core' },
+  { request: 'js/drawers/unit_quick_create_modal.js', source: 'js/drawers/unit_quick_create_modal.js', format: 'iife', scope: 'core' },
   { request: 'js/production_planning/plan_production.js', source: 'js/production_planning/plan_production.js', format: 'esm', scope: 'core' },
   { request: 'js/tools/soaps/soap_tool_bundle_entry.js', source: 'js/tools/soaps/soap_tool_bundle_entry.js', format: 'esm', scope: 'soap' },
 ];

@@ -139,10 +139,6 @@ class ReservationService:
                 )
                 continue
 
-            print(
-                f"Credited {reservation.quantity} back to lot {reservation.source_fifo_id}"
-            )
-
             # Update reserved item quantity
             reservation.reserved_item.quantity -= reservation.quantity
 

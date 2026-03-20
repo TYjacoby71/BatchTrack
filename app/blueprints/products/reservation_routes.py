@@ -5,7 +5,8 @@ from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user, login_required
 from sqlalchemy import and_, desc
 
-from ...models import Reservation, db
+from ...models import Reservation
+from ...models.product import ProductSKU
 from ...services.pos_integration import POSIntegrationService
 from ...utils.permissions import require_permission
 
@@ -134,21 +135,51 @@ def list_reservations():
 @login_required
 @require_permission("inventory.reserve")
 def create_reservation():
-    """Create a new reservation via API"""
-    try:
-        data = request.get_json()
+    """Create a reservation for POS/order workflows.
 
-        # Validate required fields
-        required_fields = ["item_id", "quantity", "order_id"]
-        for field in required_fields:
-            if field not in data:
-                return jsonify({"error": f"Missing required field: {field}"}), 400
+    Accepts either:
+    - item_id (inventory item id), or
+    - sku_code (resolved to active org ProductSKU.inventory_item_id)
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+
+        quantity_raw = data.get("quantity")
+        order_id = (data.get("order_id") or "").strip()
+        if quantity_raw is None or not order_id:
+            return jsonify({"error": "Missing required fields: quantity, order_id"}), 400
+
+        item_id = data.get("item_id")
+        if item_id is None:
+            sku_code = (data.get("sku_code") or "").strip()
+            if not sku_code:
+                return jsonify({"error": "Either item_id or sku_code is required"}), 400
+            sku = ProductSKU.scoped().filter_by(
+                sku_code=sku_code,
+                organization_id=current_user.organization_id,
+                is_active=True,
+            ).first()
+            if not sku:
+                return jsonify({"error": "SKU not found or inactive"}), 404
+            item_id = sku.inventory_item_id
+
+        try:
+            item_id = int(item_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "item_id must be an integer"}), 400
+
+        try:
+            quantity = float(quantity_raw)
+        except (TypeError, ValueError):
+            return jsonify({"error": "quantity must be numeric"}), 400
+        if quantity <= 0:
+            return jsonify({"error": "quantity must be greater than 0"}), 400
 
         # Create the reservation
         success, message = POSIntegrationService.reserve_inventory(
-            item_id=data["item_id"],
-            quantity=float(data["quantity"]),
-            order_id=data["order_id"],
+            item_id=item_id,
+            quantity=quantity,
+            order_id=order_id,
             source=data.get("source", "manual"),
             notes=data.get("notes", ""),
             sale_price=data.get("sale_price"),
@@ -156,13 +187,20 @@ def create_reservation():
         )
 
         if success:
-            return jsonify({"success": True, "message": message})
+            return jsonify(
+                {
+                    "success": True,
+                    "message": message,
+                    "inventory_item_id": item_id,
+                    "order_id": order_id,
+                }
+            )
         else:
             return jsonify({"error": message}), 400
 
     except Exception as e:
         logger.warning(
-            "Suppressed exception fallback at app/blueprints/products/reservation_routes.py:153",
+            "Suppressed exception fallback at app/blueprints/products/reservation_routes.py:create_reservation",
             exc_info=True,
         )
         return jsonify({"error": str(e)}), 500
@@ -174,61 +212,8 @@ def create_reservation():
 def release_reservation(order_id):
     """Release a reservation by order ID"""
     try:
-        print(f"DEBUG: Attempting to release reservation for order_id: {order_id}")
-
-        # First check if reservations exist for this order
-        from ...models import Reservation
-
-        reservations = (
-            Reservation.scoped().filter_by(order_id=order_id, status="active").all()
-        )
-        print(
-            f"DEBUG: Found {len(reservations)} active reservations for order {order_id}"
-        )
-
-        for i, reservation in enumerate(reservations):
-            print(f"DEBUG: Reservation {i+1}:")
-            print(f"  - ID: {reservation.id}")
-            print(f"  - Product Item ID: {reservation.product_item_id}")
-            print(f"  - Quantity: {reservation.quantity}")
-            print(f"  - Source FIFO ID: {reservation.source_fifo_id}")
-            print(f"  - Source Batch ID: {reservation.source_batch_id}")
-            print(
-                f"  - Product Item: {reservation.product_item.name if reservation.product_item else 'None'}"
-            )
-
-            # Check if source FIFO entry exists
-            if reservation.source_fifo_id:
-                from ...models import UnifiedInventoryHistory
-                from ...models.inventory_lot import InventoryLot
-
-                lot = db.session.get(InventoryLot, reservation.source_fifo_id)
-                if lot:
-                    print(f"  - FIFO Lot: {lot}")
-                    print(f"    - Lot Number: {getattr(lot, 'lot_number', 'N/A')}")
-                    print(
-                        f"    - Remaining Quantity: {getattr(lot, 'remaining_quantity', 'N/A')}"
-                    )
-                else:
-                    history_entry = db.session.get(
-                        UnifiedInventoryHistory, reservation.source_fifo_id
-                    )
-                    print(f"  - FIFO History Entry: {history_entry}")
-                    if history_entry:
-                        if getattr(history_entry, "affected_lot", None):
-                            affected_lot = history_entry.affected_lot
-                            print(
-                                f"    - Lot Number: {getattr(affected_lot, 'lot_number', 'N/A')}"
-                            )
-                            print(
-                                f"    - Lot Remaining Quantity: {getattr(affected_lot, 'remaining_quantity', 'N/A')}"
-                            )
-                        print(f"    - Quantity Change: {history_entry.quantity_change}")
-            else:
-                print("  - WARNING: No source_fifo_id recorded for this reservation!")
-
+        logger.info("Releasing reservation(s) for order_id=%s", order_id)
         success, message = POSIntegrationService.release_reservation(order_id)
-        print(f"DEBUG: Release result - Success: {success}, Message: {message}")
 
         if success:
             return jsonify({"success": True, "message": message})
@@ -237,13 +222,9 @@ def release_reservation(order_id):
 
     except Exception as e:
         logger.warning(
-            "Suppressed exception fallback at app/blueprints/products/reservation_routes.py:224",
+            "Suppressed exception fallback at app/blueprints/products/reservation_routes.py:release_reservation",
             exc_info=True,
         )
-        print(f"DEBUG: Exception in release_reservation: {str(e)}")
-        import traceback
-
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 

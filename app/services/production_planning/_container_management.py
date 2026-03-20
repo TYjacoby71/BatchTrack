@@ -107,10 +107,10 @@ def analyze_container_options(
                             "failures": conversion_failures,
                         },
                     )
-                    # Return drawer payload structure that DrawerInterceptor expects
+                    # Return drawer payload structure consumed by drawer payload handler.
                     strategy = {
                         "success": False,
-                        "drawer_payload": drawer_payload,  # This is what DrawerInterceptor looks for
+                        "drawer_payload": drawer_payload,
                         "error": f"No containers match the recipe yield unit ({yield_unit}).",
                         "error_code": "YIELD_CONTAINER_MISMATCH",
                         "status": "error",

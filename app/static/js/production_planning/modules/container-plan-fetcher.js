@@ -1,6 +1,7 @@
 // Container Plan Fetcher - Handles API calls for container planning
 import { logger } from '../../utils/logger.js';
 import { appCache } from '../../core/CacheManager.js';
+import { handleDrawerPayloadFromResponse } from '../../core/DrawerPayloadHandler.js';
 
 // Use the imported logger instance with context
 const containerLogger = {
@@ -68,11 +69,7 @@ export class ContainerPlanFetcher {
             containerLogger.debug('Raw container plan response:', data);
 
             if (data && typeof data === 'object') {
-                // Check if this is a drawer response
-                if (data.drawer_payload || (data.data && data.data.drawer_payload)) {
-                    containerLogger.debug('🔍 FETCHER DEBUG: Received drawer payload in container response:', data);
-                    // Let the DrawerInterceptor handle this
-                }
+                handleDrawerPayloadFromResponse(data);
 
                 this.container.containerPlan = data;
                 this.container.displayContainerPlan();

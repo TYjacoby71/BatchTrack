@@ -286,19 +286,6 @@ def api_mark_expired():
         return jsonify({"error": str(e)}), 500
 
 
-# --- Api Expiration Summary ---
-# Purpose: Define the top-level behavior of `api_expiration_summary` in this module.
-# Inputs: Function/class parameters and request/runtime context used by this unit.
-# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
-@expiration_bp.route("/api/summary")
-@login_required
-@require_permission("inventory.view")
-def api_expiration_summary():
-    """Get expiration summary for dashboard widgets"""
-    summary = ExpirationService.get_expiration_summary()
-    return jsonify(summary)
-
-
 # --- Api Inventory Status ---
 # Purpose: Define the top-level behavior of `api_inventory_status` in this module.
 # Inputs: Function/class parameters and request/runtime context used by this unit.

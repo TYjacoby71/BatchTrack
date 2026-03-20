@@ -186,16 +186,8 @@ class POSIntegrationService:
         Release reservation - returns inventory to available stock via FIFO credit
         """
         try:
-            print(f"DEBUG POS: Starting release_reservation for order_id: {order_id}")
-            print("DEBUG POS: Delegating to ReservationService.release_reservation")
-
             # Use the centralized reservation service
             success, message = ReservationService.release_reservation(order_id)
-
-            if success:
-                print(f"DEBUG POS: Success - {message}")
-            else:
-                print(f"DEBUG POS: Failed - {message}")
 
             return success, message
 
@@ -204,10 +196,6 @@ class POSIntegrationService:
                 "Suppressed exception fallback at app/services/pos_integration.py:198",
                 exc_info=True,
             )
-            print(f"DEBUG POS: Exception in release_reservation: {str(e)}")
-            import traceback
-
-            traceback.print_exc()
             db.session.rollback()
             return False, f"Error releasing reservation: {str(e)}"
 

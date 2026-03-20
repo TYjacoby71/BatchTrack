@@ -1,4 +1,5 @@
 import { logger as baseLogger } from '../../utils/logger.js';
+import { handleDrawerPayloadFromResponse } from '../../core/DrawerPayloadHandler.js';
 const logger = {
     debug: (msg, ...args) => baseLogger.debug(`STOCK_CHECK: ${msg}`, ...args),
     info: (msg, ...args) => baseLogger.info(`STOCK_CHECK: ${msg}`, ...args),
@@ -80,9 +81,7 @@ export class StockCheckManager {
 
             const data = await response.json();
             this.stockCheckResults = data;
-
-            // Drawer opening is now handled globally by DrawerInterceptor.
-            // We still display the partial results as usual.
+            handleDrawerPayloadFromResponse(data);
 
             this.displayStockResults(this.stockCheckResults);
             logger.debug(`Stock check completed - status: ${response.status}, all_ok: ${data.all_ok}`);
@@ -174,21 +173,7 @@ export class StockCheckManager {
                     status
                 });
 
-                // Debug: log the full result structure for conversion errors
-                console.log('🔧 STOCK CHECK DEBUG: Full conversion error result:', JSON.stringify(result, null, 2));
-
-                // Note: Drawer opening is handled globally by DrawerInterceptor
-                // The response already contains drawer_payload at the top level which triggers the global handler
-                // No need to manually dispatch drawer events here to avoid duplicates
-                if (result.conversion_details?.drawer_payload) {
-                    console.log('🔧 STOCK CHECK: Drawer payload found in conversion_details (handled by global interceptor)');
-                } else if (result.drawer_payload) {
-                    console.log('🔧 STOCK CHECK: Drawer payload found at result level (handled by global interceptor)');
-                } else if (result.conversion_result?.drawer_payload) {
-                    console.log('🔧 STOCK CHECK: Drawer payload found in conversion_result (handled by global interceptor)');
-                } else {
-                    console.log('🔧 STOCK CHECK DEBUG: No drawer_payload found in any expected location for conversion error');
-                }
+                logger.debug('Conversion error in stock check item', result);
             } else {
                 // Normal stock check logic
                 const isAvailable = result.is_available !== false && available >= needed;

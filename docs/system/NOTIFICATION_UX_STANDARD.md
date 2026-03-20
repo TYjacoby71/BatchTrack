@@ -44,7 +44,7 @@ Use when user must confirm, choose, or acknowledge a high-impact action.
 ### 4) Drawer modal (guided recovery)
 Use for recoverable, domain-specific errors requiring in-context fixes.
 
-- Contract: `drawer_payload` + `DrawerInterceptor` + `DrawerProtocol`.
+- Contract: `drawer_payload` + explicit payload handling (`handleDrawerPayloadFromResponse`) + `DrawerProtocol`.
 - See `WALL_OF_DRAWERS_PROTOCOL.md`.
 
 ### 5) Native browser dialog (`alert`, `confirm`) (restricted)

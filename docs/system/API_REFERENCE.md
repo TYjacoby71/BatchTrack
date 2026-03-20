@@ -93,6 +93,7 @@ POST     /production-planning/recipe/<recipe_id>/auto-fill-containers
 
 ```
 GET /api/inventory/item/<item_id>
+GET /api/fifo-details/<inventory_id>?batch_id=<batch_id>
 GET /batches/api/batch-inventory-summary/<batch_id>
 ```
 
@@ -147,6 +148,7 @@ Notes:
 
 ```
 GET  /api/units             — List units (authenticated)
+POST /api/units             — Create/get org custom unit (authenticated)
 POST /api/unit-converter    — Convert units (authenticated)
 GET  /api/unit-search       — Search units
 GET  /api/public/units      — List units (public, no auth)
@@ -180,7 +182,6 @@ POST     /recipes/<recipe_id>/set-current
 POST     /recipes/<recipe_id>/promote-to-master
 POST     /recipes/<recipe_id>/unlist
 POST     /recipes/ingredients/quick-add
-POST     /recipes/units/quick-add
 ```
 
 ---
@@ -218,6 +219,14 @@ GET  /reservations/api/inventory/<item_id>/reservations
 POST /reservations/api/reservations/cleanup_expired
 ```
 
+`POST /reservations/api/reservations/create` accepts either `item_id` or `sku_code` plus `quantity` and `order_id`.
+
+Inventory POS event endpoints:
+```
+POST /products/inventory/integrations/pos/sale    (legacy alias: /products/inventory/webhook/sale)
+POST /products/inventory/integrations/pos/return  (legacy alias: /products/inventory/webhook/return)
+```
+
 ---
 
 ## Drawer Actions
@@ -232,12 +241,10 @@ GET  /api/drawers/global-link/check
 GET  /api/drawers/global-link/modal
 POST /api/drawers/global-link/confirm
 GET  /api/drawers/inventory/quick-create-modal
-GET  /api/drawers/units/quick-create-modal
 GET  /api/drawers/retention/check
 GET  /api/drawers/retention/modal
 POST /api/drawers/retention/acknowledge
 GET  /api/drawers/retention/export
-POST /api/drawers/retry-operation
 ```
 
 See `app/blueprints/api/drawers/` for implementation.

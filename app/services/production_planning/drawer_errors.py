@@ -8,6 +8,8 @@ from typing import Any, Dict
 
 from flask import url_for
 
+from app.services.drawers.payloads import build_drawer_payload
+
 
 def generate_drawer_payload_for_container_error(
     error_code: str, recipe, **context: Any
@@ -21,14 +23,13 @@ def generate_drawer_payload_for_container_error(
         # We will prompt for product density at the recipe level and fire an event
         # that allows the auto-fill to retry with the provided density in-session.
         # Redirect the user to the unit manager for now; no separate product density modal
-        return {
-            "version": "1.0",
-            "redirect_url": "/conversion/units",
-            "error_type": "container_planning",
-            "error_code": error_code,
-            "error_message": "Missing product density to convert between volume and weight units for container planning",
-            "correlation_id": correlation_id,
-        }
+        return build_drawer_payload(
+            redirect_url="/conversion/units",
+            error_type="container_planning",
+            error_code=error_code,
+            error_message="Missing product density to convert between volume and weight units for container planning",
+            correlation_id=correlation_id,
+        )
     if error_code == "YIELD_CONTAINER_MISMATCH":
         correlation_id = str(uuid.uuid4())
         recipe_id = getattr(recipe, "id", None)
@@ -42,14 +43,19 @@ def generate_drawer_payload_for_container_error(
             if recipe_id
             else None
         )
-        return {
-            "version": "1.0",
-            "modal_url": modal_url,
-            "error_type": "container_planning",
-            "error_code": error_code,
-            "error_message": "Recipe yield unit does not match any available containers.",
-            "correlation_id": correlation_id,
-        }
+        if not modal_url:
+            return {
+                "error_type": "container_planning",
+                "error_code": error_code,
+                "error_message": "Recipe context missing for unit mismatch drawer",
+            }
+        return build_drawer_payload(
+            modal_url=modal_url,
+            error_type="container_planning",
+            error_code=error_code,
+            error_message="Recipe yield unit does not match any available containers.",
+            correlation_id=correlation_id,
+        )
     # Unknown/unsupported error code: return minimal info (no drawer)
     return {
         "error_type": "container_planning",

@@ -22,7 +22,7 @@ Payload fields used in the current implementation:
 - `success_event`: window event fired by the modal upon completion
 - `error_type`, `error_code`, `error_message`: classification
 - `correlation_id`: deduplication key
-- Optional retry hints: `retry`, `retry_operation`, `retry_data`, or a `retry_callback`
+- Optional retry hint: `retry` with shape `{ operation, data }`
 
 ### Standard Payload Builder (Recommended)
 
@@ -52,14 +52,14 @@ def build_drawer_payload(modal_url: str, *, error_type: str, error_code: str, su
 
 ## Frontend Flow
 
-- `app/static/js/core/DrawerInterceptor.js` wraps `window.fetch`, extracts `drawer_payload`, dispatches `openDrawer`.
+- `app/static/js/core/DrawerPayloadHandler.js` provides explicit helpers for parsing response payloads and dispatching `openDrawer`.
 - `app/static/js/core/DrawerProtocol.js` listens for `openDrawer` and:
-  - stores retry callbacks/operations keyed by event + correlation id
+  - stores retry operations keyed by event + correlation id
   - redirects or fetches modal HTML
   - injects the HTML into a `.drawer-wrapper`, executing inline scripts
   - listens for `success_event`, runs the retry, cleans up the modal
   - emits `drawer.analytics` events for observability
-- `app/static/js/drawers/drawer_cadence.js` proactively calls `/api/drawers/check` to surface cadence-based drawers (retention, global link, etc.) without bespoke pollers.
+- `app/static/js/drawers/drawer_cadence.js` proactively calls `/api/drawers/check` and explicitly dispatches returned payloads.
 - Drawer-specific helpers live under `app/static/js/drawers/` when a modal needs extra behavior (e.g., `container_unit_mismatch_drawer.js`).
 
 Example modal template: `app/templates/components/drawer/container_unit_mismatch_drawer.html`
@@ -77,7 +77,7 @@ Use a specific, namespaced event per drawer so `DrawerProtocol` can bind and ret
 ### File Locations & Conventions
 
 - **Frontend core**
-  - Interceptor: `app/static/js/core/DrawerInterceptor.js`
+  - Payload handler: `app/static/js/core/DrawerPayloadHandler.js`
   - Protocol: `app/static/js/core/DrawerProtocol.js`
   - Cadence poller: `app/static/js/drawers/drawer_cadence.js`
   - Drawer-specific helpers: `app/static/js/drawers/*.js`
@@ -132,7 +132,7 @@ Cadence examples:
 
 2. **Create/extend payload mapping**
    - Build payloads via `build_drawer_payload(...)`.
-   - Include `success_event`, `correlation_id`, and `retry` hints (either `retry` or legacy `retry_operation` + `retry_data`).
+  - Include `success_event`, `correlation_id`, and `retry` hints using only `retry: {operation, data}`.
 
 3. **Return payloads from service/controller**
    - On user-fixable errors, attach `drawer_payload` at the top level (or inside `data.drawer_payload` for nested APIs).
@@ -161,7 +161,7 @@ Cadence examples:
 8. **Testing**
    - Add/extend pytest coverage to hit `/api/drawers/...` endpoints.
    - Exercise service flows to confirm payloads and retries.
-   - Validate frontend behavior (DrawerInterceptor + DrawerProtocol auto-open the drawer).
+  - Validate frontend behavior (explicit payload handler call + DrawerProtocol open/retry).
 
 Following this checklist keeps drawer UX consistent and discoverable across services.
 
@@ -210,11 +210,9 @@ document.getElementById('saveDensity').addEventListener('click', async () => {
 
 ### Required Listeners & Retries
 
-- Global listeners are already provided by `DrawerInterceptor.js` and `DrawerProtocol.js`.
+- Global listeners are already provided by `DrawerPayloadHandler.js` and `DrawerProtocol.js`.
 - Always provide a `success_event` in the payload and dispatch it from the modal when the fix is complete.
-- Provide retry metadata: either
-  - `retry`: `{ operation: 'stock_check', data: { recipe_id } }`, or
-  - legacy `retry_operation`/`retry_data` fields.
+- Provide retry metadata as `retry: { operation: 'stock_check', data: { recipe_id } }`.
 - `DrawerProtocol` will automatically execute the provided retry after the success event.
 
 ## Cadence, Dedupe, and Telemetry

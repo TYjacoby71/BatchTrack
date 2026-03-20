@@ -308,13 +308,9 @@ class UniversalStockCheckService:
 
             # Include drawer payload if we have one and ensure retry is configured
             if bubbled_drawer_payload:
-                # Ensure a retry operation is provided for the universal handler
-                if not (
-                    bubbled_drawer_payload.get("retry")
-                    or bubbled_drawer_payload.get("retry_operation")
-                ):
+                # Ensure a retry operation is provided for the universal handler.
+                if not bubbled_drawer_payload.get("retry"):
                     bubbled_drawer_payload["retry"] = {
-                        "mode": "frontend_callback",
                         "operation": "stock_check",
                         "data": {"recipe_id": recipe.id, "scale": scale},
                     }
