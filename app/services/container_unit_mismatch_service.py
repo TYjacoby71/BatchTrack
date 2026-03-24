@@ -7,8 +7,12 @@ unit-mismatch drawer routes so handlers stay transport-only.
 
 from __future__ import annotations
 
+import logging
+
 from app.extensions import db
 from app.models import InventoryItem, Recipe
+
+logger = logging.getLogger(__name__)
 
 
 class ContainerUnitMismatchService:
@@ -51,4 +55,12 @@ class ContainerUnitMismatchService:
     ) -> None:
         recipe.predicted_yield = predicted_yield
         recipe.predicted_yield_unit = predicted_yield_unit
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception:
+            logger.warning(
+                "Suppressed exception fallback at app/services/container_unit_mismatch_service.py:58",
+                exc_info=True,
+            )
+            db.session.rollback()
+            raise
