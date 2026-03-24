@@ -22,6 +22,7 @@ from ...services.batch_service import (
     BatchService,
 )
 from ...services.batch_preferences_service import BatchPreferencesService
+from ...services.batch_start_service import BatchStartService
 from ...services.fifo_api_service import get_batch_inventory_summary_payload
 from ...services.production_planning.service import PlanProductionService
 from ...services.stock_check.core import UniversalStockCheckService
@@ -570,7 +571,7 @@ def api_start_batch():
         containers_data = data.get("containers", []) or []
         force_start = bool(data.get("force_start"))
 
-        recipe = db.session.get(Recipe, recipe_id)
+        recipe = BatchStartService.get_startable_recipe(recipe_id)
         if not recipe:
             return jsonify({"success": False, "message": "Recipe not found."}), 404
 
