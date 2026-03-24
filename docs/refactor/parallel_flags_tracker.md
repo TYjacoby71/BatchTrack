@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Recipe create-routes query/rollback access remained route-local**
+  - **Closed by:** moving purchased-recipe anti-plagiarism query, newly-created inventory item name lookup, category lookup-by-name, import recipe lookup, and rollback handling into `app/services/recipe_create_view_service.py`.
+  - **Routes affected:** `app/blueprints/recipes/views/create_routes.py` (`_enforce_anti_plagiarism`, `new_recipe`, `clone_recipe`, `import_recipe`)
+
 - **Recipe-library route-local ORM access (public list/detail/org marketplace)**
   - **Closed by:** moving public recipe listing/detail/org-marketplace queries and rollup aggregation into `app/services/recipe_library_view_service.py`.
   - **Routes affected:** `app/blueprints/recipe_library/routes.py` (`recipe_library`, `recipe_library_detail`, `organization_marketplace`, `_fetch_cost_rollups`)
