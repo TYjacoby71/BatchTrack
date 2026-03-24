@@ -60,6 +60,12 @@ class RetentionService:
         return 365
 
     @staticmethod
+    def get_organization_by_id(org_id: int | None) -> Organization | None:
+        if not org_id:
+            return None
+        return db.session.get(Organization, org_id)
+
+    @staticmethod
     def find_at_risk_recipes(org: Organization) -> List[Recipe]:
         """Find recipes older than org tier retention and safe to delete (no batch references)."""
         if not org:

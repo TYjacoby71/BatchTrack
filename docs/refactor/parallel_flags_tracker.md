@@ -51,3 +51,7 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 - **Developer dashboard/masquerade direct ORM access**
   - **Closed by:** moving feature-flag state map and masquerade organization resolution behind developer services.
   - **Routes affected:** `app/blueprints/developer/views/dashboard_routes.py`, `app/blueprints/developer/views/masquerade_routes.py`
+
+- **Drawer retention/unit-mapping direct route ORM access**
+  - **Closed by:** moving org resolution and custom-unit mapping upsert to drawer service boundaries.
+  - **Routes affected:** `app/blueprints/api/drawers/drawer_actions/retention.py`, `app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py`

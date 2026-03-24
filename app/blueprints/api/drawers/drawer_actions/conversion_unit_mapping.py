@@ -15,7 +15,7 @@ import logging
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
 
-from app.models import CustomUnitMapping, db
+from app.services.drawer_resolution_service import DrawerResolutionService
 from app.utils.permissions import require_permission
 
 from .. import drawers_bp, register_drawer_action
@@ -79,37 +79,28 @@ def conversion_unit_mapping_modal_post():
     if conversion_factor <= 0:
         return jsonify({"error": "Conversion factor must be greater than 0"}), 400
 
-    existing = (
-        CustomUnitMapping.scoped()
-        .filter_by(
-            from_unit=from_unit,
-            to_unit=to_unit,
+    try:
+        created = DrawerResolutionService.upsert_custom_unit_mapping(
             organization_id=current_user.organization_id,
-        )
-        .first()
-    )
-
-    if existing:
-        existing.conversion_factor = conversion_factor
-        message = f"Updated unit mapping: {from_unit} → {to_unit} (factor: {conversion_factor})"
-    else:
-        mapping = CustomUnitMapping(
             from_unit=from_unit,
             to_unit=to_unit,
             conversion_factor=conversion_factor,
-            organization_id=current_user.organization_id,
         )
-        db.session.add(mapping)
-        message = f"Created unit mapping: {from_unit} → {to_unit} (factor: {conversion_factor})"
-
-    try:
-        db.session.commit()
+        if created:
+            message = (
+                f"Created unit mapping: {from_unit} → {to_unit} "
+                f"(factor: {conversion_factor})"
+            )
+        else:
+            message = (
+                f"Updated unit mapping: {from_unit} → {to_unit} "
+                f"(factor: {conversion_factor})"
+            )
     except Exception as exc:  # pragma: no cover - defensive rollback
         logger.warning(
             "Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py:98",
             exc_info=True,
         )
-        db.session.rollback()
         return jsonify({"error": f"Failed to create mapping: {exc}"}), 500
 
     return jsonify({"success": True, "message": message})

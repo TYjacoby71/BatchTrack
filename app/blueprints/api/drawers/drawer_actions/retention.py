@@ -13,8 +13,7 @@ import logging
 from flask import jsonify, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from app.extensions import db
-from app.models import Organization
+from app.services.drawer_resolution_service import DrawerResolutionService
 from app.services.drawers.payloads import build_drawer_payload
 from app.services.retention_service import RetentionService
 from app.utils.permissions import require_permission
@@ -64,7 +63,7 @@ def _resolve_current_org():
     if not org_id:
         return None
     try:
-        return db.session.get(Organization, org_id)
+        return DrawerResolutionService.get_organization(org_id)
     except Exception:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/retention.py:59",
