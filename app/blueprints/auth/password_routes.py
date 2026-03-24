@@ -15,8 +15,9 @@ from datetime import timedelta
 
 from flask import current_app, flash, redirect, render_template, request, url_for
 
-from ...extensions import db, limiter
+from ...extensions import limiter
 from ...models import User
+from ...services.auth_account_service import AuthAccountService
 from ...services.email_service import EmailService
 from ...services.login_lockout_service import LoginLockoutService
 from ...utils.timezone_utils import TimezoneUtils
@@ -81,12 +82,9 @@ def forgot_password():
 
         if reset_enabled and email and "@" in email:
             try:
-                user = User.find_by_email(email)
+                user = AuthAccountService.find_user_by_email(email)
                 if user and user.is_active:
-                    reset_token = EmailService.generate_reset_token(user.id)
-                    user.password_reset_token = reset_token
-                    user.password_reset_sent_at = TimezoneUtils.utc_now()
-                    db.session.commit()
+                    reset_token = AuthAccountService.issue_password_reset_token(user)
 
                     EmailService.send_password_reset_email(
                         user.email,
@@ -98,7 +96,6 @@ def forgot_password():
                     "Suppressed exception fallback at app/blueprints/auth/password_routes.py:95",
                     exc_info=True,
                 )
-                db.session.rollback()
                 logger.warning("Forgot-password request failed for %s: %s", email, exc)
 
         flash(generic_message, "info")
@@ -133,12 +130,10 @@ def reset_password(token):
             **reset_page_context,
         )
 
-    user = User.query.filter_by(password_reset_token=token).first()
+    user = AuthAccountService.find_user_by_password_reset_token(token)
     if not user or _is_reset_token_expired(user):
         if user and user.password_reset_token == token:
-            user.password_reset_token = None
-            user.password_reset_sent_at = None
-            db.session.commit()
+            AuthAccountService.clear_password_reset_token(user)
         flash("This password reset link is invalid or has expired.", "error")
         return redirect(url_for("auth.forgot_password"))
 
@@ -157,19 +152,9 @@ def reset_password(token):
             return _render_reset_password_form()
 
         try:
-            user.set_password(new_password)
-            user.password_reset_token = None
-            user.password_reset_sent_at = None
-
-            # Reset-link proof is equivalent to mailbox ownership.
-            if user.email and not user.email_verified:
-                user.email_verified = True
-                user.email_verification_token = None
-                user.email_verification_sent_at = None
-
-            # Invalidate existing sessions for safety after credential changes.
-            user.active_session_token = None
-            db.session.commit()
+            AuthAccountService.set_password_from_reset_token(
+                user, password=new_password
+            )
             LoginLockoutService.clear_failures(
                 user_id=user.id,
                 identifiers=[user.username or "", user.email or ""],
@@ -179,7 +164,6 @@ def reset_password(token):
                 "Suppressed exception fallback at app/blueprints/auth/password_routes.py:168",
                 exc_info=True,
             )
-            db.session.rollback()
             logger.error(
                 "Password reset failed for user %s: %s", getattr(user, "id", None), exc
             )
