@@ -15,7 +15,7 @@ import logging
 from flask import Blueprint, jsonify
 from flask_login import current_user, login_required
 
-from app.models import InventoryItem
+from app.services.admin_debug_service import AdminDebugService
 from app.services.inventory_adjustment._validation import validate_inventory_fifo_sync
 
 # --- Debug blueprint ---
@@ -36,9 +36,7 @@ def validate_all_fifo_sync():
     """Validate FIFO sync for all inventory items in the organization"""
 
     # Get all inventory items for the current organization
-    items = InventoryItem.query.filter_by(
-        organization_id=current_user.organization_id
-    ).all()
+    items = AdminDebugService.list_inventory_items_for_org(current_user.organization_id)
 
     sync_issues = []
     valid_count = 0
@@ -85,9 +83,9 @@ def validate_single_fifo_sync(item_id):
     """Validate FIFO sync for a specific inventory item"""
 
     # Verify the item belongs to the current organization
-    item = InventoryItem.query.filter_by(
+    item = AdminDebugService.get_inventory_item_for_org(
         id=item_id, organization_id=current_user.organization_id
-    ).first()
+    )
 
     if not item:
         return jsonify({"error": "Item not found"}), 404

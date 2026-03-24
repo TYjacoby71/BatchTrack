@@ -8,6 +8,7 @@ from sqlalchemy import and_, desc
 from ...models import Reservation
 from ...models.product import ProductSKU
 from ...services.pos_integration import POSIntegrationService
+from ...services.reservation_view_service import ReservationViewService
 from ...utils.permissions import require_permission
 
 logger = logging.getLogger(__name__)
@@ -27,99 +28,17 @@ def list_reservations():
     status_filter = request.args.get("status", "active")
     order_id_filter = request.args.get("order_id", "")
 
-    query = Reservation.scoped()
-
-    # Apply filters
-    if status_filter != "all":
-        query = query.filter(Reservation.status == status_filter)
-
-    if order_id_filter:
-        query = query.filter(Reservation.order_id.contains(order_id_filter))
-
-    # Organization scoping
-    if current_user.organization_id:
-        query = query.filter(
-            Reservation.organization_id == current_user.organization_id
-        )
-
-    reservations = query.order_by(desc(Reservation.created_at)).limit(100).all()
-
-    # Group reservations by SKU name for display
-    reservation_groups = {}
-    for reservation in reservations:
-        if reservation.product_item:
-            sku_name = reservation.product_item.name
-            if sku_name not in reservation_groups:
-                reservation_groups[sku_name] = []
-
-            # Add reservation with additional data for display
-            batch_label = None
-            lot_number = None
-
-            if reservation.source_batch_id and reservation.source_batch:
-                batch_label = reservation.source_batch.label_code
-
-            # Get lot information from FIFO entry if available
-            if reservation.source_fifo_id:
-                from ...extensions import db
-                from ...models import UnifiedInventoryHistory
-                from ...models.inventory_lot import InventoryLot
-
-                lot = db.session.get(InventoryLot, reservation.source_fifo_id)
-
-                if lot and getattr(lot, "lot_number", None):
-                    lot_number = lot.lot_number
-                else:
-                    history_entry = db.session.get(
-                        UnifiedInventoryHistory, reservation.source_fifo_id
-                    )
-                    if history_entry and getattr(history_entry, "affected_lot", None):
-                        lot_number = history_entry.affected_lot.lot_number
-
-            reservation_data = {
-                "order_id": reservation.order_id,
-                "quantity": reservation.quantity,
-                "unit": reservation.unit,
-                "batch_id": reservation.source_batch_id,
-                "batch_label": batch_label,
-                "lot_number": lot_number,
-                "source_batch_id": reservation.source_batch_id,  # Keep both for compatibility
-                "created_at": reservation.created_at,
-                "expires_at": reservation.expires_at,
-                "sale_price": reservation.sale_price,
-                "source": reservation.source,
-                "notes": reservation.notes,
-                "status": reservation.status,
-            }
-            reservation_groups[sku_name].append(reservation_data)
-
-    # Get summary stats
-    stats = {
-        "total_active": Reservation.scoped()
-        .filter(
-            and_(
-                Reservation.status == "active",
-                Reservation.organization_id == current_user.organization_id,
-            )
-        )
-        .count(),
-        "total_expired": Reservation.scoped()
-        .filter(
-            and_(
-                Reservation.status == "expired",
-                Reservation.organization_id == current_user.organization_id,
-            )
-        )
-        .count(),
-        "total_converted": Reservation.scoped()
-        .filter(
-            and_(
-                Reservation.status == "converted_to_sale",
-                Reservation.organization_id == current_user.organization_id,
-            )
-        )
-        .count(),
-    }
+    reservations = ReservationViewService.list_reservations(
+        organization_id=current_user.organization_id,
+        status_filter=status_filter,
+        order_id_filter=order_id_filter,
+    )
+    reservation_groups = ReservationViewService.build_reservation_groups(
+        reservations=reservations
+    )
+    stats = ReservationViewService.build_stats(
+        organization_id=current_user.organization_id
+    )
 
     return render_template(
         "admin/reservations.html",
@@ -127,7 +46,7 @@ def list_reservations():
         stats=stats,
         status_filter=status_filter,
         order_id_filter=order_id_filter,
-        current_time=datetime.now(timezone.utc),
+        current_time=ReservationViewService.utc_now(),
     )
 
 
@@ -154,14 +73,13 @@ def create_reservation():
             sku_code = (data.get("sku_code") or "").strip()
             if not sku_code:
                 return jsonify({"error": "Either item_id or sku_code is required"}), 400
-            sku = ProductSKU.scoped().filter_by(
+            resolved_item_id = ReservationViewService.resolve_item_id_from_sku(
                 sku_code=sku_code,
                 organization_id=current_user.organization_id,
-                is_active=True,
-            ).first()
-            if not sku:
+            )
+            if not resolved_item_id:
                 return jsonify({"error": "SKU not found or inactive"}), 404
-            item_id = sku.inventory_item_id
+            item_id = resolved_item_id
 
         try:
             item_id = int(item_id)
@@ -296,44 +214,13 @@ def cleanup_expired():
 def get_item_reservations(item_id):
     """Get all reservations for a specific inventory item"""
     try:
-        reservations = (
-            Reservation.scoped()
-            .filter(
-                and_(
-                    Reservation.product_item_id == item_id,
-                    Reservation.organization_id == current_user.organization_id,
-                )
-            )
-            .order_by(desc(Reservation.created_at))
-            .all()
+        reservations = ReservationViewService.list_item_reservations(
+            item_id=item_id,
+            organization_id=current_user.organization_id,
         )
-
-        result = []
-        for reservation in reservations:
-            result.append(
-                {
-                    "id": reservation.id,
-                    "order_id": reservation.order_id,
-                    "quantity": reservation.quantity,
-                    "unit": reservation.unit,
-                    "status": reservation.status,
-                    "source": reservation.source,
-                    "created_at": (
-                        reservation.created_at.isoformat()
-                        if reservation.created_at
-                        else None
-                    ),
-                    "expires_at": (
-                        reservation.expires_at.isoformat()
-                        if reservation.expires_at
-                        else None
-                    ),
-                    "sale_price": reservation.sale_price,
-                    "notes": reservation.notes,
-                }
-            )
-
-        return jsonify({"reservations": result})
+        return jsonify(
+            {"reservations": ReservationViewService.serialize_item_reservations(reservations)}
+        )
 
     except Exception as e:
         logger.warning(

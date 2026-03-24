@@ -25,10 +25,10 @@ from flask import (
 )
 from flask_login import login_user
 
-from ...extensions import db, limiter
-from ...models import User
+from ...extensions import limiter
 from ...services.analytics_tracking_service import AnalyticsTrackingService
 from ...services.oauth_service import OAuthService
+from ...services.oauth_user_service import OAuthUserService
 from ...services.session_service import SessionService
 from ...utils.analytics_timing import seconds_since_first_landing
 from ...utils.timezone_utils import TimezoneUtils
@@ -69,13 +69,14 @@ def _oauth_success_or_signup_redirect(
         flash("Email address is required for account creation.", "error")
         return redirect(url_for("auth.login"))
 
-    user = User.find_by_email(email)
+    user = OAuthUserService.find_user_by_email(email)
     if user:
         if not user.oauth_provider:
-            user.oauth_provider = provider
-            user.oauth_provider_id = oauth_id
-            user.email_verified = True
-            db.session.commit()
+            OAuthUserService.link_oauth_identity(
+                user,
+                provider=provider,
+                oauth_id=oauth_id,
+            )
 
         login_user(user)
         SessionService.rotate_user_session(user)
@@ -84,8 +85,7 @@ def _oauth_success_or_signup_redirect(
         previous_last_login = TimezoneUtils.ensure_timezone_aware(
             getattr(user, "last_login", None)
         )
-        user.last_login = TimezoneUtils.utc_now()
-        db.session.commit()
+        OAuthUserService.record_login_timestamp(user, TimezoneUtils.utc_now())
         AnalyticsTrackingService.track_user_login_succeeded(
             organization_id=getattr(user, "organization_id", None),
             user_id=user.id,
