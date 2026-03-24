@@ -9,8 +9,8 @@
 | Boundary | Grade | Why |
 | --- | --- | --- |
 | Service authority | 6.5/10 | Canonical design exists, but active route/data flows still bypass service boundaries in multiple blueprints. |
-| Controller vs business logic | 7.6/10 | 26 blueprint modules still contain direct query/session logic after extracting global-link and container unit-mismatch drawer data-access paths into service boundaries on top of prior batches. |
-| Data access ownership | 7.6/10 | Persistence logic remains mixed into route layers, but this pass removed additional route-local query/mutation paths from global-link and container unit-mismatch drawer handlers. |
+| Controller vs business logic | 7.7/10 | 25 blueprint modules still contain direct query/session logic after extracting production-planning debug container data-access paths into service boundaries on top of prior batches. |
+| Data access ownership | 7.7/10 | Persistence logic remains mixed into route layers, but this pass removed additional route-local query/mutation paths from production-planning debug container handlers. |
 | Tenant isolation | 8.6/10 | Major scoped-query hardening is complete, with residual review needed on heuristic-risk files. |
 | Permission boundary | 8.0/10 | Non-public route permission audit is clean and `role_required` now enforces real role checks; remaining risk is broader policy consistency (`user_type` gates and role->permission migration). |
 | Integration boundaries | 5.9/10 | Stripe path is mature; Whop and Soap push remain partial/stubbed; POS file still contains embedded test mocks. |
@@ -26,7 +26,7 @@
 - Completion signal: structural cleanup section is still 0/25 complete in hardening checklist.
 
 ## Boundary 2: Controller vs business logic
-- Total blueprint files with direct query/session access: **26**.
+- Total blueprint files with direct query/session access: **25**.
 ### Top offenders (direct query count)
 - `app/blueprints/developer/system_roles.py`: 50
 - `app/blueprints/developer/views/reference_routes.py`: 38
@@ -181,4 +181,4 @@
 - `app/blueprints/developer/views/masquerade_routes.py`: 1 (resolved in this pass; removed from offender list)
 - `app/blueprints/developer/views/organization_routes.py`: 1 (resolved in this pass; removed from offender list)
 - `app/blueprints/expiration/routes.py`: 1
-- `app/blueprints/production_planning/routes.py`: 1
+- `app/blueprints/production_planning/routes.py`: 1 (resolved in this pass; removed from offender list)

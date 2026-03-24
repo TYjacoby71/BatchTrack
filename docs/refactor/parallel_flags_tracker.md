@@ -40,6 +40,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
   - **Closed by:** moving global-item lookup/linking mutations and recipe/container lookup + yield persistence into dedicated drawer services.
   - **Routes affected:** `app/blueprints/api/drawers/drawer_actions/global_link.py`, `app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py`
 
+- **Production-planning debug container endpoint route-local ORM access**
+  - **Closed by:** moving recipe/container-category/container-list retrieval and shaping into `app/services/production_planning_debug_service.py`.
+  - **Routes affected:** `app/blueprints/production_planning/routes.py` (`debug_recipe_containers`)
+
 - **Auth/onboarding route persistence in controllers**
   - **Closed by:** extracting verification/reset/onboarding token and profile persistence from routes to `app/services/auth_account_service.py`
   - **Routes affected:** `app/blueprints/auth/verification_routes.py`, `app/blueprints/auth/password_routes.py`, `app/blueprints/onboarding/routes.py`
