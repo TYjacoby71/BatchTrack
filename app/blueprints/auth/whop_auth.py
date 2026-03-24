@@ -14,7 +14,8 @@ import logging
 
 from flask import flash, session
 
-from ...models import User, db
+from ...models import User
+from ...services.whop_auth_service import WhopAuthService
 from ...services.whop_service import WhopService
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ class WhopAuth:
             return None
 
         # Find existing user or create new one
-        user = User.find_by_email(normalized_email)
+        user = WhopAuthService.find_user_by_email(normalized_email)
 
         if user:
             # Existing user - sync their organization
@@ -64,8 +65,7 @@ class WhopAuth:
                 organization = WhopService.create_organization_from_whop(
                     license_key, license_data
                 )
-                user.organization_id = organization.id
-                db.session.commit()
+                WhopAuthService.attach_user_to_organization(user, organization.id)
         else:
             # New user - create user and organization
             organization = WhopService.create_organization_from_whop(
@@ -73,20 +73,13 @@ class WhopAuth:
             )
 
             base_username = (normalized_email.split("@")[0] or "user").strip()
-            username = base_username
-            counter = 1
-            while User.username_exists(username):
-                username = f"{base_username}{counter}"
-                counter += 1
+            username = WhopAuthService.ensure_unique_username(base_username)
 
-            user = User(
+            user = WhopAuthService.create_user_for_organization(
                 email=normalized_email,
                 username=username,
                 organization_id=organization.id,
-                is_active=True,
             )
-            db.session.add(user)
-            db.session.commit()
 
         return user
 

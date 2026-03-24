@@ -13,9 +13,7 @@ import logging
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
-from app.extensions import db
-from app.models import Permission
-from app.models.subscription_tier import SubscriptionTier
+from app.services.developer.debug_permission_service import DebugPermissionService
 from app.utils.permissions import _org_tier_includes_permission, has_permission
 
 from .decorators import require_developer_permission
@@ -35,7 +33,7 @@ debug_bp = Blueprint("debug", __name__, url_prefix="/debug")
 def debug_permissions():
     """Debug endpoint to show current user's permissions"""
     # Get all permissions
-    all_permissions = Permission.query.filter_by(is_active=True).all()
+    all_permissions = DebugPermissionService.list_active_permissions()
 
     # Get current tier
     current_tier = (
@@ -44,19 +42,7 @@ def debug_permissions():
         else "free"
     )
 
-    # Build tier permissions from DB only
-    try:
-        tier_id = int(current_tier) if isinstance(current_tier, str) else current_tier
-    except Exception:
-        logger.warning(
-            "Suppressed exception fallback at app/blueprints/developer/debug_routes.py:45",
-            exc_info=True,
-        )
-        tier_id = None
-    tier_obj = db.session.get(SubscriptionTier, tier_id) if tier_id else None
-    tier_permissions = (
-        [p.name for p in getattr(tier_obj, "permissions", [])] if tier_obj else []
-    )
+    tier_permissions = DebugPermissionService.resolve_tier_permissions(current_tier)
 
     # Check each permission
     permission_status = {}
@@ -90,14 +76,5 @@ def debug_permissions():
 @require_developer_permission("dev.debug_mode")
 def debug_tiers():
     """Debug endpoint to show tier configuration"""
-    tiers_config = {}
-    tiers = SubscriptionTier.query.all()
-    for t in tiers:
-        tiers_config[str(t.id)] = {
-            "name": t.name,
-            "permissions": [p.name for p in getattr(t, "permissions", [])],
-            "billing_provider": t.billing_provider,
-            "is_billing_exempt": t.is_billing_exempt,
-            "is_customer_facing": t.is_customer_facing,
-        }
+    tiers_config = DebugPermissionService.list_tier_configs()
     return jsonify(tiers_config)

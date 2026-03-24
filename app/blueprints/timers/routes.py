@@ -5,9 +5,8 @@ from flask_login import current_user, login_required
 
 from app.utils.permissions import require_permission
 
-from ...models import Batch, db
+from ...services.timer_access_service import TimerAccessService
 from ...services.timer_service import TimerService
-from ...utils.timezone_utils import TimezoneUtils
 from . import timers_bp
 
 logger = logging.getLogger(__name__)
@@ -23,10 +22,9 @@ def list_timers():
     active_timers = TimerService.get_active_timers()
 
     # Get active batches for the dropdown
-    query = Batch.scoped().filter_by(status="in_progress")
-    if current_user and current_user.is_authenticated and current_user.organization_id:
-        query = query.filter(Batch.organization_id == current_user.organization_id)
-    active_batches = query.all()
+    active_batches = TimerAccessService.list_in_progress_batches_for_org(
+        current_user.organization_id
+    )
 
     return render_template(
         "timer_list.html",
@@ -67,7 +65,7 @@ def api_create_timer():
             return jsonify({"error": "Invalid batch ID or duration"}), 400
 
         # Verify batch exists and user has access
-        batch = db.session.get(Batch, batch_id)
+        batch = TimerAccessService.get_batch(batch_id)
         if not batch:
             return jsonify({"error": "Batch not found"}), 404
 
@@ -155,9 +153,7 @@ def api_stop_timer(timer_id):
 def delete_timer(timer_id):
     """Delete a timer"""
     try:
-        from ...models import BatchTimer
-
-        timer = BatchTimer.scoped().filter_by(id=timer_id).first_or_404()
+        timer = TimerAccessService.get_scoped_timer_or_404(timer_id)
 
         # Check organization access
         if (
@@ -166,8 +162,7 @@ def delete_timer(timer_id):
         ):
             return jsonify({"error": "Access denied"}), 403
 
-        db.session.delete(timer)
-        db.session.commit()
+        TimerAccessService.delete_timer(timer)
 
         return jsonify({"success": True, "message": "Timer deleted"})
 
@@ -299,9 +294,7 @@ def api_timer_summary():
 def cancel_timer(timer_id):
     """Cancel a timer"""
     try:
-        from ...models import BatchTimer
-
-        timer = BatchTimer.scoped().filter_by(id=timer_id).first_or_404()
+        timer = TimerAccessService.get_scoped_timer_or_404(timer_id)
 
         # Check organization access
         if (
@@ -310,9 +303,7 @@ def cancel_timer(timer_id):
         ):
             return jsonify({"error": "Access denied"}), 403
 
-        timer.status = "cancelled"
-        timer.end_time = TimezoneUtils.utc_now()
-        db.session.commit()
+        TimerAccessService.cancel_timer(timer)
 
         return jsonify({"success": True, "message": f'Timer "{timer.name}" cancelled'})
 
