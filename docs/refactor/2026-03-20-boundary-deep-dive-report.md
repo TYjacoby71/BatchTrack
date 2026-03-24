@@ -9,8 +9,8 @@
 | Boundary | Grade | Why |
 | --- | --- | --- |
 | Service authority | 6.5/10 | Canonical design exists, but active route/data flows still bypass service boundaries in multiple blueprints. |
-| Controller vs business logic | 8.0/10 | 22 blueprint modules still contain direct query/session logic after extracting public API global-library search and public unit-list query paths into service boundaries on top of prior batches. |
-| Data access ownership | 8.0/10 | Persistence logic remains mixed into route layers, but this pass removed additional route-local query/mutation paths from public API catalog handlers. |
+| Controller vs business logic | 8.1/10 | 21 blueprint modules still contain direct query/session logic after extracting global-library detail/save/stats route data-access paths into service boundaries on top of prior batches. |
+| Data access ownership | 8.1/10 | Persistence logic remains mixed into route layers, but this pass removed additional route-local query/mutation paths from global-library route handlers. |
 | Tenant isolation | 8.6/10 | Major scoped-query hardening is complete, with residual review needed on heuristic-risk files. |
 | Permission boundary | 8.0/10 | Non-public route permission audit is clean and `role_required` now enforces real role checks; remaining risk is broader policy consistency (`user_type` gates and role->permission migration). |
 | Integration boundaries | 5.9/10 | Stripe path is mature; Whop and Soap push remain partial/stubbed; POS file still contains embedded test mocks. |
@@ -26,7 +26,7 @@
 - Completion signal: structural cleanup section is still 0/25 complete in hardening checklist.
 
 ## Boundary 2: Controller vs business logic
-- Total blueprint files with direct query/session access: **22**.
+- Total blueprint files with direct query/session access: **21**.
 ### Top offenders (direct query count)
 - `app/blueprints/developer/system_roles.py`: 50
 - `app/blueprints/developer/views/reference_routes.py`: 38
@@ -171,7 +171,7 @@
 - `app/blueprints/products/sku.py`: 6
 - `app/blueprints/recipe_library/routes.py`: 6
 - `app/blueprints/recipes/views/create_routes.py`: 5
-- `app/blueprints/global_library/routes.py`: 4
+- `app/blueprints/global_library/routes.py`: 4 (resolved in this pass; removed from offender list)
 - `app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py`: 3 (resolved in this pass; removed from offender list)
 - `app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py`: 2 (resolved in this pass; removed from offender list)
 - `app/blueprints/api/public.py`: 2 (resolved in this pass; removed from offender list)

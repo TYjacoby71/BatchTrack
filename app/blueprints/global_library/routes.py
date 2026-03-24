@@ -32,6 +32,7 @@ from app.services.global_item_listing_service import (
 from app.services.global_item_listing_service import (
     fetch_global_item_listing,
 )
+from app.services.global_library_view_service import GlobalLibraryViewService
 from app.services.inventory_adjustment import create_inventory_item
 from app.services.statistics import AnalyticsDataService
 from app.utils.cache_utils import should_bypass_cache, stable_cache_key
@@ -316,10 +317,7 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
     """Public detail page for a specific Global Item."""
     if not _global_library_enabled():
         return _global_library_disabled_response()
-    gi = GlobalItem.query.filter(
-        not GlobalItem.is_archived,
-        GlobalItem.id == item_id,
-    ).first_or_404()
+    gi = GlobalLibraryViewService.get_active_global_item_or_404(item_id)
 
     preview_remaining = None
     if not current_user.is_authenticated:
@@ -388,20 +386,7 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
 
     related_items = []
     try:
-        related_query = (
-            GlobalItem.query.filter(
-                GlobalItem.item_type == gi.item_type,
-                GlobalItem.id != gi.id,
-                not GlobalItem.is_archived,
-            )
-            .order_by(GlobalItem.name.asc())
-            .limit(6)
-        )
-        if gi.ingredient_category_id:
-            related_query = related_query.filter(
-                GlobalItem.ingredient_category_id == gi.ingredient_category_id
-            )
-        related_items = related_query.all()
+        related_items = GlobalLibraryViewService.list_related_items_for_detail(gi)
     except Exception:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/global_library/routes.py:384",
@@ -472,10 +457,7 @@ def save_global_item_to_inventory(item_id: int):
     """
     if not _global_library_enabled():
         abort(404)
-    gi = GlobalItem.query.filter(
-        not GlobalItem.is_archived,
-        GlobalItem.id == item_id,
-    ).first_or_404()
+    gi = GlobalLibraryViewService.get_active_global_item_or_404(item_id)
 
     if not current_user.is_authenticated:
         source_hint = request.args.get("source") or "GIL_add_item_to_account_cta"
@@ -499,11 +481,10 @@ def save_global_item_to_inventory(item_id: int):
         flash("No organization found for your account.", "error")
         return redirect(url_for("app_routes.dashboard"))
 
-    existing = InventoryItem.query.filter(
-        InventoryItem.organization_id == org_id,
-        InventoryItem.global_item_id == item_id,
-        InventoryItem.is_archived.is_(False),
-    ).first()
+    existing = GlobalLibraryViewService.find_existing_inventory_item_for_org(
+        organization_id=org_id,
+        global_item_id=item_id,
+    )
     if existing:
         flash(f"{gi.name} is already in your inventory.", "info")
         return redirect(url_for("inventory.view_inventory", id=existing.id))
@@ -542,9 +523,7 @@ def global_library_item_stats(item_id: int):
     logger.info(f"Stats request for global item {item_id}")
 
     try:
-        from app.models.global_item import GlobalItem
-
-        gi = db.get_or_404(GlobalItem, item_id)
+        gi = GlobalLibraryViewService.get_global_item_or_404(item_id)
 
         rollup = AnalyticsDataService.get_global_item_rollup(item_id)
         cost = AnalyticsDataService.get_cost_distribution(item_id)

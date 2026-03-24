@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Global-library detail/save/stats route-local ORM access**
+  - **Closed by:** moving active-item/detail lookups, related-item retrieval, org inventory link lookup, and stats-item retrieval behind `app/services/global_library_view_service.py`.
+  - **Routes affected:** `app/blueprints/global_library/routes.py` (`global_item_detail`, `save_global_item_to_inventory`, `global_library_item_stats`)
+
 - **Public API global search + units route-adjacent query access**
   - **Closed by:** extracting public units lookup and global-item search query/payload shaping into `app/services/public_catalog_service.py`.
   - **Routes affected:** `app/blueprints/api/public.py` (`public_units`, `public_global_item_search`)
