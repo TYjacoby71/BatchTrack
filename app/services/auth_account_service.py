@@ -66,6 +66,12 @@ class AuthAccountService:
         db.session.commit()
 
     @staticmethod
+    def issue_password_reset_token(user: User) -> str:
+        token = EmailService.generate_reset_token(user.id)
+        AuthAccountService.set_password_reset_token(user, token)
+        return token
+
+    @staticmethod
     def set_password_from_reset_token(user: User, *, password: str) -> None:
         user.set_password(password)
         user.password_reset_token = None
