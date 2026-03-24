@@ -15,10 +15,6 @@ from datetime import datetime, timezone
 
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user
-from sqlalchemy import or_
-
-from app.extensions import db
-from app.models import Organization, User
 from app.services.developer.organization_service import OrganizationService
 from app.services.statistics import AnalyticsDataService
 from app.services.tools.feedback_note_service import ToolFeedbackNoteService
@@ -245,33 +241,19 @@ def create_organization():
 @require_developer_permission("dev.all_organizations")
 def organization_detail(org_id):
     """Detailed organization management."""
-    org = db.get_or_404(Organization, org_id)
+    org = OrganizationService.get_organization_or_404(org_id)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
     per_page = max(10, min(per_page, 200))
     search = (request.args.get("search") or "").strip()
-
-    base_query = User.query.filter_by(organization_id=org_id)
-    users_query = base_query
-
-    if search:
-        term = f"%{search}%"
-        users_query = users_query.filter(
-            or_(
-                User.username.ilike(term),
-                User.email.ilike(term),
-                User.first_name.ilike(term),
-                User.last_name.ilike(term),
-            )
+    users_pagination, total_users, active_users_count = (
+        OrganizationService.paginate_organization_users(
+            org_id=org_id,
+            page=page,
+            per_page=per_page,
+            search=search,
         )
-
-    users_query = users_query.order_by(User.created_at.desc())
-    users_pagination = users_query.paginate(
-        page=page, per_page=per_page, error_out=False
     )
-
-    total_users = base_query.count()
-    active_users_count = base_query.filter_by(is_active=True).count()
 
     tiers_config = OrganizationService.build_tier_config()
 
@@ -302,7 +284,7 @@ def organization_detail(org_id):
 @require_developer_permission("dev.modify_any_organization")
 def edit_organization(org_id):
     """Edit organization details."""
-    org = db.get_or_404(Organization, org_id)
+    org = OrganizationService.get_organization_or_404(org_id)
     success, message = OrganizationService.update_organization(org, request.form)
     flash(message, "success" if success else "error")
     return redirect(url_for("developer.organization_detail", org_id=org_id))
@@ -316,7 +298,7 @@ def edit_organization(org_id):
 @require_developer_permission("dev.billing_override")
 def upgrade_organization(org_id):
     """Upgrade organization subscription."""
-    org = db.get_or_404(Organization, org_id)
+    org = OrganizationService.get_organization_or_404(org_id)
     success, message = OrganizationService.upgrade_organization(
         org, request.form.get("tier", "")
     )
@@ -333,7 +315,7 @@ def upgrade_organization(org_id):
 def delete_organization(org_id):
     """Permanently delete an organization and all associated data."""
     data = request.get_json() or {}
-    org = db.get_or_404(Organization, org_id)
+    org = OrganizationService.get_organization_or_404(org_id)
     expected_confirm = f"DELETE {org.name}"
     is_valid, message = OrganizationService.validate_deletion(
         data.get("password"), data.get("confirm_text"), expected_confirm

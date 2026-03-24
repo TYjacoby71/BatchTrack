@@ -17,9 +17,9 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
    - **Status:** open
 
 3. **Developer support routes still own data shaping and query composition**
-   - **Surface:** `app/blueprints/developer/views/user_routes.py`, `app/blueprints/developer/views/organization_routes.py`
-   - **Flag:** route layer still contains pagination/query/filter shaping that should sit in service boundaries.
-   - **Parallel action:** add focused developer admin query services (user detail + org membership search) and move route-local ORM usage.
+   - **Surface:** `app/blueprints/developer/views/organization_routes.py`
+   - **Flag:** support submissions route still owns substantial grouping/selection shaping and should move behind a service boundary over time.
+   - **Parallel action:** extract support-submissions grouping/selection pipeline into a dedicated developer support service.
    - **Status:** open
 
 4. **Production-planning debug endpoint mixes diagnostics with data access**
@@ -39,3 +39,11 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 - **Auth/onboarding route persistence in controllers**
   - **Closed by:** extracting verification/reset/onboarding token and profile persistence from routes to `app/services/auth_account_service.py`
   - **Routes affected:** `app/blueprints/auth/verification_routes.py`, `app/blueprints/auth/password_routes.py`, `app/blueprints/onboarding/routes.py`
+
+- **Developer user/org route direct ORM access**
+  - **Closed by:** moving user/organization lookups and org-user pagination to service boundaries.
+  - **Routes affected:** `app/blueprints/developer/views/user_routes.py`, `app/blueprints/developer/views/organization_routes.py`
+
+- **Start-batch route direct recipe lookup**
+  - **Closed by:** moving recipe resolution to `app/services/batch_start_service.py`.
+  - **Routes affected:** `app/blueprints/batches/start_batch.py`
