@@ -10,25 +10,23 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
    - **Parallel action:** centralize token issuance/clear semantics in one service and migrate invite/signup writers to use it.
    - **Status:** open
 
-2. **Public/global query boundaries still route-adjacent**
-   - **Surface:** `app/blueprints/api/public.py`
-   - **Flag:** heavy `GlobalItem` query and alias-table fallback logic remains inside route module.
-   - **Parallel action:** extract search/query construction to a dedicated public catalog service with route-only transport logic.
-   - **Status:** open
-
-3. **Developer support submissions shaping remains route-local**
+2. **Developer support submissions shaping remains route-local**
    - **Surface:** `app/blueprints/developer/views/organization_routes.py`
    - **Flag:** support submissions route still owns substantial grouping/selection shaping and should move behind a service boundary over time.
    - **Parallel action:** extract support-submissions grouping/selection pipeline into a dedicated developer support service.
    - **Status:** open
 
-4. **Known integration posture still incomplete**
+3. **Known integration posture still incomplete**
    - **Surface:** `app/services/whop_service.py`, `app/services/billing_service.py`, `app/services/pos_integration.py`, soap push UI flow
    - **Flag:** Whop and Soap push remain partial/stubbed, and POS production module still embeds mock/test classes.
    - **Parallel action:** execute Workstream C items from boundary report + consolidated backlog.
    - **Status:** open
 
 ## Recently closed flags
+
+- **Public API global search + units route-adjacent query access**
+  - **Closed by:** extracting public units lookup and global-item search query/payload shaping into `app/services/public_catalog_service.py`.
+  - **Routes affected:** `app/blueprints/api/public.py` (`public_units`, `public_global_item_search`)
 
 - **Dashboard route direct org/batch query access**
   - **Closed by:** moving selected-organization existence checks, active in-progress batch lookup, and rollback helpers into `app/services/app_dashboard_service.py`.

@@ -11,18 +11,15 @@ Glossary:
 """
 
 import logging
-from collections import OrderedDict
 from datetime import datetime, timezone
 
 from flask import Blueprint, current_app, jsonify, make_response, request
 from flask_login import current_user
-from sqlalchemy import func, or_
 
 from app.extensions import cache, csrf, limiter
-from app.models.global_item import GlobalItem
-from app.models.models import Unit
 from app.services.ai import GoogleAIClientError
 from app.services.cache_invalidation import global_library_cache_key
+from app.services.public_catalog_service import PublicCatalogService
 from app.services.public_bot_service import PublicBotService, PublicBotServiceError
 from app.services.public_bot_trap_service import PublicBotTrapService
 from app.services.soapcalc_oils_service import (
@@ -133,23 +130,11 @@ def public_bot_trap():
 def public_units():
     """Return standard (non-custom) active units for public tools."""
     try:
-        units = (
-            Unit.query.filter_by(is_active=True, is_custom=False)
-            .order_by(Unit.unit_type.asc(), Unit.name.asc())
-            .all()
-        )
+        units = PublicCatalogService.list_public_units()
         return jsonify(
             {
                 "success": True,
-                "data": [
-                    {
-                        "id": u.id,
-                        "name": u.name,
-                        "symbol": getattr(u, "symbol", None),
-                        "unit_type": u.unit_type,
-                    }
-                    for u in units
-                ],
+                "data": units,
             }
         )
     except Exception as e:
@@ -189,265 +174,12 @@ def public_global_item_search():
             if cached_payload:
                 return jsonify(cached_payload)
 
-        query = GlobalItem.query.filter(not GlobalItem.is_archived)
-        if item_type:
-            query = query.filter(GlobalItem.item_type == item_type)
-
-        term = f"%{q}%"
-        try:
-            # Try alias table if present
-            from app.models import db as _db
-            from app.models.global_item import GlobalItem as _GI
-
-            alias_tbl = _db.Table(
-                "global_item_alias", _db.metadata, autoload_with=_db.engine
-            )
-            query = query.filter(
-                or_(
-                    _GI.name.ilike(term),
-                    _db.exists()
-                    .where(alias_tbl.c.global_item_id == _GI.id)
-                    .where(alias_tbl.c.alias.ilike(term)),
-                )
-            )
-        except Exception:
-            logger.warning(
-                "Suppressed exception fallback at app/blueprints/api/public.py:205",
-                exc_info=True,
-            )
-            query = query.filter(GlobalItem.name.ilike(term))
-
-        items = query.order_by(func.length(GlobalItem.name).asc()).limit(25).all()
-        group_mode = request.args.get("group") == "ingredient" and (
-            not item_type or item_type == "ingredient"
+        payload = PublicCatalogService.build_public_global_item_search_payload(
+            query_text=q,
+            item_type=item_type or None,
+            group=request.args.get("group"),
+            limit=25,
         )
-        grouped = OrderedDict() if group_mode else None
-        results = []
-
-        for gi in items:
-            ingredient_obj = gi.ingredient if getattr(gi, "ingredient", None) else None
-            ingredient_category_obj = (
-                ingredient_obj.category
-                if ingredient_obj and getattr(ingredient_obj, "category", None)
-                else None
-            )
-            variation_obj = gi.variation if getattr(gi, "variation", None) else None
-            physical_form_obj = (
-                variation_obj.physical_form
-                if variation_obj and getattr(variation_obj, "physical_form", None)
-                else (gi.physical_form if getattr(gi, "physical_form", None) else None)
-            )
-            ingredient_payload = None
-            if ingredient_obj:
-                ingredient_payload = {
-                    "id": ingredient_obj.id,
-                    "name": ingredient_obj.name,
-                    "slug": ingredient_obj.slug,
-                    # Definition-level values are defaults; item-level values live on GlobalItem.
-                    "inci_name": ingredient_obj.inci_name,
-                    "cas_number": ingredient_obj.cas_number,
-                    "ingredient_category_id": ingredient_obj.ingredient_category_id,
-                    "ingredient_category_name": (
-                        ingredient_category_obj.name
-                        if ingredient_category_obj
-                        else None
-                    ),
-                }
-            variation_payload = None
-            if variation_obj:
-                variation_payload = {
-                    "id": variation_obj.id,
-                    "name": variation_obj.name,
-                    "slug": variation_obj.slug,
-                    "default_unit": variation_obj.default_unit,
-                    "form_bypass": variation_obj.form_bypass,
-                    "physical_form_id": variation_obj.physical_form_id,
-                    "physical_form_name": (
-                        physical_form_obj.name if physical_form_obj else None
-                    ),
-                }
-            physical_form_payload = None
-            if physical_form_obj:
-                physical_form_payload = {
-                    "id": physical_form_obj.id,
-                    "name": physical_form_obj.name,
-                    "slug": physical_form_obj.slug,
-                }
-            function_names = [tag.name for tag in getattr(gi, "functions", [])]
-            application_names = [tag.name for tag in getattr(gi, "applications", [])]
-            category_tag_names = [tag.name for tag in getattr(gi, "category_tags", [])]
-
-            display_name = gi.name
-            if (
-                ingredient_payload
-                and variation_payload
-                and not variation_payload.get("form_bypass")
-            ):
-                display_name = (
-                    f"{ingredient_payload['name']}, {variation_payload['name']}"
-                )
-            elif ingredient_payload and physical_form_payload:
-                display_name = (
-                    f"{ingredient_payload['name']} ({physical_form_payload['name']})"
-                )
-            elif ingredient_payload:
-                display_name = ingredient_payload["name"]
-
-            item_payload = {
-                "id": gi.id,
-                "name": display_name,
-                "text": display_name,
-                "display_name": display_name,
-                "raw_name": gi.name,
-                "item_type": gi.item_type,
-                "ingredient": ingredient_payload,
-                "variation": variation_payload,
-                "variation_id": variation_payload["id"] if variation_payload else None,
-                "variation_name": (
-                    variation_payload["name"] if variation_payload else None
-                ),
-                "variation_slug": (
-                    variation_payload["slug"] if variation_payload else None
-                ),
-                "physical_form": physical_form_payload,
-                "functions": function_names,
-                "applications": application_names,
-                "default_unit": gi.default_unit,
-                "unit": gi.default_unit,
-                "density": gi.density,
-                "default_is_perishable": gi.default_is_perishable,
-                "recommended_shelf_life_days": gi.recommended_shelf_life_days,
-                "saponification_value": getattr(gi, "saponification_value", None),
-                "iodine_value": getattr(gi, "iodine_value", None),
-                "fatty_acid_profile": getattr(gi, "fatty_acid_profile", None),
-                "melting_point_c": getattr(gi, "melting_point_c", None),
-                "recommended_fragrance_load_pct": gi.recommended_fragrance_load_pct,
-                "is_active_ingredient": gi.is_active_ingredient,
-                "inci_name": gi.inci_name,
-                "cas_number": getattr(gi, "cas_number", None),
-                "protein_content_pct": gi.protein_content_pct,
-                "brewing_color_srm": gi.brewing_color_srm,
-                "brewing_potential_sg": gi.brewing_potential_sg,
-                "brewing_diastatic_power_lintner": gi.brewing_diastatic_power_lintner,
-                "certifications": gi.certifications or [],
-                "category_tags": category_tag_names,
-                "ingredient_name": (
-                    ingredient_payload["name"] if ingredient_payload else None
-                ),
-                "physical_form_name": (
-                    physical_form_payload["name"] if physical_form_payload else None
-                ),
-            }
-            results.append(item_payload)
-
-            if group_mode:
-                group_key = (
-                    ingredient_payload["id"] if ingredient_payload else f"item-{gi.id}"
-                )
-                group_entry = grouped.get(group_key)
-                if not group_entry:
-                    group_entry = {
-                        "id": ingredient_payload["id"] if ingredient_payload else gi.id,
-                        "ingredient_id": (
-                            ingredient_payload["id"] if ingredient_payload else None
-                        ),
-                        "name": (
-                            ingredient_payload["name"]
-                            if ingredient_payload
-                            else display_name
-                        ),
-                        "text": (
-                            ingredient_payload["name"]
-                            if ingredient_payload
-                            else display_name
-                        ),
-                        "display_name": (
-                            ingredient_payload["name"]
-                            if ingredient_payload
-                            else display_name
-                        ),
-                        "item_type": gi.item_type,
-                        "ingredient": ingredient_payload,
-                        "ingredient_category_id": (
-                            ingredient_payload["ingredient_category_id"]
-                            if ingredient_payload
-                            else None
-                        ),
-                        "ingredient_category_name": (
-                            ingredient_payload["ingredient_category_name"]
-                            if ingredient_payload
-                            else None
-                        ),
-                        "forms": [],
-                    }
-                    grouped[group_key] = group_entry
-
-                group_entry["forms"].append(
-                    {
-                        "id": gi.id,
-                        "name": display_name,
-                        "text": display_name,
-                        "display_name": display_name,
-                        "raw_name": gi.name,
-                        "item_type": gi.item_type,
-                        "ingredient_id": (
-                            ingredient_payload["id"] if ingredient_payload else None
-                        ),
-                        "ingredient_name": (
-                            ingredient_payload["name"] if ingredient_payload else None
-                        ),
-                        "variation": variation_payload,
-                        "variation_id": (
-                            variation_payload["id"] if variation_payload else None
-                        ),
-                        "variation_name": (
-                            variation_payload["name"] if variation_payload else None
-                        ),
-                        "variation_slug": (
-                            variation_payload["slug"] if variation_payload else None
-                        ),
-                        "physical_form": physical_form_payload,
-                        "physical_form_name": (
-                            physical_form_payload["name"]
-                            if physical_form_payload
-                            else None
-                        ),
-                        "default_unit": gi.default_unit,
-                        "unit": gi.default_unit,
-                        "density": gi.density,
-                        "default_is_perishable": gi.default_is_perishable,
-                        "recommended_shelf_life_days": gi.recommended_shelf_life_days,
-                        "recommended_fragrance_load_pct": gi.recommended_fragrance_load_pct,
-                        "aliases": gi.aliases or [],
-                        "certifications": gi.certifications or [],
-                        "functions": function_names,
-                        "applications": application_names,
-                        "inci_name": gi.inci_name,
-                        "cas_number": getattr(gi, "cas_number", None),
-                        "protein_content_pct": gi.protein_content_pct,
-                        "brewing_color_srm": gi.brewing_color_srm,
-                        "brewing_potential_sg": gi.brewing_potential_sg,
-                        "brewing_diastatic_power_lintner": gi.brewing_diastatic_power_lintner,
-                        "saponification_value": getattr(
-                            gi, "saponification_value", None
-                        ),
-                        "iodine_value": getattr(gi, "iodine_value", None),
-                        "fatty_acid_profile": getattr(gi, "fatty_acid_profile", None),
-                        "melting_point_c": getattr(gi, "melting_point_c", None),
-                        "flash_point_c": getattr(gi, "flash_point_c", None),
-                        "moisture_content_percent": getattr(
-                            gi, "moisture_content_percent", None
-                        ),
-                        "comedogenic_rating": getattr(gi, "comedogenic_rating", None),
-                        "ph_value": getattr(gi, "ph_value", None),
-                        "category_tags": category_tag_names,
-                    }
-                )
-
-        if group_mode:
-            payload = {"success": True, "results": list(grouped.values())}
-        else:
-            payload = {"success": True, "results": results}
 
         if cache_key:
             try:
