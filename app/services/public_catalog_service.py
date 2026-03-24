@@ -24,12 +24,21 @@ class PublicCatalogService:
     """Service helpers for unauthenticated public catalog endpoints."""
 
     @staticmethod
-    def list_public_units() -> list[Unit]:
-        return (
+    def list_public_units() -> list[dict[str, Any]]:
+        units = (
             Unit.query.filter_by(is_active=True, is_custom=False)
             .order_by(Unit.unit_type.asc(), Unit.name.asc())
             .all()
         )
+        return [
+            {
+                "id": unit.id,
+                "name": unit.name,
+                "symbol": getattr(unit, "symbol", None),
+                "unit_type": unit.unit_type,
+            }
+            for unit in units
+        ]
 
     @staticmethod
     def search_global_items(
