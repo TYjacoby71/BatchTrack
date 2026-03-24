@@ -30,6 +30,7 @@ from ...services.analytics_tracking_service import AnalyticsTrackingService
 from ...services.billing.orchestrators.account_provisioning_orchestrator import (
     AccountProvisioningOrchestrator,
 )
+from ...services.developer.addon_service import AddonService
 from ...services.billing_service import BillingService
 from ...services.session_service import SessionService
 from ...services.signup_service import SignupService
@@ -136,9 +137,7 @@ def storage_addon():
     tier = organization.subscription_tier
     # Enforce tier-allowed add-ons: storage key must be allowed on this tier
     try:
-        from ...models.addon import Addon
-
-        storage_addon = Addon.query.filter_by(key="storage", is_active=True).first()
+        storage_addon = AddonService.find_active_addon_by_key("storage")
     except Exception:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/billing/routes.py:138",
@@ -182,9 +181,7 @@ def start_addon_checkout(addon_key):
     """Start Stripe checkout for a specific add-on by key (uses addon.stripe_lookup_key).
     Enforces that the add-on is allowed for the organization's current tier.
     """
-    from ...models.addon import Addon
-
-    addon = Addon.query.filter_by(key=addon_key, is_active=True).first()
+    addon = AddonService.find_active_addon_by_key(addon_key)
     if not addon or not addon.stripe_lookup_key:
         flash("Add-on not available.", "warning")
         return redirect(url_for("settings.index") + "#billing")
