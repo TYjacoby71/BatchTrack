@@ -126,6 +126,70 @@ class ExpirationService:
             return None
 
     @staticmethod
+    def get_life_remaining_entry_or_404(fifo_id: int):
+        """Return scoped unified history entry for life-remaining API."""
+        return UnifiedInventoryHistory.scoped().filter_by(id=fifo_id).first_or_404()
+
+    @staticmethod
+    def get_debug_expiration_snapshot(*, organization_id: int | None) -> Dict:
+        """Build debug expiration payload for product lots."""
+        sku_lots = (
+            InventoryLot.scoped()
+            .join(InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id)
+            .filter(
+                and_(
+                    InventoryLot.remaining_quantity_base > 0,
+                    InventoryItem.type == "product",
+                    (
+                        InventoryItem.organization_id == organization_id
+                        if organization_id
+                        else True
+                    ),
+                )
+            )
+            .all()
+        )
+
+        debug_info = []
+        for lot in sku_lots:
+            inventory_item = lot.inventory_item or db.session.get(
+                InventoryItem, lot.inventory_item_id
+            )
+            expiration = ExpirationService.get_effective_sku_expiration_date(lot)
+            debug_info.append(
+                {
+                    "lot_id": lot.id,
+                    "inventory_item_name": (
+                        inventory_item.name if inventory_item else "Unknown"
+                    ),
+                    "inventory_item_id": lot.inventory_item_id,
+                    "is_perishable": (
+                        inventory_item.is_perishable if inventory_item else False
+                    ),
+                    "shelf_life_days": (
+                        inventory_item.shelf_life_days if inventory_item else None
+                    ),
+                    "remaining_quantity": float(lot.remaining_quantity or 0.0),
+                    "received_date": (
+                        lot.received_date.isoformat() if lot.received_date else None
+                    ),
+                    "batch_id": lot.batch_id,
+                    "calculated_expiration": (
+                        expiration.isoformat() if expiration else None
+                    ),
+                }
+            )
+
+        return {
+            "total_product_lots": len(sku_lots),
+            "entries": debug_info[:10],
+            "perishable_count": len([e for e in debug_info if e["is_perishable"]]),
+            "non_perishable_count": len(
+                [e for e in debug_info if not e["is_perishable"]]
+            ),
+        }
+
+    @staticmethod
     def get_effective_expiration_date(fifo_entry) -> Optional[datetime]:
         """
         Get the effective expiration date for a FIFO entry using proper hierarchy:

@@ -132,9 +132,7 @@ def api_calculate_expiration():
 @require_permission("inventory.view")
 def api_life_remaining(fifo_id):
     """Get life remaining percentage for a FIFO entry"""
-    from app.models import UnifiedInventoryHistory
-
-    entry = UnifiedInventoryHistory.scoped().filter_by(id=fifo_id).first_or_404()
+    entry = ExpirationService.get_life_remaining_entry_or_404(fifo_id)
     if not entry.expiration_date:
         return jsonify({"life_remaining_percent": None, "non_perishable": True})
 
@@ -176,66 +174,14 @@ def api_archive_expired():
 @require_permission("inventory.view")
 def api_debug_expiration():
     """Debug endpoint to check expiration setup"""
-    from flask_login import current_user
-    from sqlalchemy import and_
-
-    from ...models import InventoryItem, InventoryLot, db
-
-    sku_lots = (
-        InventoryLot.scoped()
-        .join(InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id)
-        .filter(
-            and_(
-                InventoryLot.remaining_quantity_base > 0,
-                InventoryItem.type == "product",
-                (
-                    InventoryItem.organization_id == current_user.organization_id
-                    if current_user.is_authenticated and current_user.organization_id
-                    else True
-                ),
-            )
+    debug_payload = ExpirationService.get_debug_expiration_snapshot(
+        organization_id=(
+            current_user.organization_id
+            if current_user.is_authenticated and current_user.organization_id
+            else None
         )
-        .all()
     )
-
-    debug_info = []
-    for lot in sku_lots:
-        inventory_item = lot.inventory_item or db.session.get(
-            InventoryItem, lot.inventory_item_id
-        )
-        expiration = ExpirationService.get_effective_sku_expiration_date(lot)
-        debug_info.append(
-            {
-                "lot_id": lot.id,
-                "inventory_item_name": (
-                    inventory_item.name if inventory_item else "Unknown"
-                ),
-                "inventory_item_id": lot.inventory_item_id,
-                "is_perishable": (
-                    inventory_item.is_perishable if inventory_item else False
-                ),
-                "shelf_life_days": (
-                    inventory_item.shelf_life_days if inventory_item else None
-                ),
-                "remaining_quantity": float(lot.remaining_quantity or 0.0),
-                "received_date": (
-                    lot.received_date.isoformat() if lot.received_date else None
-                ),
-                "batch_id": lot.batch_id,
-                "calculated_expiration": expiration.isoformat() if expiration else None,
-            }
-        )
-
-    return jsonify(
-        {
-            "total_product_lots": len(sku_lots),
-            "entries": debug_info[:10],
-            "perishable_count": len([e for e in debug_info if e["is_perishable"]]),
-            "non_perishable_count": len(
-                [e for e in debug_info if not e["is_perishable"]]
-            ),
-        }
-    )
+    return jsonify(debug_payload)
 
 
 # --- Api Mark Expired ---

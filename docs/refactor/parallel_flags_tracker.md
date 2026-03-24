@@ -22,13 +22,7 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
    - **Parallel action:** extract support-submissions grouping/selection pipeline into a dedicated developer support service.
    - **Status:** open
 
-4. **Production-planning debug endpoint mixes diagnostics with data access**
-   - **Surface:** `app/blueprints/production_planning/routes.py`
-   - **Flag:** debug route performs direct `db.session` and scoped inventory/category queries.
-   - **Parallel action:** move debug data fetch to production-planning debug service; keep route as response formatter.
-   - **Status:** open
-
-5. **Known integration posture still incomplete**
+4. **Known integration posture still incomplete**
    - **Surface:** `app/services/whop_service.py`, `app/services/billing_service.py`, `app/services/pos_integration.py`, soap push UI flow
    - **Flag:** Whop and Soap push remain partial/stubbed, and POS production module still embeds mock/test classes.
    - **Parallel action:** execute Workstream C items from boundary report + consolidated backlog.
@@ -43,6 +37,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 - **Production-planning debug container endpoint route-local ORM access**
   - **Closed by:** moving recipe/container-category/container-list retrieval and shaping into `app/services/production_planning_debug_service.py`.
   - **Routes affected:** `app/blueprints/production_planning/routes.py` (`debug_recipe_containers`)
+
+- **Expiration life/debug endpoint route-local ORM access**
+  - **Closed by:** moving scoped history lookup and debug expiration query/shaping into `ExpirationService`.
+  - **Routes affected:** `app/blueprints/expiration/routes.py` (`api_life_remaining`, `api_debug_expiration`)
 
 - **Auth/onboarding route persistence in controllers**
   - **Closed by:** extracting verification/reset/onboarding token and profile persistence from routes to `app/services/auth_account_service.py`
