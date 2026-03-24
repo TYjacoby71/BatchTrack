@@ -37,3 +37,8 @@ class OAuthUserService:
     def update_last_login(user: User) -> None:
         user.last_login = TimezoneUtils.utc_now()
         db.session.commit()
+
+    @staticmethod
+    def update_last_login_to_now(user: User) -> None:
+        """Alias for explicit timestamped login updates in auth routes."""
+        OAuthUserService.update_last_login(user)

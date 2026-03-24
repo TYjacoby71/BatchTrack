@@ -5,8 +5,7 @@ import logging
 from flask import jsonify, request
 from flask_login import current_user, login_required
 
-from app.extensions import db
-from app.models import InventoryItem
+from app.services.recipe_ajax_service import RecipeAjaxService
 from app.utils.permissions import require_permission
 
 from .. import recipes_bp
@@ -27,13 +26,9 @@ def quick_add_ingredient():
         if not name:
             return jsonify({"error": "Ingredient name is required"}), 400
 
-        existing = (
-            InventoryItem.scoped()
-            .filter_by(
-                name=name,
-                organization_id=current_user.organization_id,
-            )
-            .first()
+        existing = RecipeAjaxService.find_existing_ingredient(
+            name=name,
+            organization_id=current_user.organization_id,
         )
 
         if existing:
@@ -47,17 +42,13 @@ def quick_add_ingredient():
                 }
             )
 
-        ingredient = InventoryItem(
+        ingredient = RecipeAjaxService.create_ingredient(
             name=name,
             unit=unit,
             type=ingredient_type,
-            quantity=0.0,
             organization_id=current_user.organization_id,
             created_by=current_user.id,
         )
-
-        db.session.add(ingredient)
-        db.session.commit()
 
         logger.info("Quick-added ingredient: %s (ID: %s)", name, ingredient.id)
 
@@ -76,6 +67,5 @@ def quick_add_ingredient():
             "Suppressed exception fallback at app/blueprints/recipes/views/ajax_routes.py:131",
             exc_info=True,
         )
-        db.session.rollback()
         logger.error("Error quick-adding ingredient: %s", exc)
         return jsonify({"error": str(exc)}), 500

@@ -15,12 +15,13 @@ from flask import flash, jsonify, redirect, render_template, request, session, u
 from flask_login import current_user, login_required
 
 from ...extensions import limiter
-from ...models import InventoryItem, Recipe, UserPreferences, db
+from ...models import InventoryItem, Recipe
 from ...services.batch_service import (
     BatchManagementService,
     BatchOperationsService,
     BatchService,
 )
+from ...services.batch_preferences_service import BatchPreferencesService
 from ...services.fifo_api_service import get_batch_inventory_summary_payload
 from ...services.production_planning.service import PlanProductionService
 from ...services.stock_check.core import UniversalStockCheckService
@@ -36,7 +37,6 @@ from .start_batch import start_batch_bp
 logger = logging.getLogger(__name__)
 
 BLOCKING_STOCK_STATUSES = {"NEEDED", "OUT_OF_STOCK", "ERROR", "DENSITY_MISSING"}
-BATCH_LIST_PREF_SCOPE = "batches_list"
 DEFAULT_VISIBLE_COLUMNS = [
     "recipe",
     "timestamp",
@@ -76,22 +76,11 @@ def _normalize_visible_columns(raw_columns):
 
 def _persist_batch_list_preferences(visible_columns, filters):
     """Persist batch list settings to user preferences."""
-    user_prefs = UserPreferences.get_for_user(current_user.id)
-    if not user_prefs:
-        return
-    next_values = {
-        "visible_columns": _normalize_visible_columns(visible_columns),
-        "status": filters.get("status") or "all",
-        "recipe_id": filters.get("recipe_id"),
-        "start": filters.get("start"),
-        "end": filters.get("end"),
-        "sort_by": filters.get("sort_by") or "date_desc",
-    }
-    previous_values = user_prefs.get_list_preferences(BATCH_LIST_PREF_SCOPE)
-    if previous_values == next_values:
-        return
-    user_prefs.set_list_preferences(BATCH_LIST_PREF_SCOPE, next_values, merge=False)
-    db.session.commit()
+    BatchPreferencesService.persist_batch_list_preferences(
+        user_id=current_user.id,
+        visible_columns=_normalize_visible_columns(visible_columns),
+        filters=filters,
+    )
 
 
 # --- Extract blocking stock issues ---
@@ -221,7 +210,6 @@ def set_column_visibility():
             "Suppressed exception fallback at app/blueprints/batches/routes.py:227",
             exc_info=True,
         )
-        db.session.rollback()
         logger.exception("Failed to persist batch column visibility preferences")
     flash("Column preferences updated.", "success")
     return redirect(url_for("batches.list_batches"))
@@ -245,10 +233,7 @@ def list_batches():
         in_progress_page = request.args.get("in_progress_page", 1, type=int)
         completed_page = request.args.get("completed_page", 1, type=int)
 
-        user_prefs = UserPreferences.get_for_user(current_user.id)
-        saved_scope = (
-            user_prefs.get_list_preferences(BATCH_LIST_PREF_SCOPE) if user_prefs else {}
-        )
+        saved_scope = BatchPreferencesService.load_scope_preferences(current_user.id)
 
         session_visible_columns = session.get("visible_columns")
         if session_visible_columns is None:
@@ -295,7 +280,6 @@ def list_batches():
                 "Suppressed exception fallback at app/blueprints/batches/routes.py:297",
                 exc_info=True,
             )
-            db.session.rollback()
             logger.exception("Failed to persist batch list preferences")
 
         # Pagination configuration
