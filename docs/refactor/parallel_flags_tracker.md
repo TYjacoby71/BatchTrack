@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Recipe-library route-local ORM access (public list/detail/org marketplace)**
+  - **Closed by:** moving public recipe listing/detail/org-marketplace queries and rollup aggregation into `app/services/recipe_library_view_service.py`.
+  - **Routes affected:** `app/blueprints/recipe_library/routes.py` (`recipe_library`, `recipe_library_detail`, `organization_marketplace`, `_fetch_cost_rollups`)
+
 - **Global-library detail/save/stats route-local ORM access**
   - **Closed by:** moving active-item/detail lookups, related-item retrieval, org inventory link lookup, and stats-item retrieval behind `app/services/global_library_view_service.py`.
   - **Routes affected:** `app/blueprints/global_library/routes.py` (`global_item_detail`, `save_global_item_to_inventory`, `global_library_item_stats`)
