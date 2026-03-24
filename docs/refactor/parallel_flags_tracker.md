@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Recipe form-parsing route-adjacent query/session access**
+  - **Closed by:** moving portion-unit lookup/create, global-item lookup, org inventory lookup-by-global/name, and ownership-link flush/rollback handling into `app/services/recipe_form_parsing_service.py`.
+  - **Routes affected:** `app/blueprints/recipes/form_parsing.py` (`ensure_portion_unit`, `extract_ingredients_from_form`)
+
 - **Recipe create-routes query/rollback access remained route-local**
   - **Closed by:** moving purchased-recipe anti-plagiarism query, newly-created inventory item name lookup, category lookup-by-name, import recipe lookup, and rollback handling into `app/services/recipe_create_view_service.py`.
   - **Routes affected:** `app/blueprints/recipes/views/create_routes.py` (`_enforce_anti_plagiarism`, `new_recipe`, `clone_recipe`, `import_recipe`)

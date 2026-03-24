@@ -16,12 +16,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
 from flask_login import current_user
-from sqlalchemy import func
 
-from app.extensions import db
-from app.models import GlobalItem, InventoryItem, Recipe
-from app.models.unit import Unit
+from app.models import Recipe
 from app.services.inventory_adjustment import create_inventory_item
+from app.services.recipe_form_parsing_service import RecipeFormParsingService
 from app.services.recipe_marketplace_service import RecipeMarketplaceService
 
 from .form_prefill import safe_int
@@ -145,18 +143,10 @@ def ensure_portion_unit(portion_name: Optional[str]) -> Optional[int]:
     if not portion_name:
         return None
 
-    try:
-        existing = (
-            Unit.query.filter(Unit.name == portion_name)
-            .order_by((Unit.organization_id == current_user.organization_id).desc())
-            .first()
-        )
-    except Exception:
-        logger.warning(
-            "Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:154",
-            exc_info=True,
-        )
-        existing = None
+    existing = RecipeFormParsingService.find_unit_for_portion_name(
+        portion_name=portion_name,
+        organization_id=getattr(current_user, "organization_id", None),
+    )
 
     if existing:
         return existing.id
@@ -164,28 +154,11 @@ def ensure_portion_unit(portion_name: Optional[str]) -> Optional[int]:
     if not getattr(current_user, "is_authenticated", False):
         return None
 
-    try:
-        unit = Unit(
-            name=portion_name,
-            unit_type="count",
-            base_unit="count",
-            conversion_factor=1.0,
-            is_active=True,
-            is_custom=True,
-            is_mapped=False,
-            organization_id=current_user.organization_id,
-            created_by=current_user.id,
-        )
-        db.session.add(unit)
-        db.session.flush()
-        return unit.id
-    except Exception:
-        logger.warning(
-            "Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:178",
-            exc_info=True,
-        )
-        db.session.rollback()
-        return None
+    return RecipeFormParsingService.create_custom_count_unit(
+        portion_name=portion_name,
+        organization_id=getattr(current_user, "organization_id", None),
+        created_by=getattr(current_user, "id", None),
+    )
 
 
 # --- Coerce float ---
@@ -234,68 +207,33 @@ def extract_ingredients_from_form(form):
                 item_id = None
 
         if not item_id and gi_id:
-            try:
-                gi = db.session.get(GlobalItem, int(gi_id)) if gi_id else None
-            except Exception:
-                logger.warning(
-                    "Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:231",
-                    exc_info=True,
-                )
-                gi = None
+            gi = RecipeFormParsingService.get_global_item(int(gi_id)) if gi_id else None
 
             if gi:
-                try:
-                    existing = (
-                        InventoryItem.scoped()
-                        .filter_by(
-                            organization_id=current_user.organization_id,
-                            global_item_id=gi.id,
-                            type=gi.item_type,
-                        )
-                        .order_by(InventoryItem.id.asc())
-                        .first()
+                existing = (
+                    RecipeFormParsingService.find_org_inventory_item_for_global(
+                        organization_id=getattr(current_user, "organization_id", None),
+                        global_item_id=gi.id,
+                        item_type=gi.item_type,
                     )
-                except Exception:
-                    logger.warning(
-                        "Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:245",
-                        exc_info=True,
-                    )
-                    existing = None
+                )
 
                 if existing:
                     item_id = int(existing.id)
                 else:
-                    try:
-                        name_match = (
-                            InventoryItem.scoped()
-                            .filter(
-                                InventoryItem.organization_id
-                                == current_user.organization_id,
-                                func.lower(InventoryItem.name)
-                                == func.lower(db.literal(gi.name)),
-                                InventoryItem.type == gi.item_type,
-                            )
-                            .order_by(InventoryItem.id.asc())
-                            .first()
+                    name_match = (
+                        RecipeFormParsingService.find_org_inventory_item_name_match(
+                            organization_id=getattr(current_user, "organization_id", None),
+                            name=gi.name,
+                            item_type=gi.item_type,
                         )
-                    except Exception:
-                        logger.warning(
-                            "Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:263",
-                            exc_info=True,
-                        )
-                        name_match = None
+                    )
 
                     if name_match:
-                        try:
-                            name_match.global_item_id = gi.id
-                            name_match.ownership = "global"
-                            db.session.flush()
-                        except Exception:
-                            logger.warning(
-                                "Suppressed exception fallback at app/blueprints/recipes/form_parsing.py:271",
-                                exc_info=True,
-                            )
-                            db.session.rollback()
+                        RecipeFormParsingService.link_inventory_item_to_global(
+                            item=name_match,
+                            global_item_id=gi.id,
+                        )
                         item_id = int(name_match.id)
                     else:
                         form_like = {
