@@ -47,7 +47,7 @@
 - `app/blueprints/products/product_inventory_routes.py`: 9
 
 ## Boundary 3: Data access ownership
-- Data access findings overlap controller/business findings: persistence logic is still route-adjacent in 22 files.
+- Data access findings overlap controller/business findings: persistence logic is still route-adjacent in 21 files.
 - Drawers/actions endpoints and several developer/admin modules still perform direct `db.session` mutations in route scope.
 
 ## Boundary 4: Tenant isolation
