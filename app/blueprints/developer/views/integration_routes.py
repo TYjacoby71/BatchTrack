@@ -18,6 +18,7 @@ from flask import jsonify, render_template, request, url_for
 
 from app.config import ENV_DIAGNOSTICS
 from app.config_schema import build_integration_sections
+from app.services.developer.integration_admin_service import IntegrationAdminService
 from app.services.developer.dashboard_service import DeveloperDashboardService
 from app.services.email_service import EmailService
 from app.services.integrations.registry import build_integration_categories
@@ -38,8 +39,6 @@ logger = logging.getLogger(__name__)
 def integrations_checklist():
     """Comprehensive integrations and launch checklist (developer only)."""
     from flask import current_app
-
-    from app.models.subscription_tier import SubscriptionTier
 
     def _env_or_config_value(key):
         value = os.environ.get(key)
@@ -79,7 +78,7 @@ def integrations_checklist():
     stripe_secret = _env_or_config_value("STRIPE_SECRET_KEY")
     stripe_publishable = _env_or_config_value("STRIPE_PUBLISHABLE_KEY")
     stripe_webhook_secret = _env_or_config_value("STRIPE_WEBHOOK_SECRET")
-    tiers_count = SubscriptionTier.query.count()
+    tiers_count = IntegrationAdminService.get_customer_facing_tier_count()
     stripe_status = {
         "secret_key_present": bool(stripe_secret),
         "publishable_key_present": bool(stripe_publishable),
@@ -474,22 +473,7 @@ def integrations_test_stripe():
 def integrations_stripe_events():
     """Summarize recent Stripe webhook events from the database."""
     try:
-        from app.models.stripe_event import StripeEvent
-
-        total = StripeEvent.query.count()
-        last = StripeEvent.query.order_by(StripeEvent.id.desc()).first()
-        payload = {"total_events": total}
-        if last:
-            payload.update(
-                {
-                    "last_event_id": last.event_id,
-                    "last_event_type": last.event_type,
-                    "last_status": last.status,
-                    "last_processed_at": (
-                        last.processed_at.isoformat() if last.processed_at else None
-                    ),
-                }
-            )
+        payload = IntegrationAdminService.get_stripe_event_summary()
         return jsonify({"success": True, "data": payload})
     except Exception as exc:
         logger.warning(
@@ -507,30 +491,16 @@ def integrations_stripe_events():
 @require_developer_permission("dev.system_admin")
 def integrations_set_feature_flags():
     """Set feature flags via AJAX."""
-    from app.extensions import db
-    from app.models.feature_flag import FeatureFlag
-
     try:
         data = request.get_json()
         if not data:
             return jsonify({"success": False, "error": "No data provided"}), 400
 
         toggleable_keys = DeveloperDashboardService.get_toggleable_feature_keys()
-        for flag_key, enabled in data.items():
-            if flag_key not in toggleable_keys:
-                continue
-            feature_flag = FeatureFlag.query.filter_by(key=flag_key).first()
-            if feature_flag:
-                feature_flag.enabled = bool(enabled)
-            else:
-                feature_flag = FeatureFlag(
-                    key=flag_key,
-                    enabled=bool(enabled),
-                    description=f"Auto-created flag for {flag_key}",
-                )
-                db.session.add(feature_flag)
-
-        db.session.commit()
+        IntegrationAdminService.set_feature_flags(
+            requested_flags=data,
+            toggleable_keys=toggleable_keys,
+        )
         return jsonify({"success": True})
 
     except Exception as exc:
@@ -538,7 +508,6 @@ def integrations_set_feature_flags():
             "Suppressed exception fallback at app/blueprints/developer/views/integration_routes.py:513",
             exc_info=True,
         )
-        db.session.rollback()
         return jsonify({"success": False, "error": str(exc)}), 500
 
 

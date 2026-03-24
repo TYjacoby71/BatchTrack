@@ -24,13 +24,13 @@ from flask import (
 from flask_login import current_user, login_required, login_user
 
 from ...extensions import csrf, db, limiter
-from ...models.models import Organization
 from ...models.subscription_tier import SubscriptionTier
 from ...services.analytics_tracking_service import AnalyticsTrackingService
 from ...services.billing.orchestrators.account_provisioning_orchestrator import (
     AccountProvisioningOrchestrator,
 )
 from ...services.developer.addon_service import AddonService
+from ...services.billing.subscription_webhook_service import SubscriptionWebhookService
 from ...services.billing_service import BillingService
 from ...services.session_service import SessionService
 from ...services.signup_service import SignupService
@@ -626,25 +626,14 @@ def handle_subscription_change(event):
         customer_id = subscription.get("customer")
         status = subscription.get("status")
 
-        organization = Organization.query.filter_by(
-            stripe_customer_id=customer_id
-        ).first()
+        organization = SubscriptionWebhookService.get_organization_by_customer_id(
+            customer_id
+        )
         if not organization:
             logger.warning(f"Organization not found for customer ID: {customer_id}")
             return jsonify({"error": "Organization not found"}), 404
 
-        # Update subscription status
-        if status in ["active", "trialing"]:
-            organization.subscription_status = status
-            organization.billing_status = "active"
-        elif status == "past_due":
-            organization.subscription_status = status
-            organization.billing_status = "past_due"
-        elif status == "canceled":
-            organization.subscription_status = status
-            organization.billing_status = "cancelled"
-
-        db.session.commit()
+        SubscriptionWebhookService.apply_subscription_status(organization, status)
         logger.info(
             f"Updated organization {organization.id} subscription status to {status}"
         )
@@ -666,16 +655,14 @@ def handle_subscription_deleted(event):
         subscription = event["data"]["object"]
         customer_id = subscription.get("customer")
 
-        organization = Organization.query.filter_by(
-            stripe_customer_id=customer_id
-        ).first()
+        organization = SubscriptionWebhookService.get_organization_by_customer_id(
+            customer_id
+        )
         if not organization:
             logger.warning(f"Organization not found for customer ID: {customer_id}")
             return jsonify({"error": "Organization not found"}), 404
 
-        organization.subscription_status = "cancelled"
-        organization.billing_status = "cancelled"
-        db.session.commit()
+        SubscriptionWebhookService.mark_subscription_cancelled(organization)
         logger.info(
             f"Updated organization {organization.id} subscription status to cancelled"
         )
