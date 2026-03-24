@@ -23,8 +23,8 @@ from flask import (
 from flask_login import current_user, login_required
 
 from app.blueprints.expiration.services import ExpirationService
-from app.extensions import db, limiter
-from app.models import Batch
+from app.extensions import limiter
+from app.services.app_dashboard_service import AppDashboardService
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.services.statistics import AnalyticsDataService
 from app.utils.permissions import permission_required
@@ -57,19 +57,8 @@ def dashboard():
             )
             return redirect(url_for("developer.dashboard"))
 
-        # Verify the organization still exists.
-        from app.models import Organization
-
         try:
-            selected_org = db.session.get(Organization, selected_org_id)
-            if not selected_org:
-                session.pop("dev_selected_org_id", None)
-                session.pop("dev_masquerade_context", None)
-                flash(
-                    "Selected organization no longer exists. Masquerade cleared.",
-                    "error",
-                )
-                return redirect(url_for("developer.dashboard"))
+            selected_org_exists = AppDashboardService.organization_exists(selected_org_id)
         except Exception as org_error:
             logger.warning(
                 "Suppressed exception fallback at app/blueprints/dashboard/routes.py:74",
@@ -78,8 +67,16 @@ def dashboard():
             print("---!!! ORGANIZATION QUERY ERROR (ORIGINAL SIN?) !!!---")
             print(f"Error: {org_error}")
             print("----------------------------------------------------")
-            db.session.rollback()
+            AppDashboardService.rollback_session()
             flash("Database error accessing organization. Please try again.", "error")
+            return redirect(url_for("developer.dashboard"))
+        if not selected_org_exists:
+            session.pop("dev_selected_org_id", None)
+            session.pop("dev_masquerade_context", None)
+            flash(
+                "Selected organization no longer exists. Masquerade cleared.",
+                "error",
+            )
             return redirect(url_for("developer.dashboard"))
 
     # Initialize with safe defaults.
@@ -94,16 +91,13 @@ def dashboard():
 
     try:
         # Force clean state.
-        db.session.rollback()
+        AppDashboardService.rollback_session()
 
         # Get active batch with explicit error catching.
         try:
-            batch_query = Batch.scoped().filter_by(status="in_progress")
-            if current_user.organization_id:
-                batch_query = batch_query.filter_by(
-                    organization_id=current_user.organization_id
-                )
-            active_batch = batch_query.first()
+            active_batch = AppDashboardService.get_active_in_progress_batch(
+                organization_id=getattr(current_user, "organization_id", None)
+            )
         except Exception as batch_error:
             logger.warning(
                 "Suppressed exception fallback at app/blueprints/dashboard/routes.py:105",
@@ -112,7 +106,7 @@ def dashboard():
             print("---!!! BATCH QUERY ERROR (ORIGINAL SIN?) !!!---")
             print(f"Error: {batch_error}")
             print("-----------------------------------------------")
-            db.session.rollback()
+            AppDashboardService.rollback_session()
             active_batch = None
 
         # Get inventory alerts with explicit error catching.
@@ -128,7 +122,7 @@ def dashboard():
             print("---!!! INVENTORY ALERTS ERROR (ORIGINAL SIN?) !!!---")
             print(f"Error: {inv_error}")
             print("----------------------------------------------------")
-            db.session.rollback()
+            AppDashboardService.rollback_session()
             low_stock_ingredients = []
 
         # Get expiration summary with explicit error catching.
@@ -142,7 +136,7 @@ def dashboard():
             print("---!!! EXPIRATION SERVICE ERROR (ORIGINAL SIN?) !!!---")
             print(f"Error: {exp_error}")
             print("------------------------------------------------------")
-            db.session.rollback()
+            AppDashboardService.rollback_session()
             expiration_summary = {
                 "expired_fifo": 0,
                 "expiring_fifo": 0,
@@ -158,7 +152,7 @@ def dashboard():
         print("---!!! GENERAL DASHBOARD ERROR !!!---")
         print(f"Error: {exc}")
         print("------------------------------------")
-        db.session.rollback()
+        AppDashboardService.rollback_session()
         flash(
             "Dashboard temporarily unavailable. Please try refreshing the page.",
             "error",

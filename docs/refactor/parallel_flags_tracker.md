@@ -30,6 +30,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Dashboard route direct org/batch query access**
+  - **Closed by:** moving selected-organization existence checks, active in-progress batch lookup, and rollback helpers into `app/services/app_dashboard_service.py`.
+  - **Routes affected:** `app/blueprints/dashboard/routes.py` (`dashboard`)
+
 - **Global-link and container-mismatch drawer direct route ORM access**
   - **Closed by:** moving global-item lookup/linking mutations and recipe/container lookup + yield persistence into dedicated drawer services.
   - **Routes affected:** `app/blueprints/api/drawers/drawer_actions/global_link.py`, `app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py`
