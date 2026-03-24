@@ -5,7 +5,10 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from flask import current_app
+from sqlalchemy import select
 
+from app.extensions import db
+from app.models.feature_flag import FeatureFlag
 from app.services.marketing_content_service import MarketingContentService
 from app.utils.settings import get_settings, save_settings
 
@@ -701,6 +704,11 @@ class DeveloperDashboardService:
         from app.services.statistics import AnalyticsDataService
 
         return AnalyticsDataService.get_waitlist_statistics(force_refresh=force_refresh)
+
+    @staticmethod
+    def get_feature_flag_state() -> Dict[str, bool]:
+        rows = db.session.execute(select(FeatureFlag.key, FeatureFlag.enabled)).all()
+        return {str(row[0]): bool(row[1]) for row in rows}
 
     @staticmethod
     def _format_generated_at(generated_iso: Optional[str]) -> Optional[str]:

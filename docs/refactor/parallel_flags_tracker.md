@@ -16,7 +16,7 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
    - **Parallel action:** extract search/query construction to a dedicated public catalog service with route-only transport logic.
    - **Status:** open
 
-3. **Developer support routes still own data shaping and query composition**
+3. **Developer support submissions shaping remains route-local**
    - **Surface:** `app/blueprints/developer/views/organization_routes.py`
    - **Flag:** support submissions route still owns substantial grouping/selection shaping and should move behind a service boundary over time.
    - **Parallel action:** extract support-submissions grouping/selection pipeline into a dedicated developer support service.
@@ -47,3 +47,7 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 - **Start-batch route direct recipe lookup**
   - **Closed by:** moving recipe resolution to `app/services/batch_start_service.py`.
   - **Routes affected:** `app/blueprints/batches/start_batch.py`
+
+- **Developer dashboard/masquerade direct ORM access**
+  - **Closed by:** moving feature-flag state map and masquerade organization resolution behind developer services.
+  - **Routes affected:** `app/blueprints/developer/views/dashboard_routes.py`, `app/blueprints/developer/views/masquerade_routes.py`

@@ -12,8 +12,7 @@ from __future__ import annotations
 
 from flask import flash, redirect, session, url_for
 
-from app.extensions import db
-from app.models import Organization
+from app.services.developer.organization_service import OrganizationService
 from app.utils.timezone_utils import TimezoneUtils
 
 from ..decorators import require_developer_permission
@@ -28,7 +27,7 @@ from ..routes import developer_bp
 @require_developer_permission("dev.all_organizations")
 def select_organization(org_id):
     """Select an organization to view as developer (customer support)."""
-    org = db.get_or_404(Organization, org_id)
+    org = OrganizationService.get_organization_or_404(org_id)
     session["dev_selected_org_id"] = org_id
     flash(f"Now viewing data for: {org.name} (Customer Support Mode)", "info")
     return redirect(url_for("app_routes.dashboard"))
@@ -42,7 +41,7 @@ def select_organization(org_id):
 @require_developer_permission("dev.all_organizations")
 def view_as_organization(org_id):
     """Set session to view as a specific organization (customer support)."""
-    organization = db.get_or_404(Organization, org_id)
+    organization = OrganizationService.get_organization_or_404(org_id)
 
     session.pop("dev_selected_org_id", None)
     session.pop("dev_masquerade_context", None)
@@ -72,7 +71,7 @@ def clear_organization_filter():
     org_name = None
     if "dev_selected_org_id" in session:
         org_id = session["dev_selected_org_id"]
-        org = db.session.get(Organization, org_id)
+        org = OrganizationService.get_selected_organization(org_id)
         org_name = org.name if org else "Unknown"
 
     session.pop("dev_selected_org_id", None)

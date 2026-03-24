@@ -14,7 +14,6 @@ import logging
 
 from flask import jsonify, render_template, request, url_for
 
-from app.models.feature_flag import FeatureFlag
 from app.services.developer.dashboard_service import DeveloperDashboardService
 from app.services.statistics import AnalyticsDataService
 
@@ -184,8 +183,7 @@ def update_system_settings():
 @require_developer_permission("dev.system_admin")
 def feature_flags():
     """Feature flags management page."""
-    db_flags = FeatureFlag.query.all()
-    flag_state = {flag.key: flag.enabled for flag in db_flags}
+    flag_state = DeveloperDashboardService.get_feature_flag_state()
     feature_flag_sections = DeveloperDashboardService.get_feature_flag_sections()
 
     return render_template(
