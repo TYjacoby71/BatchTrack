@@ -63,7 +63,6 @@
 - `app/blueprints/developer/debug_routes.py`
 - `app/blueprints/developer/subscription_tiers.py`
 - `app/blueprints/developer/views/integration_routes.py`
-- `app/blueprints/developer/views/product_category_routes.py`
 - `app/blueprints/developer/views/user_routes.py`
 - Note: several entries are developer/public/auth surfaces and may be intentionally unscoped by policy.
 
