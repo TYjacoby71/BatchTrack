@@ -13,7 +13,7 @@ Glossary:
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user, login_required
 
-from app.models import Tag, db
+from app.services.tag_manager_service import TagManagerService
 from app.utils.permissions import require_permission
 
 # --- Tag manager blueprint ---
@@ -31,7 +31,7 @@ tag_manager_bp = Blueprint("tag_manager", __name__)
 @login_required
 @require_permission("tags.manage")
 def tag_manager():
-    tags = Tag.scoped().all()
+    tags = TagManagerService.list_tags()
     return render_template("tag_manager.html", tags=tags)
 
 
@@ -43,7 +43,7 @@ def tag_manager():
 @login_required
 @require_permission("tags.manage")
 def get_tags():
-    tags = Tag.scoped().filter_by(is_active=True).all()
+    tags = TagManagerService.list_tags(active_only=True)
     return jsonify(
         [
             {
@@ -67,16 +67,13 @@ def get_tags():
 def create_tag():
     data = request.get_json()
 
-    tag = Tag(
+    tag = TagManagerService.create_tag(
+        organization_id=current_user.organization_id,
+        created_by=current_user.id,
         name=data["name"],
         color=data.get("color", "#6c757d"),
         description=data.get("description", ""),
-        organization_id=current_user.organization_id,
-        created_by=current_user.id,
     )
-
-    db.session.add(tag)
-    db.session.commit()
 
     return jsonify({"success": True, "tag_id": tag.id})
 
@@ -89,14 +86,15 @@ def create_tag():
 @login_required
 @require_permission("tags.manage")
 def update_tag(tag_id):
-    tag = Tag.scoped().filter_by(id=tag_id).first_or_404()
+    tag = TagManagerService.get_tag_or_404(tag_id)
     data = request.get_json()
 
-    tag.name = data["name"]
-    tag.color = data.get("color", tag.color)
-    tag.description = data.get("description", tag.description)
-
-    db.session.commit()
+    TagManagerService.update_tag(
+        tag,
+        name=data["name"],
+        color=data.get("color", tag.color),
+        description=data.get("description", tag.description),
+    )
 
     return jsonify({"success": True})
 
@@ -109,8 +107,7 @@ def update_tag(tag_id):
 @login_required
 @require_permission("tags.manage")
 def delete_tag(tag_id):
-    tag = Tag.scoped().filter_by(id=tag_id).first_or_404()
-    tag.is_active = False
-    db.session.commit()
+    tag = TagManagerService.get_tag_or_404(tag_id)
+    TagManagerService.soft_delete_tag(tag)
 
     return jsonify({"success": True})
