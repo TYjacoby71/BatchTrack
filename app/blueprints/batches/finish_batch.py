@@ -20,8 +20,8 @@ from app.utils.permissions import (
     require_permission,
 )
 
-from ...models import Batch, InventoryItem, Product, ProductVariant, db
-from ...models.inventory_lot import InventoryLot
+from ...models import InventoryItem, ProductSKU
+from ...services.batch_finish_route_service import BatchFinishRouteService
 from ...services.inventory_adjustment import process_inventory_adjustment
 
 finish_batch_bp = Blueprint("finish_batch", __name__)
@@ -76,7 +76,7 @@ def complete_batch(batch_id):
             "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:74",
             exc_info=True,
         )
-        db.session.rollback()
+        BatchFinishRouteService.rollback_session()
         logger.error(f"Error completing batch {batch_id}: {str(e)}")
         flash(f"Error completing batch: {str(e)}", "error")
         return redirect(
@@ -124,7 +124,7 @@ def fail_batch(batch_id):
             "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:118",
             exc_info=True,
         )
-        db.session.rollback()
+        BatchFinishRouteService.rollback_session()
         logger.error(f"Error failing batch {batch_id}: {str(e)}")
         if request.is_json:
             return jsonify({"success": False, "message": str(e)}), 500
@@ -143,10 +143,10 @@ def _complete_batch_internal(batch_id, form_data):
     try:
         # Get the batch with conditional organization scoping
         org_id = getattr(current_user, "organization_id", None)
-        query = Batch.scoped().filter_by(id=batch_id, status="in_progress")
-        if org_id:
-            query = query.filter_by(organization_id=org_id)
-        batch = query.first()
+        batch = BatchFinishRouteService.get_in_progress_batch(
+            batch_id=batch_id,
+            organization_id=org_id,
+        )
 
         if not batch:
             return False, "Batch not found or already completed"
@@ -188,19 +188,13 @@ def _complete_batch_internal(batch_id, form_data):
                     getattr(current_user, "organization_id", None)
                     or batch.organization_id
                 )
-                existing_skus_query = (
-                    ProductSKU.scoped()
-                    .join(ProductSKU.inventory_item)
-                    .filter(
-                        ProductSKU.product_id == product_id,
-                        ProductSKU.variant_id == variant_id,
+                existing_skus = (
+                    BatchFinishRouteService.list_existing_skus_for_product_variant(
+                        product_id=product_id,
+                        variant_id=variant_id,
+                        organization_id=inv_org_id,
                     )
                 )
-                if inv_org_id:
-                    existing_skus_query = existing_skus_query.filter(
-                        InventoryItem.organization_id == inv_org_id
-                    )
-                existing_skus = existing_skus_query.all()
 
                 for sku in existing_skus:
                     is_valid, error_msg, inv_qty, fifo_total = (
@@ -297,7 +291,7 @@ def _complete_batch_internal(batch_id, form_data):
         try:
             from app.models.statistics import BatchStats as _BatchStats
 
-            stats = _BatchStats.query.filter_by(batch_id=batch.id).first()
+            stats = BatchFinishRouteService.get_batch_stats(batch_id=batch.id)
             if stats and batch.final_quantity and output_unit:
                 # If product output path computed container volume, use it
                 total_container_volume = None
@@ -324,14 +318,14 @@ def _complete_batch_internal(batch_id, form_data):
             pass
 
         try:
-            db.session.commit()
+            BatchFinishRouteService.commit_session()
             return True, f"Batch {batch.label_code} completed successfully!"
         except Exception as commit_error:
             logger.warning(
                 "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:311",
                 exc_info=True,
             )
-            db.session.rollback()
+            BatchFinishRouteService.rollback_session()
             return (
                 False,
                 f"Failed to complete batch due to database error: {str(commit_error)}",
@@ -342,7 +336,7 @@ def _complete_batch_internal(batch_id, form_data):
             "Suppressed exception fallback at app/blueprints/batches/finish_batch.py:318",
             exc_info=True,
         )
-        db.session.rollback()
+        BatchFinishRouteService.rollback_session()
         logger.error(f"Error completing batch {batch_id}: {str(e)}")
         return False, f"Error completing batch: {str(e)}"
 
@@ -359,16 +353,11 @@ def _create_intermediate_ingredient(
         # Create or get inventory item for the intermediate ingredient
         ingredient_name = f"{batch.recipe.name} (Intermediate)"
 
-        inventory_item = (
-            InventoryItem.scoped()
-            .filter_by(
-                name=ingredient_name,
-                organization_id=(
-                    getattr(current_user, "organization_id", None)
-                    or batch.organization_id
-                ),
-            )
-            .first()
+        inventory_item = BatchFinishRouteService.find_inventory_item_by_name_and_org(
+            name=ingredient_name,
+            organization_id=(
+                getattr(current_user, "organization_id", None) or batch.organization_id
+            ),
         )
 
         if not inventory_item:
@@ -383,8 +372,7 @@ def _create_intermediate_ingredient(
                 ),
                 created_by=(getattr(current_user, "id", None) or batch.created_by),
             )
-            db.session.add(inventory_item)
-            db.session.flush()  # Ensure we get the ID
+            BatchFinishRouteService.add_and_flush(inventory_item)
 
         # Set perishable data at the inventory_item level from batch
         if batch.is_perishable:
@@ -441,38 +429,23 @@ def _create_product_output(
     """Create product SKUs from batch completion using centralized inventory adjustment"""
     try:
         # Get product and variant with proper organization scoping
-        product = (
-            Product.scoped()
-            .filter_by(
-                id=product_id,
-                organization_id=(
-                    getattr(current_user, "organization_id", None)
-                    or batch.organization_id
-                ),
-            )
-            .first()
+        inv_org_id = getattr(current_user, "organization_id", None) or batch.organization_id
+        product = BatchFinishRouteService.get_scoped_product(
+            product_id=product_id,
+            organization_id=inv_org_id,
         )
-
-        variant = (
-            ProductVariant.scoped()
-            .filter_by(
-                id=variant_id,
-                product_id=product_id,
-                organization_id=(
-                    getattr(current_user, "organization_id", None)
-                    or batch.organization_id
-                ),
-            )
-            .first()
+        variant = BatchFinishRouteService.get_scoped_variant(
+            variant_id=variant_id,
+            product_id=product_id,
+            organization_id=inv_org_id,
         )
 
         if not product:
-            product = Product.scoped().filter_by(id=product_id).first()
+            product = BatchFinishRouteService.get_product_any_scope(product_id=product_id)
         if not variant:
-            variant = (
-                ProductVariant.scoped()
-                .filter_by(id=variant_id, product_id=product_id)
-                .first()
+            variant = BatchFinishRouteService.get_variant_any_scope(
+                variant_id=variant_id,
+                product_id=product_id,
             )
 
         if not product or not variant:
@@ -564,14 +537,10 @@ def _create_product_output(
                 from ...models import InventoryItem
                 from ...models.product import ProductSKU
 
-                sku = (
-                    ProductSKU.scoped()
-                    .filter_by(
-                        product_id=product.id,
-                        variant_id=variant.id,
-                        size_label=size_label,
-                    )
-                    .first()
+                sku = BatchFinishRouteService.get_sku_for_variant_and_size(
+                    product_id=product.id,
+                    variant_id=variant.id,
+                    size_label=size_label,
                 )
 
                 if not sku:
@@ -584,8 +553,7 @@ def _create_product_output(
                         organization_id=batch.organization_id,
                         created_by=batch.created_by,
                     )
-                    db.session.add(inv)
-                    db.session.flush()
+                    BatchFinishRouteService.add_and_flush(inv)
 
                     # Generate a simple SKU code using model helper
                     sku_code = ProductSKU.generate_sku_code(
@@ -594,13 +562,10 @@ def _create_product_output(
 
                     # Optional: render human-friendly name
                     try:
-                        from ...models.product_category import ProductCategory
                         from ...services.sku_name_builder import SKUNameBuilder
 
-                        category = (
-                            db.session.get(ProductCategory, product.category_id)
-                            if getattr(product, "category_id", None)
-                            else None
+                        category = BatchFinishRouteService.get_product_category(
+                            category_id=getattr(product, "category_id", None)
                         )
                         template = (
                             category.sku_name_template
@@ -641,8 +606,7 @@ def _create_product_output(
                         organization_id=batch.organization_id,
                         created_by=batch.created_by,
                     )
-                    db.session.add(sku)
-                    db.session.flush()
+                    BatchFinishRouteService.add_and_flush(sku)
 
                 # Credit inventory as number of portions to the SKU's inventory item
                 adjustment_result = process_inventory_adjustment(
@@ -662,13 +626,9 @@ def _create_product_output(
                         error_message or "Failed to credit portion inventory"
                     )
 
-                portion_lot = (
-                    InventoryLot.scoped()
-                    .filter_by(
-                        inventory_item_id=sku.inventory_item_id, batch_id=batch.id
-                    )
-                    .order_by(InventoryLot.created_at.desc())
-                    .first()
+                portion_lot = BatchFinishRouteService.get_latest_lot_for_batch(
+                    inventory_item_id=sku.inventory_item_id,
+                    batch_id=batch.id,
                 )
                 if portion_lot:
                     logger.info(
@@ -767,16 +727,12 @@ def _process_container_allocations(
         if final_quantity > 0:
             try:
                 # Get container with simple query
-                container_item = (
-                    InventoryItem.scoped()
-                    .filter_by(
-                        id=int(container_id),
-                        organization_id=(
-                            getattr(current_user, "organization_id", None)
-                            or batch.organization_id
-                        ),
-                    )
-                    .first()
+                container_item = BatchFinishRouteService.get_scoped_inventory_item(
+                    inventory_item_id=int(container_id),
+                    organization_id=(
+                        getattr(current_user, "organization_id", None)
+                        or batch.organization_id
+                    ),
                 )
 
                 if not container_item:
@@ -927,13 +883,10 @@ def _create_container_sku(
 
         # Ensure sku_name follows category template for container flows
         try:
-            from ...models.product_category import ProductCategory
             from ...services.sku_name_builder import SKUNameBuilder
 
-            category = (
-                db.session.get(ProductCategory, product.category_id)
-                if getattr(product, "category_id", None)
-                else None
+            category = BatchFinishRouteService.get_product_category(
+                category_id=getattr(product, "category_id", None)
             )
             template = (
                 category.sku_name_template
@@ -983,13 +936,9 @@ def _create_container_sku(
             f"Successfully created/updated container SKU: {product_sku.sku_code} with {quantity} containers at ${total_cost_per_container:.2f} per container"
         )
 
-        new_lot = (
-            InventoryLot.scoped()
-            .filter_by(
-                inventory_item_id=product_sku.inventory_item_id, batch_id=batch.id
-            )
-            .order_by(InventoryLot.created_at.desc())
-            .first()
+        new_lot = BatchFinishRouteService.get_latest_lot_for_batch(
+            inventory_item_id=product_sku.inventory_item_id,
+            batch_id=batch.id,
         )
 
         if new_lot:
@@ -1054,11 +1003,9 @@ def _create_bulk_sku(
         logger.info(
             f"Created/updated {bulk_size_label} SKU: {bulk_sku.sku_code} with {quantity} {unit} at ${ingredient_unit_cost:.2f} per {unit}"
         )
-        bulk_lot = (
-            InventoryLot.scoped()
-            .filter_by(inventory_item_id=bulk_sku.inventory_item_id, batch_id=batch.id)
-            .order_by(InventoryLot.created_at.desc())
-            .first()
+        bulk_lot = BatchFinishRouteService.get_latest_lot_for_batch(
+            inventory_item_id=bulk_sku.inventory_item_id,
+            batch_id=batch.id,
         )
 
         if bulk_lot:
