@@ -13,9 +13,12 @@ import logging
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required
 
-from app.models import Organization, Permission, SubscriptionTier, db
+from app.models import SubscriptionTier
 from app.models.addon import Addon
 from app.services.ai import GoogleAIClientError
+from app.services.developer.subscription_tier_route_service import (
+    SubscriptionTierRouteService,
+)
 from app.services.signup_checkout_service import SignupCheckoutService
 from app.services.signup_info_partial_service import (
     SignupInfoPartialService,
@@ -51,10 +54,9 @@ def _addon_permission_map(addons):
     addon_perm_names = [a.permission_name for a in addons if a and a.permission_name]
     if not addon_perm_names:
         return {}
-    permissions = Permission.query.filter(
-        Permission.is_active.is_(True),
-        Permission.name.in_(addon_perm_names),
-    ).all()
+    permissions = SubscriptionTierRouteService.list_active_permissions_for_names(
+        names=addon_perm_names
+    )
     perm_by_name = {p.name: p for p in permissions}
     return {
         addon.id: perm_by_name.get(addon.permission_name)
@@ -69,10 +71,9 @@ def _addon_permission_map(addons):
 # Outputs: Return value or response payload for caller/HTTP client.
 def _base_permissions(addons):
     addon_perm_names = [a.permission_name for a in addons if a and a.permission_name]
-    query = Permission.query.filter(Permission.is_active.is_(True))
-    if addon_perm_names:
-        query = query.filter(Permission.name.not_in(addon_perm_names))
-    return query.order_by(Permission.name).all()
+    return SubscriptionTierRouteService.list_base_permissions_excluding_names(
+        excluded_names=addon_perm_names
+    )
 
 
 # =========================================================
@@ -87,10 +88,8 @@ def _base_permissions(addons):
 @require_permission("dev.manage_tiers")
 def manage_tiers():
     """Main page to view all tiers directly from the database."""
-    all_tiers_db = SubscriptionTier.query.order_by(SubscriptionTier.name).all()
-    all_permissions = (
-        Permission.query.filter_by(is_active=True).order_by(Permission.name).all()
-    )
+    all_tiers_db = SubscriptionTierRouteService.list_all_tiers_ordered()
+    all_permissions = SubscriptionTierRouteService.list_active_permissions_ordered()
 
     # Convert to dictionary format expected by template
     tiers_dict = {}
@@ -322,12 +321,7 @@ def apply_signup_info_ai_edit(partial_id):
         return redirect(
             url_for(".manage_signup_info_partials", open_partial_id=partial_id)
         )
-    signup_tiers = (
-        SubscriptionTier.query.filter_by(is_customer_facing=True)
-        .filter(SubscriptionTier.billing_provider != "exempt")
-        .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
-        .all()
-    )
+    signup_tiers = SubscriptionTierRouteService.list_signup_customer_facing_paid_tiers()
     tier_names = [str(tier.name or "").strip() for tier in signup_tiers if tier.name]
     allow_name_update = str(request.form.get("allow_name_update") or "") == "1"
     try:
@@ -365,12 +359,7 @@ def generate_signup_info_ai_draft(partial_id):
     if not prompt:
         flash("AI prompt is required.", "error")
         return redirect(url_for(".manage_signup_info_partials"))
-    signup_tiers = (
-        SubscriptionTier.query.filter_by(is_customer_facing=True)
-        .filter(SubscriptionTier.billing_provider != "exempt")
-        .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
-        .all()
-    )
+    signup_tiers = SubscriptionTierRouteService.list_signup_customer_facing_paid_tiers()
     tier_names = [str(tier.name or "").strip() for tier in signup_tiers if tier.name]
     try:
         drafted = SignupInfoPartialService.create_ai_draft(
@@ -409,12 +398,7 @@ def generate_signup_info_ai_draft(partial_id):
 @login_required
 @require_permission("dev.manage_tiers")
 def save_signup_info_assignments():
-    signup_tiers = (
-        SubscriptionTier.query.filter_by(is_customer_facing=True)
-        .filter(SubscriptionTier.billing_provider != "exempt")
-        .order_by(SubscriptionTier.user_limit.asc(), SubscriptionTier.id.asc())
-        .all()
-    )
+    signup_tiers = SubscriptionTierRouteService.list_signup_customer_facing_paid_tiers()
     default_assignment = {
         "mode": request.form.get("default_mode", "manual"),
         "primary_partial_id": request.form.get("default_primary_partial_id", ""),
@@ -588,7 +572,7 @@ def create_tier():
             return redirect(url_for(".create_tier"))
 
         # Check for duplicate name
-        if SubscriptionTier.query.filter_by(name=name).first():
+        if SubscriptionTierRouteService.tier_name_exists(name=name):
             flash(f"A tier with the name '{name}' already exists.", "error")
             return redirect(url_for(".create_tier"))
 
@@ -632,54 +616,21 @@ def create_tier():
         # Add permissions (merge with addon-linked permissions)
         permission_ids = set(request.form.getlist("permissions", type=int))
 
-        db.session.add(tier)
-        db.session.flush()
-
-        # Allowed and Included add-ons
         addon_ids = request.form.getlist("allowed_addons", type=int)
         included_ids = request.form.getlist("included_addons", type=int)
-        selected_addon_ids = set(addon_ids or []) | set(included_ids or [])
-        if selected_addon_ids:
-            selected_addons = Addon.query.filter(Addon.id.in_(selected_addon_ids)).all()
-            addon_perm_names = [
-                a.permission_name for a in selected_addons if a.permission_name
-            ]
-            if addon_perm_names:
-                addon_perms = Permission.query.filter(
-                    Permission.is_active.is_(True),
-                    Permission.name.in_(addon_perm_names),
-                ).all()
-                permission_ids.update({p.id for p in addon_perms})
-        if permission_ids:
-            tier.permissions = Permission.query.filter(
-                Permission.id.in_(permission_ids)
-            ).all()
-        if addon_ids is not None:
-            tier.allowed_addons = (
-                Addon.query.filter(Addon.id.in_(addon_ids)).all() if addon_ids else []
-            )
-        if included_ids is not None:
-            try:
-                tier.included_addons = (
-                    Addon.query.filter(Addon.id.in_(included_ids)).all()
-                    if included_ids
-                    else []
-                )
-            except Exception:
-                logger.warning(
-                    "Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:300",
-                    exc_info=True,
-                )
-                pass
-
-        db.session.commit()
+        SubscriptionTierRouteService.create_tier_with_relationships(
+            tier=tier,
+            permission_ids=permission_ids,
+            addon_ids=addon_ids,
+            included_ids=included_ids,
+        )
 
         logger.info(f"Created subscription tier: {name} (id: {tier.id})")
         flash(f'Subscription tier "{name}" created successfully.', "success")
         return redirect(url_for(".manage_tiers"))
 
     # For GET request
-    all_addons = Addon.query.filter_by(is_active=True).order_by(Addon.name).all()
+    all_addons = SubscriptionTierRouteService.list_active_addons_ordered()
     addon_permissions = _addon_permission_map(all_addons)
     all_permissions = _base_permissions(all_addons)
     return render_template(
@@ -699,7 +650,7 @@ def create_tier():
 @require_permission("dev.manage_tiers")
 def edit_tier(tier_id):
     """Edit an existing tier by its database ID."""
-    tier = db.session.get(SubscriptionTier, tier_id)
+    tier = SubscriptionTierRouteService.get_tier(tier_id=tier_id)
     if not tier:
         flash("Tier not found.", "error")
         return redirect(url_for(".manage_tiers"))
@@ -857,43 +808,13 @@ def edit_tier(tier_id):
             # Update allowed and included add-ons
             addon_ids = request.form.getlist("allowed_addons", type=int)
             included_ids = request.form.getlist("included_addons", type=int)
-            tier.allowed_addons = (
-                Addon.query.filter(Addon.id.in_(addon_ids)).all() if addon_ids else []
-            )
-            try:
-                tier.included_addons = (
-                    Addon.query.filter(Addon.id.in_(included_ids)).all()
-                    if included_ids
-                    else []
-                )
-            except Exception:
-                logger.warning(
-                    "Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:472",
-                    exc_info=True,
-                )
-                pass
-
-            # Update permissions (merge with addon-linked permissions)
             permission_ids = set(request.form.getlist("permissions", type=int))
-            selected_addon_ids = set(addon_ids or []) | set(included_ids or [])
-            if selected_addon_ids:
-                selected_addons = Addon.query.filter(
-                    Addon.id.in_(selected_addon_ids)
-                ).all()
-                addon_perm_names = [
-                    a.permission_name for a in selected_addons if a.permission_name
-                ]
-                if addon_perm_names:
-                    addon_perms = Permission.query.filter(
-                        Permission.is_active.is_(True),
-                        Permission.name.in_(addon_perm_names),
-                    ).all()
-                    permission_ids.update({p.id for p in addon_perms})
-            tier.permissions = Permission.query.filter(
-                Permission.id.in_(permission_ids)
-            ).all()
-
-            db.session.commit()
+            SubscriptionTierRouteService.update_tier_relationships(
+                tier=tier,
+                permission_ids=permission_ids,
+                addon_ids=addon_ids,
+                included_ids=included_ids,
+            )
 
             logger.info(f"Updated subscription tier: {tier.name} (id: {tier.id})")
             flash(f'Subscription tier "{tier.name}" updated successfully.', "success")
@@ -904,13 +825,13 @@ def edit_tier(tier_id):
                 "Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:501",
                 exc_info=True,
             )
-            db.session.rollback()
+            SubscriptionTierRouteService.rollback_session()
             logger.error(f"Error updating tier: {e}")
             flash("Error updating tier. Please try again.", "error")
             return redirect(url_for(".edit_tier", tier_id=tier_id))
 
     # For GET request
-    all_addons = Addon.query.filter_by(is_active=True).order_by(Addon.name).all()
+    all_addons = SubscriptionTierRouteService.list_active_addons_ordered()
     addon_permissions = _addon_permission_map(all_addons)
     all_permissions = _base_permissions(all_addons)
     return render_template(
@@ -931,7 +852,7 @@ def edit_tier(tier_id):
 @require_permission("dev.manage_tiers")
 def delete_tier(tier_id):
     """Delete a tier from the database, with safety checks."""
-    tier = db.session.get(SubscriptionTier, tier_id)
+    tier = SubscriptionTierRouteService.get_tier(tier_id=tier_id)
     if not tier:
         flash("Tier not found.", "error")
         return redirect(url_for(".manage_tiers"))
@@ -942,7 +863,9 @@ def delete_tier(tier_id):
         return redirect(url_for(".manage_tiers"))
 
     # Check for organizations using this tier
-    orgs_on_tier = Organization.query.filter_by(subscription_tier_id=tier_id).count()
+    orgs_on_tier = SubscriptionTierRouteService.count_organizations_on_tier(
+        tier_id=tier_id
+    )
     if orgs_on_tier > 0:
         flash(
             f'Cannot delete "{tier.name}" as {orgs_on_tier} organization(s) are currently subscribed to it.',
@@ -951,8 +874,7 @@ def delete_tier(tier_id):
         return redirect(url_for(".manage_tiers"))
 
     try:
-        db.session.delete(tier)
-        db.session.commit()
+        SubscriptionTierRouteService.delete_tier(tier=tier)
 
         logger.info(f"Deleted subscription tier: {tier.name} (id: {tier.id})")
         flash(f'Subscription tier "{tier.name}" has been deleted.', "success")
@@ -962,7 +884,7 @@ def delete_tier(tier_id):
             "Suppressed exception fallback at app/blueprints/developer/subscription_tiers.py:555",
             exc_info=True,
         )
-        db.session.rollback()
+        SubscriptionTierRouteService.rollback_session()
         logger.error(f"Error deleting tier: {e}")
         flash("Error deleting tier. Please try again.", "error")
 
@@ -981,7 +903,7 @@ def delete_tier(tier_id):
 @require_permission("dev.manage_tiers")
 def sync_tier_with_stripe(tier_id):
     """Sync a specific tier with Stripe pricing"""
-    tier = db.session.get(SubscriptionTier, tier_id)
+    tier = SubscriptionTierRouteService.get_tier(tier_id=tier_id)
     if not tier:
         return jsonify({"success": False, "error": "Tier not found"}), 404
 
@@ -1040,7 +962,7 @@ def sync_tier_with_stripe(tier_id):
 @require_permission("dev.manage_tiers")
 def sync_tier_with_whop(tier_id):
     """Sync a specific tier with Whop"""
-    tier = db.session.get(SubscriptionTier, tier_id)
+    tier = SubscriptionTierRouteService.get_tier(tier_id=tier_id)
     if not tier:
         return jsonify({"success": False, "error": "Tier not found"}), 404
 
@@ -1074,7 +996,7 @@ def sync_tier_with_whop(tier_id):
 @require_permission("dev.manage_tiers")
 def api_get_tiers():
     """API endpoint to get all tiers as JSON."""
-    tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
+    tiers = SubscriptionTierRouteService.list_customer_facing_tiers()
     return jsonify(
         [
             {

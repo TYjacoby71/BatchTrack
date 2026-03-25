@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Developer subscription tiers routes retained direct ORM/session access across tier list/create/edit/delete/sync/api and signup-tier assignment flows**
+  - **Closed by:** moving tier/permission/add-on/org-count reads plus tier mutation transaction ownership behind `app/services/developer/subscription_tier_route_service.py`.
+  - **Routes affected:** `app/blueprints/developer/subscription_tiers.py` (`_addon_permission_map`, `_base_permissions`, `manage_tiers`, `apply_signup_info_ai_edit`, `generate_signup_info_ai_draft`, `save_signup_info_assignments`, `create_tier`, `edit_tier`, `delete_tier`, `sync_tier_with_stripe`, `sync_tier_with_whop`, `api_get_tiers`)
+
 - **Products routes retained direct ORM/session access across create/list/view/edit/delete flows**
   - **Closed by:** moving product and SKU scoped lookups, category/container reads, product create/update/delete mutation ownership, and commit/rollback helpers into `app/services/product_route_service.py`.
   - **Routes affected:** `app/blueprints/products/products.py` (`create_product_from_data`, `list_products`, `new_product`, `view_product`, `view_product_by_name`, `edit_product`, `delete_product`)
