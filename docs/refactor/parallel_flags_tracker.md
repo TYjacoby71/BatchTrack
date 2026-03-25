@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Ingredient API route-local ORM/session access across category/search/create-link flows**
+  - **Closed by:** moving ingredient category lookups, ingredient/form/variation/global-item search pipelines, and create-or-link inventory mutation/session handling into `app/services/ingredient_route_service.py`.
+  - **Routes affected:** `app/blueprints/api/ingredient_routes.py` (`get_categories`, `get_ingredient_density`, `search_ingredients`, `search_ingredient_definitions`, `list_forms_for_ingredient_definition`, `search_physical_forms`, `search_variations`, `create_or_link_ingredient`, `search_global_items`)
+
 - **Recipe manage routes retained direct ORM/session access across list/view/note/lock/make-parent flows**
   - **Closed by:** moving recipe list pagination/grouped variations, view-note/group-version lookups, note insertion, lock/unlock persistence, and legacy make-parent conversion/session handling into `app/services/recipe_manage_view_service.py`.
   - **Routes affected:** `app/blueprints/recipes/views/manage_routes.py` (`list_recipes`, `view_recipe`, `add_recipe_note`, `make_parent_recipe`, `lock_recipe`, `unlock_recipe`)
