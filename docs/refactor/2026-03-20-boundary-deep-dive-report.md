@@ -9,8 +9,8 @@
 | Boundary | Grade | Why |
 | --- | --- | --- |
 | Service authority | 6.5/10 | Canonical design exists, but active route/data flows still bypass service boundaries in multiple blueprints. |
-| Controller vs business logic | 9.6/10 | 8 blueprint modules still contain direct query/session logic after extracting expiration services data-access touchpoints (lot/history/item lookups, scoped queries, commit ownership) into a dedicated data service on top of prior batches. |
-| Data access ownership | 9.6/10 | Persistence logic remains mixed into route layers, but this pass removed additional route-local query/session touchpoints from expiration services workflows. |
+| Controller vs business logic | 9.7/10 | 7 blueprint modules still contain direct query/session logic after extracting products route query/session touchpoints (product/sku/container/category lookups plus create/edit/delete transaction ownership) into a dedicated route service on top of prior batches. |
+| Data access ownership | 9.7/10 | Persistence logic remains mixed into route layers, but this pass removed additional route-local query/session touchpoints from products routes workflows. |
 | Tenant isolation | 8.6/10 | Major scoped-query hardening is complete, with residual review needed on heuristic-risk files. |
 | Permission boundary | 8.0/10 | Non-public route permission audit is clean and `role_required` now enforces real role checks; remaining risk is broader policy consistency (`user_type` gates and role->permission migration). |
 | Integration boundaries | 5.9/10 | Stripe path is mature; Whop and Soap push remain partial/stubbed; POS file still contains embedded test mocks. |
@@ -26,7 +26,7 @@
 - Completion signal: structural cleanup section is still 0/25 complete in hardening checklist.
 
 ## Boundary 2: Controller vs business logic
-- Total blueprint files with direct query/session access: **8**.
+- Total blueprint files with direct query/session access: **7**.
 ### Top offenders (direct query count)
 - `app/blueprints/developer/system_roles.py`: 50
 - `app/blueprints/developer/views/reference_routes.py`: 38
@@ -35,10 +35,9 @@
 - `app/blueprints/developer/views/global_item_routes.py`: 32
 - `app/blueprints/inventory/routes.py`: 24
 - `app/blueprints/batches/finish_batch.py`: 14
-- `app/blueprints/products/products.py`: 13
 
 ## Boundary 3: Data access ownership
-- Data access findings overlap controller/business findings: persistence logic is still route-adjacent in 8 files.
+- Data access findings overlap controller/business findings: persistence logic is still route-adjacent in 7 files.
 - Drawers/actions endpoints and several developer/admin modules still perform direct `db.session` mutations in route scope.
 
 ## Boundary 4: Tenant isolation
@@ -62,7 +61,6 @@
 - `app/blueprints/dashboard/routes.py`: 2 occurrences
 - `app/blueprints/core/routes.py`: 1 occurrences
 - `app/blueprints/inventory/routes.py`: 1 occurrences
-- `app/blueprints/products/products.py`: 1 occurrences
 - `app/blueprints/recipe_library/routes.py`: 1 occurrences
 
 ### Policy context
@@ -149,8 +147,8 @@
 - `app/blueprints/auth/permissions.py`: 28 (resolved in this pass; removed from offender list)
 - `app/blueprints/conversion/routes.py`: 24 (resolved in this pass; removed from offender list)
 - `app/blueprints/expiration/services.py`: 14 (resolved in this pass; removed from offender list)
+- `app/blueprints/products/products.py`: 13 (resolved in this pass; removed from offender list)
 - `app/blueprints/batches/finish_batch.py`: 14
-- `app/blueprints/products/products.py`: 13
 - `app/blueprints/products/product_inventory_routes.py`: 9 (resolved in this pass; removed from offender list)
 - `app/blueprints/dashboard/routes.py`: 7 (resolved in this pass; removed from offender list)
 - `app/blueprints/recipes/form_parsing.py`: 7 (resolved in this pass; removed from offender list)

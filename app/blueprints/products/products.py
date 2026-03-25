@@ -13,18 +13,12 @@ from flask import (
 from flask_login import current_user, login_required
 
 from ...extensions import cache
-from ...models import (
-    InventoryItem,
-    InventoryLot,
-    UnifiedInventoryHistory,
-    UserPreferences,
-    db,
-)
-from ...models.product import Product, ProductSKU
+from ...models import UserPreferences
 from ...services.cache_invalidation import (
     product_list_cache_key,
     product_list_page_cache_key,
 )
+from ...services.product_route_service import ProductRouteService
 from ...services.product_service import ProductService
 from ...utils.cache_utils import should_bypass_cache
 from ...utils.settings import is_feature_enabled
@@ -200,40 +194,17 @@ def create_product_from_data(data):
     and quick add functionality
     """
     try:
-        from ...models import InventoryItem, db
-        from ...utils.permissions import get_effective_organization_id
-
-        organization_id = get_effective_organization_id()
-        if not organization_id and current_user.user_type != "developer":
-            return {"success": False, "error": "No organization context"}
-
-        # Create inventory item for product
-        product = InventoryItem(
-            name=data["name"],
-            type="product",
-            unit=data.get("unit", "count"),
-            quantity=0,
-            organization_id=organization_id,
+        product = ProductRouteService.create_inventory_product_from_data(
+            data=data, user_type=getattr(current_user, "user_type", None)
         )
-
-        db.session.add(product)
-        db.session.flush()
-
-        # Product creation audit is now handled by FIFO operations automatically
-        # No separate audit entry needed
-        db.session.commit()
-
-        return {
-            "success": True,
-            "product": {"id": product.id, "name": product.name, "unit": product.unit},
-        }
+        return ProductRouteService.serialize_created_inventory_product(product=product)
 
     except Exception as e:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/products/products.py:227",
             exc_info=True,
         )
-        db.session.rollback()
+        ProductRouteService.rollback_session()
         return {"success": False, "error": str(e)}
 
 
@@ -257,20 +228,17 @@ def list_products():
         user_prefs = UserPreferences.get_for_user(current_user.id)
     if user_prefs:
         try:
-            current_scope = user_prefs.get_list_preferences(PRODUCTS_LIST_PREF_SCOPE)
-            if current_scope.get("sort") != sort_type:
-                user_prefs.set_list_preferences(
-                    PRODUCTS_LIST_PREF_SCOPE,
-                    {"sort": sort_type},
-                    merge=True,
-                )
-                db.session.commit()
+            ProductRouteService.persist_user_products_sort_preference(
+                user_prefs=user_prefs,
+                scope=PRODUCTS_LIST_PREF_SCOPE,
+                sort_type=sort_type,
+            )
         except Exception:
             logger.warning(
                 "Suppressed exception fallback at app/blueprints/products/products.py:260",
                 exc_info=True,
             )
-            db.session.rollback()
+            ProductRouteService.rollback_session()
     org_id = getattr(current_user, "organization_id", None) or 0
     cache_key = product_list_cache_key(org_id, sort_type)
     page_cache_key = product_list_page_cache_key(org_id, sort_type)
@@ -318,23 +286,16 @@ def list_products():
             self.total_packaged = 0
 
             if self.id:
-                from ...models.product import Product, ProductSKU, ProductVariant
-
-                product = (
-                    Product.scoped()
-                    .filter_by(
-                        name=self.name, organization_id=current_user.organization_id
-                    )
-                    .first()
+                product = ProductRouteService.find_product_by_name_for_org(
+                    name=self.name,
+                    organization_id=getattr(current_user, "organization_id", None),
                 )
 
                 if product:
                     self.id = product.id
 
-                    actual_variants = (
-                        ProductVariant.scoped()
-                        .filter_by(product_id=product.id, is_active=True)
-                        .all()
+                    actual_variants = ProductRouteService.list_active_variants_for_product(
+                        product_id=product.id
                     )
 
                     self.variations = []
@@ -356,14 +317,9 @@ def list_products():
 
                     self.variant_count = len(actual_variants)
 
-                    product_skus = (
-                        ProductSKU.scoped()
-                        .filter_by(
-                            product_id=product.id,
-                            organization_id=current_user.organization_id,
-                            is_active=True,
-                        )
-                        .all()
+                    product_skus = ProductRouteService.list_active_skus_for_product_for_org(
+                        product_id=product.id,
+                        organization_id=getattr(current_user, "organization_id", None),
                     )
 
                     for sku in product_skus:
@@ -437,12 +393,9 @@ def list_products():
     enhanced_product_data = []
     for data in product_data:
         # Get the actual product ID instead of SKU inventory_item_id
-        first_sku = (
-            ProductSKU.scoped()
-            .filter_by(organization_id=current_user.organization_id, is_active=True)
-            .join(ProductSKU.product)
-            .filter(Product.name == data["product_name"])
-            .first()
+        first_sku = ProductRouteService.find_first_active_sku_for_product_name_for_org(
+            product_name=data["product_name"],
+            organization_id=getattr(current_user, "organization_id", None),
         )
         if first_sku:
             data["product_id"] = first_sku.product_id  # Use actual product ID
@@ -500,23 +453,9 @@ def new_product():
             flash("Product category is required", "error")
             return redirect(url_for("products.new_product"))
 
-        # Check if product already exists (check both new Product model and legacy ProductSKU)
-        from ...models.product import Product
-
-        existing_product = (
-            Product.scoped()
-            .filter_by(name=name, organization_id=current_user.organization_id)
-            .first()
-        )
-
-        # Also check legacy ProductSKU table
-        existing_sku = (
-            ProductSKU.scoped()
-            .filter_by(product_name=name, organization_id=current_user.organization_id)
-            .first()
-        )
-
-        if existing_product or existing_sku:
+        if ProductRouteService.product_name_exists_for_org(
+            name=name, organization_id=getattr(current_user, "organization_id", None)
+        ):
             flash("Product with this name already exists", "error")
             return redirect(url_for("products.new_product"))
 
@@ -532,17 +471,12 @@ def new_product():
                 unit="oz",  # Default unit
             )
 
-            # Set the category_id and low_stock_threshold on the created product
-            if base_sku.product:
-                base_sku.product.category_id = int(category_id)
-                base_sku.product.low_stock_threshold = (
-                    float(low_stock_threshold) if low_stock_threshold else 0
-                )
-                base_sku.low_stock_threshold = (
-                    float(low_stock_threshold) if low_stock_threshold else 0
-                )
-
-            db.session.commit()
+            ProductRouteService.apply_category_and_threshold_to_base_sku(
+                base_sku=base_sku,
+                category_id=category_id,
+                low_stock_threshold=low_stock_threshold,
+            )
+            ProductRouteService.commit_session()
 
             flash("Product created successfully.", "success")
             return redirect(
@@ -554,15 +488,13 @@ def new_product():
                 "Suppressed exception fallback at app/blueprints/products/products.py:519",
                 exc_info=True,
             )
-            db.session.rollback()
+            ProductRouteService.rollback_session()
             flash(f"Error creating product: {str(e)}", "error")
             return redirect(url_for("products.new_product"))
 
     # Load product categories for selection if template supports it later
     try:
-        from ...models.product_category import ProductCategory
-
-        categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+        categories = ProductRouteService.list_product_categories()
     except Exception:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/products/products.py:529",
@@ -579,24 +511,16 @@ def new_product():
 @require_permission("products.view")
 def view_product(product_id):
     """View product details with all SKUs by product ID"""
-    from ...models.product import Product
-
-    # First try to find the product directly by ID
-    product = (
-        Product.scoped()
-        .filter_by(id=product_id, organization_id=current_user.organization_id)
-        .first()
+    product = ProductRouteService.get_product_for_org(
+        product_id=product_id,
+        organization_id=getattr(current_user, "organization_id", None),
     )
 
     if not product:
         # If not found by product ID, try to find by inventory_item_id (legacy support)
-        base_sku = (
-            ProductSKU.scoped()
-            .filter_by(
-                inventory_item_id=product_id,
-                organization_id=current_user.organization_id,
-            )
-            .first()
+        base_sku = ProductRouteService.get_base_sku_by_inventory_item_for_org(
+            inventory_item_id=product_id,
+            organization_id=getattr(current_user, "organization_id", None),
         )
 
         if not base_sku:
@@ -606,14 +530,9 @@ def view_product(product_id):
         product = base_sku.product
 
     # Get all SKUs for this product - with org scoping
-    skus = (
-        ProductSKU.scoped()
-        .filter_by(
-            product_id=product.id,
-            is_active=True,
-            organization_id=current_user.organization_id,
-        )
-        .all()
+    skus = ProductRouteService.list_active_skus_for_product_for_org(
+        product_id=product.id,
+        organization_id=getattr(current_user, "organization_id", None),
     )
 
     # Group SKUs by variant, including variants without SKUs
@@ -638,12 +557,7 @@ def view_product(product_id):
         variants[variant_key]["skus"].append(sku)
 
     # Get available containers for manual stock addition
-    available_containers = (
-        InventoryItem.scoped()
-        .filter_by(type="container", is_archived=False)
-        .filter(InventoryItem.quantity > 0)
-        .all()
-    )
+    available_containers = ProductRouteService.list_available_container_items()
 
     # Use the actual Product model
     # Add variations for template compatibility
@@ -672,11 +586,7 @@ def view_product(product_id):
 
     # Load product categories for edit modal
     try:
-        from ...models.product_category import ProductCategory
-
-        product_categories = ProductCategory.query.order_by(
-            ProductCategory.name.asc()
-        ).all()
+        product_categories = ProductRouteService.list_product_categories()
     except Exception:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/products/products.py:627",
@@ -711,8 +621,9 @@ def view_product(product_id):
 def view_product_by_name(product_name):
     """Redirect to product by ID for backward compatibility"""
     # Find the first SKU for this product to get the ID
-    sku = (
-        ProductSKU.scoped().filter_by(product_name=product_name, is_active=True).first()
+    sku = ProductRouteService.find_first_active_sku_by_product_name_for_org(
+        product_name=product_name,
+        organization_id=getattr(current_user, "organization_id", None),
     )
 
     if not sku:
@@ -727,13 +638,8 @@ def view_product_by_name(product_name):
 @require_permission("products.edit")
 def edit_product(product_id):
     """Edit product details by product ID"""
-    from ...models.product import Product
-
-    # First try to find the product directly by ID
-    product = (
-        Product.scoped()
-        .filter_by(id=product_id, organization_id=current_user.organization_id)
-        .first()
+    product = ProductRouteService.get_product_for_org(
+        product_id=product_id, organization_id=getattr(current_user, "organization_id", None)
     )
 
     if not product:
@@ -748,36 +654,22 @@ def edit_product(product_id):
         flash("Name and category are required", "error")
         return redirect(url_for("products.view_product", product_id=product_id))
 
-    # Check if another product has this name
-    existing = (
-        Product.scoped()
-        .filter(
-            Product.name == name,
-            Product.id != product.id,
-            Product.organization_id == current_user.organization_id,
-        )
-        .first()
+    existing = ProductRouteService.find_other_product_with_name_for_org(
+        name=name,
+        organization_id=getattr(current_user, "organization_id", None),
+        exclude_product_id=product.id,
     )
     if existing:
         flash("Another product with this name already exists", "error")
         return redirect(url_for("products.view_product", product_id=product_id))
 
-    # Update the product
-    product.name = name
-    if low_stock_threshold is not None:
-        product.low_stock_threshold = (
-            float(low_stock_threshold) if low_stock_threshold else 0
-        )
-    try:
-        product.category_id = int(category_id)
-    except Exception:
-        logger.warning(
-            "Suppressed exception fallback at app/blueprints/products/products.py:708",
-            exc_info=True,
-        )
-        pass
-
-    db.session.commit()
+    ProductRouteService.update_product_core_fields(
+        product=product,
+        name=name,
+        category_id=category_id,
+        low_stock_threshold=low_stock_threshold,
+    )
+    ProductRouteService.commit_session()
     flash("Product updated successfully", "success")
     return redirect(url_for("products.view_product", product_id=product.id))
 
@@ -788,14 +680,9 @@ def edit_product(product_id):
 def delete_product(product_id):
     """Delete a product and all its related data by product ID"""
     try:
-        # Get the base SKU to find the product - with org scoping
-        base_sku = (
-            ProductSKU.scoped()
-            .filter_by(
-                inventory_item_id=product_id,
-                organization_id=current_user.organization_id,
-            )
-            .first()
+        base_sku = ProductRouteService.get_base_sku_by_inventory_item_for_org(
+            inventory_item_id=product_id,
+            organization_id=getattr(current_user, "organization_id", None),
         )
 
         if not base_sku:
@@ -804,13 +691,9 @@ def delete_product(product_id):
 
         product = base_sku.product
 
-        # Get all SKUs for this product - with org scoping
-        skus = (
-            ProductSKU.scoped()
-            .filter_by(
-                product_id=product.id, organization_id=current_user.organization_id
-            )
-            .all()
+        skus = ProductRouteService.list_product_skus_for_org(
+            product_id=product.id,
+            organization_id=getattr(current_user, "organization_id", None),
         )
 
         if not skus:
@@ -825,25 +708,8 @@ def delete_product(product_id):
             flash("Cannot delete product with remaining inventory", "error")
             return redirect(url_for("products.view_product", product_id=product_id))
 
-        # Delete unified history and lot records first
-        for sku in skus:
-            UnifiedInventoryHistory.scoped().filter_by(
-                inventory_item_id=sku.inventory_item_id
-            ).delete(synchronize_session=False)
-            InventoryLot.scoped().filter_by(
-                inventory_item_id=sku.inventory_item_id
-            ).delete(synchronize_session=False)
-
-        # Delete the SKUs
-        ProductSKU.scoped().filter_by(product_id=product.id).delete()
-
-        # Delete the product and its variants
-        from ...models.product import Product, ProductVariant
-
-        ProductVariant.scoped().filter_by(product_id=product.id).delete()
-        Product.scoped().filter_by(id=product.id).delete()
-
-        db.session.commit()
+        ProductRouteService.delete_product_hierarchy(product_id=product.id, skus=skus)
+        ProductRouteService.commit_session()
 
         flash(f'Product "{product.name}" deleted successfully', "success")
         return redirect(url_for("products.list_products"))
@@ -853,7 +719,7 @@ def delete_product(product_id):
             "Suppressed exception fallback at app/blueprints/products/products.py:773",
             exc_info=True,
         )
-        db.session.rollback()
+        ProductRouteService.rollback_session()
         flash(f"Error deleting product: {str(e)}", "error")
         return redirect(url_for("products.view_product", product_id=product_id))
 

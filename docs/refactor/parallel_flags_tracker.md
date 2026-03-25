@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Products routes retained direct ORM/session access across create/list/view/edit/delete flows**
+  - **Closed by:** moving product and SKU scoped lookups, category/container reads, product create/update/delete mutation ownership, and commit/rollback helpers into `app/services/product_route_service.py`.
+  - **Routes affected:** `app/blueprints/products/products.py` (`create_product_from_data`, `list_products`, `new_product`, `view_product`, `view_product_by_name`, `edit_product`, `delete_product`)
+
 - **Expiration service module retained direct ORM/session access across lot/history/product-lookup and expiration-status flows**
   - **Closed by:** moving scoped lot/history queries, model fetches, and commit ownership behind `app/services/expiration_data_service.py` while keeping expiry rule calculations in `ExpirationService`.
   - **Routes affected:** `app/blueprints/expiration/services.py` (`get_life_remaining_entry_or_404`, `get_debug_expiration_snapshot`, `get_effective_expiration_date`, `get_effective_sku_expiration_date`, `_query_fifo_entries`, `_query_sku_entries`, `_format_sku_entry`, `update_fifo_expiration_data`, `get_expiration_date_for_new_entry`, `get_inventory_item_expiration_status`, `get_weighted_average_freshness`, `mark_as_expired`, `get_expiring_within_days`, `get_expired_inventory`, `get_expiring_soon`)
