@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Conversion routes retained direct ORM/session access across unit delete/create/mapping and validation flows**
+  - **Closed by:** moving unit/mapping lookups, scoped mapping listings, and mapping/unit mutation transaction ownership behind `app/services/conversion_route_service.py`.
+  - **Routes affected:** `app/blueprints/conversion/routes.py` (`delete_unit`, `manage_units`, `delete_mapping`, `validate_mapping`, `add_mapping`)
+
 - **Auth permissions routes retained direct ORM/session access across permission-matrix and role CRUD flows**
   - **Closed by:** moving subscription-tier permission resolution, permission registry reads, permission-matrix upsert/delete + role rebind writes, permission-status toggles, and role create/update transaction ownership behind `app/services/auth_permission_route_service.py`.
   - **Routes affected:** `app/blueprints/auth/permissions.py` (`get_tier_permissions`, `manage_permissions`, `update_permission_matrix`, `toggle_permission_status`, `manage_roles`, `create_role`, `update_role`)
