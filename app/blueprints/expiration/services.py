@@ -19,15 +19,8 @@ from sqlalchemy.orm import joinedload
 
 from app.services.inventory_adjustment import process_inventory_adjustment
 
-from ...models import (
-    Batch,
-    InventoryHistory,
-    InventoryItem,
-    InventoryLot,
-    ProductSKU,
-    UnifiedInventoryHistory,
-    db,
-)
+from ...models import InventoryItem, InventoryLot
+from ...services.expiration_data_service import ExpirationDataService
 
 # Set logger to INFO level to reduce debug noise
 logger = logging.getLogger(__name__)
@@ -128,32 +121,19 @@ class ExpirationService:
     @staticmethod
     def get_life_remaining_entry_or_404(fifo_id: int):
         """Return scoped unified history entry for life-remaining API."""
-        return UnifiedInventoryHistory.scoped().filter_by(id=fifo_id).first_or_404()
+        return ExpirationDataService.get_unified_history_entry_or_404(fifo_id=fifo_id)
 
     @staticmethod
     def get_debug_expiration_snapshot(*, organization_id: int | None) -> Dict:
         """Build debug expiration payload for product lots."""
-        sku_lots = (
-            InventoryLot.scoped()
-            .join(InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id)
-            .filter(
-                and_(
-                    InventoryLot.remaining_quantity_base > 0,
-                    InventoryItem.type == "product",
-                    (
-                        InventoryItem.organization_id == organization_id
-                        if organization_id
-                        else True
-                    ),
-                )
-            )
-            .all()
+        sku_lots = ExpirationDataService.list_debug_product_lots(
+            organization_id=organization_id
         )
 
         debug_info = []
         for lot in sku_lots:
-            inventory_item = lot.inventory_item or db.session.get(
-                InventoryItem, lot.inventory_item_id
+            inventory_item = lot.inventory_item or ExpirationDataService.get_inventory_item(
+                inventory_item_id=lot.inventory_item_id
             )
             expiration = ExpirationService.get_effective_sku_expiration_date(lot)
             debug_info.append(
@@ -201,7 +181,9 @@ class ExpirationService:
             return None
 
         # Get the inventory item for master shelf life
-        inventory_item = db.session.get(InventoryItem, fifo_entry.inventory_item_id)
+        inventory_item = ExpirationDataService.get_inventory_item(
+            inventory_item_id=fifo_entry.inventory_item_id
+        )
         if not inventory_item:
             return None
 
@@ -211,7 +193,7 @@ class ExpirationService:
 
         # If this entry is from a batch
         if fifo_entry.batch_id:
-            batch = db.session.get(Batch, fifo_entry.batch_id)
+            batch = ExpirationDataService.get_batch(batch_id=fifo_entry.batch_id)
             if batch and batch.is_perishable and batch.shelf_life_days:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at
@@ -246,8 +228,8 @@ class ExpirationService:
             return None
 
         # Only process perishable items
-        inventory_item = lot.inventory_item or db.session.get(
-            InventoryItem, lot.inventory_item_id
+        inventory_item = lot.inventory_item or ExpirationDataService.get_inventory_item(
+            inventory_item_id=lot.inventory_item_id
         )
         if not inventory_item or not inventory_item.is_perishable:
             return None
@@ -262,7 +244,7 @@ class ExpirationService:
 
         # If this entry is from a batch
         if lot.batch_id:
-            batch = db.session.get(Batch, lot.batch_id)
+            batch = ExpirationDataService.get_batch(batch_id=lot.batch_id)
             if batch and batch.is_perishable and batch.shelf_life_days:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at
@@ -303,37 +285,9 @@ class ExpirationService:
         now_utc = TimezoneUtils.utc_now()
 
         # Base lot query with remaining quantity and org scoping - ensure relationship is loaded
-        query = (
-            InventoryLot.scoped()
-            .join(InventoryItem)
-            .options(joinedload(InventoryLot.inventory_item))
-            .filter(
-                and_(
-                    InventoryLot.remaining_quantity_base > 0,
-                    InventoryItem.is_perishable,
-                )
-            )
+        lots = ExpirationDataService.list_fifo_lots(
+            now_utc=now_utc, expired=expired, days_ahead=days_ahead
         )
-
-        # Apply time-based filtering
-        if expired:
-            query = query.filter(
-                and_(
-                    InventoryLot.expiration_date.isnot(None),
-                    InventoryLot.expiration_date < now_utc,
-                )
-            )
-        elif days_ahead:
-            future_date_utc = now_utc + timedelta(days=days_ahead)
-            query = query.filter(
-                and_(
-                    InventoryLot.expiration_date.isnot(None),
-                    InventoryLot.expiration_date >= now_utc,
-                    InventoryLot.expiration_date <= future_date_utc,
-                )
-            )
-
-        lots = query.order_by(InventoryLot.expiration_date.asc()).all()
 
         # Format lot entries for compatibility with templates that expect FIFO-like objects
         formatted_entries = []
@@ -374,24 +328,7 @@ class ExpirationService:
 
         now_utc = TimezoneUtils.utc_now()
 
-        query = (
-            InventoryLot.scoped()
-            .join(InventoryItem, InventoryLot.inventory_item_id == InventoryItem.id)
-            .join(
-                ProductSKU,
-                ProductSKU.inventory_item_id == InventoryLot.inventory_item_id,
-            )
-            .options(joinedload(InventoryLot.inventory_item))
-            .filter(
-                and_(
-                    InventoryLot.remaining_quantity_base > 0,
-                    InventoryItem.type == "product",
-                    InventoryItem.is_perishable,
-                )
-            )
-        )
-
-        lots = query.all()
+        lots = ExpirationDataService.list_perishable_product_lots()
         filtered_entries = []
 
         for lot in lots:
@@ -431,12 +368,8 @@ class ExpirationService:
 
         if expiration_date:
             # Get product info
-            from ...models import Product, ProductSKU, ProductVariant
-
-            sku = (
-                ProductSKU.scoped()
-                .filter_by(inventory_item_id=lot.inventory_item_id)
-                .first()
+            sku = ExpirationDataService.get_product_sku_by_inventory_item(
+                inventory_item_id=lot.inventory_item_id
             )
             if not sku:
                 logger.warning(
@@ -444,8 +377,8 @@ class ExpirationService:
                 )
                 return None
 
-            product = db.session.get(Product, sku.product_id)
-            variant = db.session.get(ProductVariant, sku.variant_id)
+            product = ExpirationDataService.get_product(product_id=sku.product_id)
+            variant = ExpirationDataService.get_product_variant(variant_id=sku.variant_id)
 
             return {
                 "inventory_item_id": lot.inventory_item_id,
@@ -506,21 +439,14 @@ class ExpirationService:
     def update_fifo_expiration_data(inventory_item_id: int, shelf_life_days: int):
         """Update expiration data for inventory item - updates master item and existing lots metadata"""
         # Update the master inventory item
-        item = db.session.get(InventoryItem, inventory_item_id)
+        item = ExpirationDataService.get_inventory_item(inventory_item_id=inventory_item_id)
         if item:
             item.is_perishable = True
             item.shelf_life_days = shelf_life_days
 
         # Update existing lots to reflect perishable status and set expiration if missing
-        lots = (
-            InventoryLot.scoped()
-            .filter(
-                and_(
-                    InventoryLot.inventory_item_id == inventory_item_id,
-                    InventoryLot.remaining_quantity_base > 0,
-                )
-            )
-            .all()
+        lots = ExpirationDataService.list_active_lots_for_item(
+            inventory_item_id=inventory_item_id
         )
 
         for lot in lots:
@@ -530,14 +456,16 @@ class ExpirationService:
                     lot.received_date, shelf_life_days
                 )
 
-        db.session.commit()
+        ExpirationDataService.commit_session()
 
     @staticmethod
     def get_expiration_date_for_new_entry(
         inventory_item_id: int, batch_id: Optional[int] = None
     ) -> Optional[datetime]:
         """Calculate expiration date for a new lot being created (for InventoryLot creation)"""
-        inventory_item = db.session.get(InventoryItem, inventory_item_id)
+        inventory_item = ExpirationDataService.get_inventory_item(
+            inventory_item_id=inventory_item_id
+        )
         if not inventory_item or not inventory_item.is_perishable:
             return None
 
@@ -549,7 +477,7 @@ class ExpirationService:
 
         # If this entry is from a batch
         if batch_id:
-            batch = db.session.get(Batch, batch_id)
+            batch = ExpirationDataService.get_batch(batch_id=batch_id)
             if batch and batch.is_perishable and batch.shelf_life_days:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at or now_utc
@@ -599,7 +527,14 @@ class ExpirationService:
                 InventoryLot.organization_id == current_user.organization_id
             )
 
-        lots = InventoryLot.scoped().filter(and_(*base_filter)).all()
+        lots = ExpirationDataService.list_lots_for_item_expiration_status(
+            inventory_item_id=inventory_item_id,
+            organization_id=(
+                current_user.organization_id
+                if current_user.is_authenticated and current_user.organization_id
+                else None
+            ),
+        )
 
         expired_lots = []
         expiring_soon_lots = []
@@ -623,16 +558,8 @@ class ExpirationService:
         """Calculate weighted average freshness for an inventory item based on InventoryLot objects"""
         from app.models.inventory_lot import InventoryLot
 
-        lots = (
-            InventoryLot.scoped()
-            .filter(
-                and_(
-                    InventoryLot.inventory_item_id == inventory_item_id,
-                    InventoryLot.remaining_quantity_base > 0,
-                    InventoryLot.expiration_date.isnot(None),
-                )
-            )
-            .all()
+        lots = ExpirationDataService.list_lots_for_weighted_freshness(
+            inventory_item_id=inventory_item_id
         )
 
         if not lots:
@@ -682,7 +609,7 @@ class ExpirationService:
             if kind in ("fifo", "raw"):
                 # Use InventoryLot for lot-based tracking
                 try:
-                    lot = db.session.get(InventoryLot, entry_id)
+                    lot = ExpirationDataService.get_lot(lot_id=entry_id)
                 except OperationalError:
                     lot = None
                 # Fallback to UnifiedInventoryHistory for canonical FIFO entries
@@ -690,12 +617,12 @@ class ExpirationService:
                     entry = None
                 else:
                     try:
-                        entry = db.session.get(UnifiedInventoryHistory, entry_id)
+                        entry = ExpirationDataService.get_unified_history(entry_id=entry_id)
                     except OperationalError:
                         entry = None
                 # Legacy compatibility - some tests/bootstrap data still use InventoryHistory
                 if not entry and not lot:
-                    entry = db.session.get(InventoryHistory, entry_id)
+                    entry = ExpirationDataService.get_inventory_history(entry_id=entry_id)
 
                 if not entry and not lot:
                     return False, "Lot or FIFO entry not found"
@@ -728,7 +655,7 @@ class ExpirationService:
                 )
 
             elif kind == "product":
-                lot = db.session.get(InventoryLot, entry_id)
+                lot = ExpirationDataService.get_lot(lot_id=entry_id)
                 if not lot:
                     return False, "Product lot not found"
 
@@ -769,21 +696,10 @@ class ExpirationService:
             future_date = now_utc + timedelta(days=days_ahead)
 
             # Query inventory lots with organization scoping and perishable via InventoryItem
-            query = (
-                InventoryLot.scoped()
-                .join(InventoryItem)
-                .filter(
-                    and_(
-                        InventoryLot.expiration_date.isnot(None),
-                        InventoryLot.expiration_date >= now_utc,
-                        InventoryLot.expiration_date <= future_date,
-                        InventoryLot.remaining_quantity_base > 0,
-                        InventoryItem.is_perishable,
-                    )
-                )
+            lots = ExpirationDataService.list_lots_expiring_within(
+                now_utc=now_utc,
+                future_date=future_date,
             )
-
-            lots = query.order_by(InventoryLot.expiration_date.asc()).all()
 
             results = []
             for lot in lots:
@@ -838,20 +754,7 @@ class ExpirationService:
 
         now_utc = TimezoneUtils.utc_now()
 
-        query = (
-            InventoryLot.scoped()
-            .join(InventoryItem)
-            .filter(
-                and_(
-                    InventoryLot.remaining_quantity_base > 0,
-                    InventoryLot.expiration_date.isnot(None),
-                    InventoryLot.expiration_date < now_utc,
-                    InventoryItem.is_perishable,
-                )
-            )
-        )
-
-        return query.all()
+        return ExpirationDataService.list_expired_lots(now_utc=now_utc)
 
     @staticmethod
     def get_expiring_soon(days_ahead=7):
@@ -861,18 +764,7 @@ class ExpirationService:
         now_utc = TimezoneUtils.utc_now()
         cutoff_date_utc = now_utc + timedelta(days=days_ahead)
 
-        query = (
-            InventoryLot.scoped()
-            .join(InventoryItem)
-            .filter(
-                and_(
-                    InventoryLot.remaining_quantity_base > 0,
-                    InventoryLot.expiration_date.isnot(None),
-                    InventoryLot.expiration_date > now_utc,
-                    InventoryLot.expiration_date <= cutoff_date_utc,
-                    InventoryItem.is_perishable,
-                )
-            )
+        return ExpirationDataService.list_expiring_soon_lots(
+            now_utc=now_utc,
+            cutoff_date_utc=cutoff_date_utc,
         )
-
-        return query.all()
