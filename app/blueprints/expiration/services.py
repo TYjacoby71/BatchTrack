@@ -19,7 +19,8 @@ from sqlalchemy.orm import joinedload
 
 from app.services.inventory_adjustment import process_inventory_adjustment
 
-from ...models import InventoryItem, InventoryLot
+from ...extensions import db
+from ...models import InventoryHistory, InventoryItem, InventoryLot, UnifiedInventoryHistory
 from ...services.expiration_data_service import ExpirationDataService
 
 # Set logger to INFO level to reduce debug noise
@@ -609,7 +610,7 @@ class ExpirationService:
             if kind in ("fifo", "raw"):
                 # Use InventoryLot for lot-based tracking
                 try:
-                    lot = ExpirationDataService.get_lot(lot_id=entry_id)
+                    lot = db.session.get(InventoryLot, entry_id)
                 except OperationalError:
                     lot = None
                 # Fallback to UnifiedInventoryHistory for canonical FIFO entries
@@ -617,12 +618,12 @@ class ExpirationService:
                     entry = None
                 else:
                     try:
-                        entry = ExpirationDataService.get_unified_history(entry_id=entry_id)
+                        entry = db.session.get(UnifiedInventoryHistory, entry_id)
                     except OperationalError:
                         entry = None
                 # Legacy compatibility - some tests/bootstrap data still use InventoryHistory
                 if not entry and not lot:
-                    entry = ExpirationDataService.get_inventory_history(entry_id=entry_id)
+                    entry = db.session.get(InventoryHistory, entry_id)
 
                 if not entry and not lot:
                     return False, "Lot or FIFO entry not found"
@@ -655,7 +656,7 @@ class ExpirationService:
                 )
 
             elif kind == "product":
-                lot = ExpirationDataService.get_lot(lot_id=entry_id)
+                lot = db.session.get(InventoryLot, entry_id)
                 if not lot:
                     return False, "Product lot not found"
 

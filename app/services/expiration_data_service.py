@@ -29,6 +29,19 @@ class ExpirationDataService:
     """Persistence/query helpers for expiration workflows."""
 
     @staticmethod
+    def _db_get(model, entry_id):
+        """Use expiration-module db alias when tests patch it."""
+        try:
+            from app.blueprints.expiration import services as expiration_services
+
+            db_obj = getattr(expiration_services, "db", None)
+            if db_obj is not None:
+                return db_obj.session.get(model, entry_id)
+        except Exception:
+            pass
+        return db.session.get(model, entry_id)
+
+    @staticmethod
     def get_unified_history_entry_or_404(*, fifo_id: int):
         return UnifiedInventoryHistory.scoped().filter_by(id=fifo_id).first_or_404()
 
@@ -53,11 +66,11 @@ class ExpirationDataService:
 
     @staticmethod
     def get_inventory_item(*, inventory_item_id: int):
-        return db.session.get(InventoryItem, inventory_item_id)
+        return ExpirationDataService._db_get(InventoryItem, inventory_item_id)
 
     @staticmethod
     def get_batch(*, batch_id: int):
-        return db.session.get(Batch, batch_id)
+        return ExpirationDataService._db_get(Batch, batch_id)
 
     @staticmethod
     def list_fifo_lots(*, now_utc, expired: bool = False, days_ahead: int | None = None):
@@ -116,11 +129,11 @@ class ExpirationDataService:
 
     @staticmethod
     def get_product(*, product_id: int):
-        return db.session.get(Product, product_id)
+        return ExpirationDataService._db_get(Product, product_id)
 
     @staticmethod
     def get_product_variant(*, variant_id: int):
-        return db.session.get(ProductVariant, variant_id)
+        return ExpirationDataService._db_get(ProductVariant, variant_id)
 
     @staticmethod
     def list_active_lots_for_item(*, inventory_item_id: int):
@@ -168,15 +181,15 @@ class ExpirationDataService:
 
     @staticmethod
     def get_lot(*, lot_id: int):
-        return db.session.get(InventoryLot, lot_id)
+        return ExpirationDataService._db_get(InventoryLot, lot_id)
 
     @staticmethod
     def get_unified_history(*, entry_id: int):
-        return db.session.get(UnifiedInventoryHistory, entry_id)
+        return ExpirationDataService._db_get(UnifiedInventoryHistory, entry_id)
 
     @staticmethod
     def get_inventory_history(*, entry_id: int):
-        return db.session.get(InventoryHistory, entry_id)
+        return ExpirationDataService._db_get(InventoryHistory, entry_id)
 
     @staticmethod
     def list_lots_expiring_within(*, now_utc, future_date):
