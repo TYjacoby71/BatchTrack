@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Product inventory routes retained direct SKU/lot lookups and route-level session control**
+  - **Closed by:** moving SKU-by-inventory/code/id lookups, fresh/expired lot listing, quantity summation, and commit/rollback helpers into `app/services/product_inventory_route_service.py`.
+  - **Routes affected:** `app/blueprints/products/product_inventory_routes.py` (`adjust_sku_inventory`, `get_sku_fifo_status`, `dispose_expired_sku`, `process_sale_webhook`, `process_return_webhook`, `create_manual_reservation`, `add_inventory_from_batch`)
+
 - **Recipe form-parsing route-adjacent query/session access**
   - **Closed by:** moving portion-unit lookup/create, global-item lookup, org inventory lookup-by-global/name, and ownership-link flush/rollback handling into `app/services/recipe_form_parsing_service.py`.
   - **Routes affected:** `app/blueprints/recipes/form_parsing.py` (`ensure_portion_unit`, `extract_ingredients_from_form`)
