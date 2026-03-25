@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Auth login/quick-signup routes retained direct ORM/session access**
+  - **Closed by:** moving login-user lookup, verification token persistence, login commit/rollback helpers, free-tier resolution, quick-signup org/user creation, global-item lookup, and logout token-clear session handling into `app/services/auth_login_route_service.py`.
+  - **Routes affected:** `app/blueprints/auth/login_routes.py` (`_send_verification_if_needed`, `login`, `quick_signup`, `logout`)
+
 - **Ingredient API route-local ORM/session access across category/search/create-link flows**
   - **Closed by:** moving ingredient category lookups, ingredient/form/variation/global-item search pipelines, and create-or-link inventory mutation/session handling into `app/services/ingredient_route_service.py`.
   - **Routes affected:** `app/blueprints/api/ingredient_routes.py` (`get_categories`, `get_ingredient_density`, `search_ingredients`, `search_ingredient_definitions`, `list_forms_for_ingredient_definition`, `search_physical_forms`, `search_variations`, `create_or_link_ingredient`, `search_global_items`)
