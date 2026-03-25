@@ -42,7 +42,6 @@
 - `app/blueprints/batches/finish_batch.py`: 14
 - `app/blueprints/expiration/services.py`: 14
 - `app/blueprints/products/products.py`: 13
-- `app/blueprints/products/product_inventory_routes.py`: 9 (resolved in this pass; removed from offender list)
 
 ## Boundary 3: Data access ownership
 - Data access findings overlap controller/business findings: persistence logic is still route-adjacent in 14 files.
