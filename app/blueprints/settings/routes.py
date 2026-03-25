@@ -4,14 +4,12 @@ from datetime import datetime, timezone
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from werkzeug.security import generate_password_hash
-
-from ...extensions import db
-from ...models import InventoryItem, User, UserPreferences
+from ...models import User
 from ...services.affiliate_service import AffiliateService
 from ...services.billing.orchestrators.settings_billing_orchestrator import (
     SettingsBillingOrchestrator,
 )
+from ...services.settings_route_service import SettingsRouteService
 from ...services.user_preferences_service import UserPreferencesService
 from ...utils.permissions import has_permission, require_permission
 from ...utils.settings import (
@@ -34,7 +32,9 @@ logger = logging.getLogger(__name__)
 def index():
     """Settings dashboard with organized sections"""
     # Get or create user preferences
-    user_prefs_obj = UserPreferences.get_for_user(current_user.id)
+    user_prefs_obj = SettingsRouteService.get_user_preferences_for_user(
+        user_id=current_user.id
+    )
 
     # Convert to dictionary for JSON serialization - handle None for developers
     if user_prefs_obj:
@@ -162,7 +162,9 @@ def regenerate_affiliate_link():
 def get_user_preferences():
     """Get user preferences for current user"""
     try:
-        user_prefs = UserPreferences.get_for_user(current_user.id)
+        user_prefs = SettingsRouteService.get_user_preferences_for_user(
+            user_id=current_user.id
+        )
 
         if user_prefs:
             return jsonify(
@@ -212,7 +214,9 @@ def update_user_preferences():
     """Update user preferences"""
     try:
         data = request.get_json()
-        user_prefs = UserPreferences.get_for_user(current_user.id)
+        user_prefs = SettingsRouteService.get_user_preferences_for_user(
+            user_id=current_user.id
+        )
 
         # If no preferences exist (like for developers), don't try to update
         if not user_prefs:
@@ -229,7 +233,7 @@ def update_user_preferences():
                 setattr(user_prefs, key, value)
 
         user_prefs.updated_at = datetime.now(timezone.utc)
-        db.session.commit()
+        SettingsRouteService.commit_session()
 
         flash("All preferences saved successfully", "success")
         return jsonify({"success": True, "message": "Preferences updated successfully"})
@@ -277,7 +281,7 @@ def update_list_preferences(scope):
             "Suppressed exception fallback at app/blueprints/settings/routes.py:224",
             exc_info=True,
         )
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -389,7 +393,7 @@ def save_profile():
 
         # Commit changes
         print("Attempting to save to database...")
-        db.session.commit()
+        SettingsRouteService.commit_session()
         print("Database save successful")
 
         if expects_json:
@@ -412,7 +416,7 @@ def save_profile():
 
         traceback.print_exc()
 
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         error_msg = f"Error updating profile: {str(e)}"
 
         if expects_json:
@@ -449,8 +453,10 @@ def change_password():
         if len(new_password) < 8:
             return jsonify({"error": "Password must be at least 8 characters"}), 400
 
-        current_user.password_hash = generate_password_hash(new_password)
-        db.session.commit()
+        SettingsRouteService.set_user_password_hash(
+            user=current_user,
+            new_password=new_password,
+        )
 
         return jsonify({"success": True, "message": "Password changed successfully"})
     except Exception as e:
@@ -489,7 +495,7 @@ def set_backup_password():
 
         # Set the password
         current_user.set_password(password)
-        db.session.commit()
+        SettingsRouteService.commit_session()
 
         return jsonify({"success": True, "message": "Backup password set successfully"})
 
@@ -498,7 +504,7 @@ def set_backup_password():
             "Suppressed exception fallback at app/blueprints/settings/routes.py:426",
             exc_info=True,
         )
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         return jsonify({"error": str(e)}), 500
 
 
@@ -511,16 +517,9 @@ def bulk_update_ingredients():
         data = request.get_json()
         ingredients = data.get("ingredients", [])
 
-        updated_count = 0
-        for ingredient_data in ingredients:
-            ingredient = db.session.get(InventoryItem, ingredient_data["id"])
-            if ingredient:
-                ingredient.name = ingredient_data["name"]
-                ingredient.unit = ingredient_data["unit"]
-                ingredient.cost_per_unit = ingredient_data["cost_per_unit"]
-                updated_count += 1
-
-        db.session.commit()
+        updated_count = SettingsRouteService.bulk_update_ingredients(
+            ingredients=ingredients
+        )
         return jsonify({"success": True, "updated_count": updated_count})
 
     except Exception as e:
@@ -528,7 +527,7 @@ def bulk_update_ingredients():
             "Suppressed exception fallback at app/blueprints/settings/routes.py:452",
             exc_info=True,
         )
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         return jsonify({"error": str(e)}), 400
 
 
@@ -541,20 +540,9 @@ def bulk_update_containers():
         data = request.get_json()
         containers = data.get("containers", [])
 
-        updated_count = 0
-        for container_data in containers:
-            container = db.session.get(InventoryItem, container_data["id"])
-            if container and container.type == "container":
-                container.name = container_data["name"]
-                # Canonical keys only
-                if "capacity" in container_data:
-                    container.capacity = container_data.get("capacity")
-                if "capacity_unit" in container_data:
-                    container.capacity_unit = container_data.get("capacity_unit")
-                container.cost_per_unit = container_data["cost_per_unit"]
-                updated_count += 1
-
-        db.session.commit()
+        updated_count = SettingsRouteService.bulk_update_containers(
+            containers=containers
+        )
         return jsonify({"success": True, "updated_count": updated_count})
 
     except Exception as e:
@@ -562,7 +550,7 @@ def bulk_update_containers():
             "Suppressed exception fallback at app/blueprints/settings/routes.py:482",
             exc_info=True,
         )
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         return jsonify({"error": str(e)}), 400
 
 
@@ -574,7 +562,7 @@ def update_timezone():
 
     if timezone and TimezoneUtils.validate_timezone(timezone):
         current_user.timezone = timezone
-        db.session.commit()
+        SettingsRouteService.commit_session()
         flash("Timezone updated successfully", "success")
     else:
         flash(
@@ -599,12 +587,14 @@ def update_user_preference():
             return jsonify({"error": "Preference key is required"}), 400
 
         # Get or create user preferences
-        user_prefs = UserPreferences.get_for_user(current_user.id)
+        user_prefs = SettingsRouteService.get_user_preferences_for_user(
+            user_id=current_user.id
+        )
 
         # Update the preference
         if hasattr(user_prefs, key):
             setattr(user_prefs, key, value)
-            db.session.commit()
+            SettingsRouteService.commit_session()
             flash("Preference saved successfully", "success")
             return jsonify({"success": True})
         else:
@@ -616,7 +606,7 @@ def update_user_preference():
             "Suppressed exception fallback at app/blueprints/settings/routes.py:532",
             exc_info=True,
         )
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         flash("Error saving preference", "error")
         return jsonify({"error": str(e)}), 500
 
@@ -655,8 +645,7 @@ def update_system_setting():
 def user_management():
     """User management page for profile and account settings"""
     # Get all users separated by type
-    customer_users = User.query.filter(User.user_type != "developer").all()
-    developer_users = User.query.filter(User.user_type == "developer").all()
+    customer_users, developer_users = SettingsRouteService.list_user_management_groups()
 
     return render_template(
         "settings/user_management.html",

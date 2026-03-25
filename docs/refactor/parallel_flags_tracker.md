@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Settings routes retained direct ORM/session access across user preferences/profile/password/bulk-update/user-management flows**
+  - **Closed by:** moving user preference retrieval/mutation, profile/password persistence, bulk inventory/container updates, timezone updates, and user-management user-list queries behind `app/services/settings_route_service.py`.
+  - **Routes affected:** `app/blueprints/settings/routes.py` (`get_user_preferences`, `update_user_preferences`, `save_profile`, `change_password`, `set_backup_password`, `bulk_update_ingredients`, `bulk_update_containers`, `update_timezone`, `update_user_preference`, `user_management`)
+
 - **Product variants routes retained direct ORM/session access across add/view/create-sku/edit/delete flows**
   - **Closed by:** moving product/variant/SKU/container lookups, variant/SKU creation mutations, variant update/deactivation, base-variant fallback creation, and rollback handling into `app/services/product_variant_route_service.py`.
   - **Routes affected:** `app/blueprints/products/product_variants.py` (`add_variant`, `view_variant`, `create_sku_for_variant`, `edit_variant`, `delete_variant`)
