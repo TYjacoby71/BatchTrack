@@ -27,21 +27,14 @@ from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.extensions import cache, limiter
-from app.models import (
-    GlobalItem,
-    IngredientCategory,
-    InventoryItem,
-    UnifiedInventoryHistory,
-    Unit,
-    UserPreferences,
-    db,
-)
+from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory, UserPreferences
 from app.models.inventory_lot import InventoryLot
 from app.services.bulk_inventory_service import (
     BulkInventoryService,
     BulkInventoryServiceError,
 )
 from app.services.cache_invalidation import inventory_list_cache_key
+from app.services.inventory_route_service import InventoryRouteService
 from app.services.inventory_adjustment import (
     create_inventory_item,
     process_inventory_adjustment,
@@ -92,19 +85,9 @@ def _expired_quantity_map(item_ids):
     if not item_ids:
         return {}
     today = TimezoneUtils.utc_now().date()
-    rows = (
-        db.session.query(
-            InventoryLot.inventory_item_id,
-            func.sum(InventoryLot.remaining_quantity_base),
-        )
-        .filter(
-            InventoryLot.inventory_item_id.in_(item_ids),
-            InventoryLot.remaining_quantity_base > 0,
-            InventoryLot.expiration_date.is_not(None),
-            InventoryLot.expiration_date < today,
-        )
-        .group_by(InventoryLot.inventory_item_id)
-        .all()
+    rows = InventoryRouteService.list_expired_quantity_rows(
+        item_ids=item_ids,
+        today=today,
     )
     return {row[0]: int(row[1] or 0) for row in rows}
 
@@ -272,9 +255,9 @@ def api_search_inventory():
 def api_get_inventory_item(item_id):
     """Return inventory item details for the edit modal (org-scoped)."""
     try:
-        query = InventoryItem.query
-        if current_user.organization_id:
-            query = query.filter_by(organization_id=current_user.organization_id)
+        query = InventoryRouteService.build_inventory_item_org_query(
+            organization_id=current_user.organization_id
+        )
         item = query.filter_by(id=item_id).first()
         if not item:
             return jsonify({"error": "Item not found"}), 404
@@ -332,9 +315,9 @@ def api_toggle_global_link(item_id: int):
         if action not in {"unlink", "relink", "resync"}:
             return jsonify({"success": False, "error": "Invalid action"}), 400
 
-        query = InventoryItem.query
-        if current_user.organization_id:
-            query = query.filter_by(organization_id=current_user.organization_id)
+        query = InventoryRouteService.build_inventory_item_org_query(
+            organization_id=current_user.organization_id
+        )
         item = query.filter_by(id=item_id).first()
         if not item:
             return jsonify({"success": False, "error": "Item not found"}), 404
@@ -350,7 +333,7 @@ def api_toggle_global_link(item_id: int):
                 400,
             )
 
-        gi = db.session.get(GlobalItem, int(item.global_item_id))
+        gi = InventoryRouteService.get_global_item(global_item_id=int(item.global_item_id))
         if not gi:
             return jsonify({"success": False, "error": "Global item not found"}), 404
 
@@ -370,49 +353,43 @@ def api_toggle_global_link(item_id: int):
 
         if action == "unlink":
             item.ownership = "org"
-            db.session.add(
-                UnifiedInventoryHistory(
-                    inventory_item_id=item.id,
-                    change_type="unlink_global",
-                    quantity_change=0.0,
-                    quantity_change_base=0,
-                    unit=item.unit or "count",
-                    notes=f"Unlinked from GlobalItem '{gi.name}' (source retained for relink)",
-                    created_by=getattr(current_user, "id", None),
-                    organization_id=item.organization_id,
-                )
+            InventoryRouteService.add_unified_inventory_history(
+                inventory_item_id=item.id,
+                change_type="unlink_global",
+                quantity_change=0.0,
+                quantity_change_base=0,
+                unit=item.unit or "count",
+                notes=f"Unlinked from GlobalItem '{gi.name}' (source retained for relink)",
+                created_by=getattr(current_user, "id", None),
+                organization_id=item.organization_id,
             )
         elif action == "relink":
             GlobalItemSyncService.relink_inventory_item(item, gi)
-            db.session.add(
-                UnifiedInventoryHistory(
-                    inventory_item_id=item.id,
-                    change_type="relink_global",
-                    quantity_change=0.0,
-                    quantity_change_base=0,
-                    unit=item.unit or "count",
-                    notes=f"Relinked to GlobalItem '{gi.name}'",
-                    created_by=getattr(current_user, "id", None),
-                    organization_id=item.organization_id,
-                )
+            InventoryRouteService.add_unified_inventory_history(
+                inventory_item_id=item.id,
+                change_type="relink_global",
+                quantity_change=0.0,
+                quantity_change_base=0,
+                unit=item.unit or "count",
+                notes=f"Relinked to GlobalItem '{gi.name}'",
+                created_by=getattr(current_user, "id", None),
+                organization_id=item.organization_id,
             )
         elif action == "resync":
             # Keep linked, re-apply global specs. (Unit is preserved if user chose a different one.)
             GlobalItemSyncService.relink_inventory_item(item, gi)
-            db.session.add(
-                UnifiedInventoryHistory(
-                    inventory_item_id=item.id,
-                    change_type="sync_global",
-                    quantity_change=0.0,
-                    quantity_change_base=0,
-                    unit=item.unit or "count",
-                    notes=f"Re-synced from GlobalItem '{gi.name}'",
-                    created_by=getattr(current_user, "id", None),
-                    organization_id=item.organization_id,
-                )
+            InventoryRouteService.add_unified_inventory_history(
+                inventory_item_id=item.id,
+                change_type="sync_global",
+                quantity_change=0.0,
+                quantity_change_base=0,
+                unit=item.unit or "count",
+                notes=f"Re-synced from GlobalItem '{gi.name}'",
+                created_by=getattr(current_user, "id", None),
+                organization_id=item.organization_id,
             )
 
-        db.session.commit()
+        InventoryRouteService.commit_session()
 
         return jsonify(
             {
@@ -430,7 +407,7 @@ def api_toggle_global_link(item_id: int):
             "Suppressed exception fallback at app/blueprints/inventory/routes.py:429",
             exc_info=True,
         )
-        db.session.rollback()
+        InventoryRouteService.rollback_session()
         logger.exception("Failed to toggle global link")
         return jsonify({"success": False, "error": str(exc)}), 500
 
@@ -478,7 +455,7 @@ def api_quick_create_inventory():
                 400,
             )
 
-        item = db.session.get(InventoryItem, int(item_id))
+        item = InventoryRouteService.get_inventory_item(item_id=int(item_id))
         if not item:
             return jsonify({"success": False, "error": "Created item not found"}), 500
 
@@ -544,10 +521,8 @@ def list_inventory():
         )
         pass
 
-    units = Unit.scoped().filter(Unit.is_active).all()
-    categories = (
-        IngredientCategory.scoped().order_by(IngredientCategory.name.asc()).all()
-    )
+    units = InventoryRouteService.list_active_units()
+    categories = InventoryRouteService.list_scoped_ingredient_categories()
     org_tracks_inventory_quantities = _org_tracks_inventory_quantities()
 
     if not bypass_cache:
@@ -576,10 +551,7 @@ def list_inventory():
                 breadcrumb_items=[{"label": "Inventory"}],
             )
 
-    query = InventoryItem.query
-    if org_id:
-        query = query.filter_by(organization_id=org_id)
-    query = query.filter(~InventoryItem.type.in_(("product", "product-reserved")))
+    query = InventoryRouteService.build_inventory_list_query(organization_id=org_id)
 
     if not show_archived:
         query = query.filter(InventoryItem.is_archived.is_(False))
@@ -658,13 +630,13 @@ def set_column_visibility():
                 {"legacy_visible_columns": columns},
                 merge=True,
             )
-            db.session.commit()
+            InventoryRouteService.commit_session()
     except Exception:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/inventory/routes.py:647",
             exc_info=True,
         )
-        db.session.rollback()
+        InventoryRouteService.rollback_session()
         logger.exception("Failed to persist inventory column visibility preferences")
     return redirect(url_for("inventory.list_inventory"))
 
@@ -682,9 +654,9 @@ def view_inventory(id):
     fifo_filter = request.args.get("fifo") == "true"
 
     # Get scoped inventory item - regular users only see their org's inventory
-    query = InventoryItem.query
-    if current_user.organization_id:
-        query = query.filter_by(organization_id=current_user.organization_id)
+    query = InventoryRouteService.build_inventory_item_org_query(
+        organization_id=current_user.organization_id
+    )
     item = query.filter_by(id=id).first_or_404()
 
     if not item:
@@ -702,17 +674,9 @@ def view_inventory(id):
         from app.services.quantity_base import from_base_quantity
 
         # Only check InventoryLot for expired quantities
-        expired_lots_for_calc = (
-            InventoryLot.scoped()
-            .filter(
-                and_(
-                    InventoryLot.inventory_item_id == item.id,
-                    InventoryLot.remaining_quantity_base > 0,
-                    InventoryLot.expiration_date.isnot(None),
-                    InventoryLot.expiration_date < today,
-                )
-            )
-            .all()
+        expired_lots_for_calc = InventoryRouteService.list_expired_lots_for_item(
+            inventory_item_id=item.id,
+            today=today,
         )
         expired_base = sum(
             int(lot.remaining_quantity_base or 0) for lot in expired_lots_for_calc
@@ -749,16 +713,7 @@ def view_inventory(id):
     if not hasattr(item, "temp_available_quantity"):
         item.temp_available_quantity = float(item.quantity)
 
-    history_query = (
-        UnifiedInventoryHistory.scoped()
-        .filter_by(inventory_item_id=id)
-        .options(
-            joinedload(UnifiedInventoryHistory.batch),
-            joinedload(UnifiedInventoryHistory.used_for_batch),
-            joinedload(UnifiedInventoryHistory.affected_lot),
-            joinedload(UnifiedInventoryHistory.user),
-        )
-    )
+    history_query = InventoryRouteService.build_unified_history_query(inventory_item_id=id)
 
     # Lots: retrieve via FIFO service to preserve service authority
     history_query = history_query.order_by(UnifiedInventoryHistory.timestamp.desc())
@@ -768,7 +723,7 @@ def view_inventory(id):
     # When FIFO toggle is ON, show ALL lots (including depleted ones).
     # When FIFO toggle is OFF, show only active lots.
     # In tracked mode, hide infinite-anchor rows from the default lot table.
-    lots_query = InventoryLot.scoped().filter_by(inventory_item_id=id)
+    lots_query = InventoryRouteService.build_lots_query(inventory_item_id=id)
     if item.is_tracked:
         lots_query = lots_query.filter(
             InventoryLot.source_type != INFINITE_ANCHOR_SOURCE_TYPE
@@ -783,10 +738,7 @@ def view_inventory(id):
                     InventoryLot.source_type == INFINITE_ANCHOR_SOURCE_TYPE,
                 )
             )
-    lots = lots_query.order_by(
-        case((InventoryLot.source_type == INFINITE_ANCHOR_SOURCE_TYPE, 1), else_=0),
-        InventoryLot.created_at.asc(),
-    ).all()
+    lots = lots_query.order_by(*InventoryRouteService.lot_ordering()).all()
 
     # Get expired FIFO entries for display (only from InventoryLot since lots handle FIFO tracking)
     expired_entries = []
@@ -796,18 +748,9 @@ def view_inventory(id):
         from app.services.quantity_base import from_base_quantity
 
         # Only check InventoryLot for expired entries
-        expired_entries = (
-            InventoryLot.scoped()
-            .filter(
-                and_(
-                    InventoryLot.inventory_item_id == id,
-                    InventoryLot.remaining_quantity_base > 0,
-                    InventoryLot.expiration_date.isnot(None),
-                    InventoryLot.expiration_date < today,
-                )
-            )
-            .order_by(InventoryLot.expiration_date.asc())
-            .all()
+        expired_entries = InventoryRouteService.list_expired_entries_for_item(
+            inventory_item_id=id,
+            today=today,
         )
         expired_total_base = sum(
             int(lot.remaining_quantity_base or 0) for lot in expired_entries
@@ -828,9 +771,7 @@ def view_inventory(id):
         expired_entries=expired_entries,
         expired_total=expired_total,
         units=get_global_unit_list(),
-        get_ingredient_categories=IngredientCategory.scoped()
-        .order_by(IngredientCategory.name)
-        .all,
+        get_ingredient_categories=InventoryRouteService.list_ingredient_categories_ordered,
         UnifiedInventoryHistory=UnifiedInventoryHistory,
         now=datetime.now(timezone.utc),
         int_to_base36=int_to_base36,
@@ -866,7 +807,7 @@ def add_inventory():
 
         if success:
             # Ensure database transaction is committed
-            db.session.commit()
+            InventoryRouteService.commit_session()
             flash(f"New inventory item created: {message}", "success")
             if item_id:
                 return redirect(url_for("inventory.view_inventory", id=item_id))
@@ -911,7 +852,7 @@ def adjust_inventory(item_id):
                 flash(message, flash_category)
             return redirect(redirect_url or url_for(".view_inventory", id=item_id))
 
-        item = db.session.get(InventoryItem, int(item_id))
+        item = InventoryRouteService.get_inventory_item(item_id=int(item_id))
         if not item:
             return respond(
                 False,
@@ -1059,10 +1000,10 @@ def edit_inventory(id):
     """Handle inventory item editing and recounts"""
     try:
         # Get scoped inventory item first to ensure access
-        query = InventoryItem.query
-        if current_user.organization_id:
-            query = query.filter_by(organization_id=current_user.organization_id)
-        item = query.filter_by(id=id).first_or_404()
+        item = InventoryRouteService.get_inventory_item_by_id_or_404_for_org(
+            item_id=id,
+            organization_id=current_user.organization_id,
+        )
 
         # Authority check
         if not can_edit_inventory_item(item):
@@ -1075,11 +1016,11 @@ def edit_inventory(id):
 
         # Enforce global item type validation if linked
         try:
-            from app.models import GlobalItem
-
             new_type = form_data.get("type", item.type)
             if getattr(item, "global_item_id", None):
-                gi = db.session.get(GlobalItem, int(item.global_item_id))
+                gi = InventoryRouteService.get_global_item(
+                    global_item_id=int(item.global_item_id)
+                )
                 if gi and gi.item_type != new_type:
                     flash(
                         f"Type '{new_type}' does not match linked global item type '{gi.item_type}'.",
@@ -1170,7 +1111,9 @@ def edit_inventory(id):
                     item.category_id = parsed_category_id
                     # Apply category default density when category is chosen
                     try:
-                        cat_obj = db.session.get(IngredientCategory, parsed_category_id)
+                        cat_obj = InventoryRouteService.get_ingredient_category(
+                            category_id=parsed_category_id
+                        )
                         if (
                             cat_obj
                             and cat_obj.default_density
@@ -1244,17 +1187,17 @@ def edit_inventory(id):
 @login_required
 @permission_required("inventory.delete")
 def archive_inventory(id):
-    item = InventoryItem.scoped().filter_by(id=id).first_or_404()
+    item = InventoryRouteService.get_scoped_inventory_item_or_404(item_id=id)
     try:
         item.is_archived = True
-        db.session.commit()
+        InventoryRouteService.commit_session()
         flash("Inventory item archived successfully.", "success")
     except Exception as e:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/inventory/routes.py:1223",
             exc_info=True,
         )
-        db.session.rollback()
+        InventoryRouteService.rollback_session()
         flash(f"Error archiving item: {str(e)}", "error")
     return redirect(url_for("inventory.list_inventory"))
 
@@ -1267,17 +1210,17 @@ def archive_inventory(id):
 @login_required
 @permission_required("inventory.edit")
 def restore_inventory(id):
-    item = InventoryItem.scoped().filter_by(id=id).first_or_404()
+    item = InventoryRouteService.get_scoped_inventory_item_or_404(item_id=id)
     try:
         item.is_archived = False
-        db.session.commit()
+        InventoryRouteService.commit_session()
         flash("Inventory item restored successfully.", "success")
     except Exception as e:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/inventory/routes.py:1242",
             exc_info=True,
         )
-        db.session.rollback()
+        InventoryRouteService.rollback_session()
         flash(f"Error restoring item: {str(e)}", "error")
     return redirect(url_for("inventory.list_inventory"))
 
@@ -1292,7 +1235,7 @@ def restore_inventory(id):
 def debug_inventory(id):
     """Debug endpoint to check inventory status"""
     try:
-        item = InventoryItem.scoped().filter_by(id=id).first_or_404()
+        item = InventoryRouteService.get_scoped_inventory_item_or_404(item_id=id)
 
         # Check FIFO sync
         from app.services.inventory_adjustment import validate_inventory_fifo_sync
@@ -1309,9 +1252,9 @@ def debug_inventory(id):
             "fifo_error": error_msg,
             "inventory_qty": inv_qty,
             "fifo_total": fifo_total,
-            "history_count": UnifiedInventoryHistory.scoped()
-            .filter_by(inventory_item_id=id)
-            .count(),
+            "history_count": InventoryRouteService.count_unified_history_for_item(
+                inventory_item_id=id
+            ),
         }
 
         return jsonify(debug_info)
@@ -1337,15 +1280,11 @@ def bulk_inventory_updates():
     if not _bulk_inventory_updates_enabled():
         flash("Bulk inventory updates are not enabled for your plan.", "warning")
         return redirect(url_for("inventory.list_inventory"))
-    query = InventoryItem.query
-    if current_user.organization_id:
-        query = query.filter_by(organization_id=current_user.organization_id)
-    query = query.filter(~InventoryItem.type.in_(("product", "product-reserved")))
     inventory_records = (
-        query.filter(not InventoryItem.is_archived)
-        .order_by(InventoryItem.name.asc())
-        .limit(750)
-        .all()
+        InventoryRouteService.list_bulk_update_inventory_records(
+            organization_id=current_user.organization_id,
+            limit=750,
+        )
     )
 
     inventory_payload = [

@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Inventory routes retained direct ORM/session access across item-detail/global-link/list/view/archive/restore/debug/bulk-update flows**
+  - **Closed by:** moving inventory/global-item/category/unit/lot/history lookups and route-level commit/rollback ownership behind `app/services/inventory_route_service.py`.
+  - **Routes affected:** `app/blueprints/inventory/routes.py` (`_expired_quantity_map`, `api_get_inventory_item`, `api_toggle_global_link`, `api_quick_create_inventory`, `list_inventory`, `set_column_visibility`, `view_inventory`, `adjust_inventory`, `edit_inventory`, `archive_inventory`, `restore_inventory`, `debug_inventory`, `bulk_inventory_updates`)
+
 - **Batch finish routes retained direct ORM/session access across completion/output-posting workflows**
   - **Closed by:** moving batch/product/variant/sku/container/lot query boundaries and commit/rollback ownership behind `app/services/batch_finish_route_service.py`.
   - **Routes affected:** `app/blueprints/batches/finish_batch.py` (`complete_batch`, `fail_batch`, `_complete_batch_internal`, `_create_intermediate_ingredient`, `_create_product_output`, `_process_container_allocations`, `_create_container_sku`, `_create_bulk_sku`)
