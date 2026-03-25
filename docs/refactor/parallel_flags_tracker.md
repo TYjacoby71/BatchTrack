@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Auth permissions routes retained direct ORM/session access across permission-matrix and role CRUD flows**
+  - **Closed by:** moving subscription-tier permission resolution, permission registry reads, permission-matrix upsert/delete + role rebind writes, permission-status toggles, and role create/update transaction ownership behind `app/services/auth_permission_route_service.py`.
+  - **Routes affected:** `app/blueprints/auth/permissions.py` (`get_tier_permissions`, `manage_permissions`, `update_permission_matrix`, `toggle_permission_status`, `manage_roles`, `create_role`, `update_role`)
+
 - **Settings routes retained direct ORM/session access across user preferences/profile/password/bulk-update/user-management flows**
   - **Closed by:** moving user preference retrieval/mutation, profile/password persistence, bulk inventory/container updates, timezone updates, and user-management user-list queries behind `app/services/settings_route_service.py`.
   - **Routes affected:** `app/blueprints/settings/routes.py` (`get_user_preferences`, `update_user_preferences`, `save_profile`, `change_password`, `set_backup_password`, `bulk_update_ingredients`, `bulk_update_containers`, `update_timezone`, `update_user_preference`, `user_management`)
