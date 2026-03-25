@@ -16,13 +16,7 @@ from flask_login import current_user, login_required
 
 from app.utils.settings import is_feature_enabled
 
-from ...models import (
-    InventoryItem,
-    ProductSKU,
-    Reservation,
-    UnifiedInventoryHistory,
-    db,
-)
+from ...services.sku_route_service import SkuRouteService
 from ...utils.permissions import require_permission
 from ...utils.timezone_utils import TimezoneUtils
 from ...utils.unit_utils import get_global_unit_list
@@ -47,21 +41,12 @@ def _merge_skus_enabled() -> bool:
 @require_permission("products.view")
 def view_sku(inventory_item_id):
     """View individual SKU details"""
-    sku = (
-        ProductSKU.scoped()
-        .filter_by(inventory_item_id=inventory_item_id)
-        .first_or_404()
-    )
+    sku = SkuRouteService.get_sku_or_404(inventory_item_id=inventory_item_id)
 
     # Get SKU history for this specific SKU using inventory_item_id
-    history = (
-        UnifiedInventoryHistory.scoped()
-        .filter_by(
-            inventory_item_id=sku.inventory_item_id,
-            organization_id=current_user.organization_id,
-        )
-        .order_by(UnifiedInventoryHistory.timestamp.desc())
-        .all()
+    history = SkuRouteService.list_sku_history_for_org(
+        inventory_item_id=sku.inventory_item_id,
+        organization_id=current_user.organization_id,
     )
 
     # Debug logging
@@ -113,13 +98,9 @@ def view_sku(inventory_item_id):
 @require_permission("products.manage_variants")
 def edit_sku(inventory_item_id):
     """Edit SKU details"""
-    sku = (
-        ProductSKU.scoped()
-        .filter_by(
-            inventory_item_id=inventory_item_id,
-            organization_id=current_user.organization_id,
-        )
-        .first_or_404()
+    sku = SkuRouteService.get_org_sku_or_404(
+        inventory_item_id=inventory_item_id,
+        organization_id=current_user.organization_id,
     )
 
     try:
@@ -170,12 +151,9 @@ def edit_sku(inventory_item_id):
 
                     # Update FIFO entries with expiration data using ExpirationService
                     from ...blueprints.expiration.services import ExpirationService
-                    from ...models.inventory_lot import InventoryLot
 
-                    lots = (
-                        InventoryLot.scoped()
-                        .filter(InventoryLot.inventory_item_id == sku.inventory_item_id)
-                        .all()
+                    lots = SkuRouteService.list_inventory_lots_for_item(
+                        inventory_item_id=sku.inventory_item_id
                     )
 
                     for lot in lots:
@@ -187,10 +165,8 @@ def edit_sku(inventory_item_id):
                                 )
                             )
 
-                        history_entries = (
-                            UnifiedInventoryHistory.scoped()
-                            .filter(UnifiedInventoryHistory.affected_lot_id == lot.id)
-                            .all()
+                        history_entries = SkuRouteService.list_history_entries_for_lot(
+                            lot_id=lot.id
                         )
                         for entry in history_entries:
                             entry.is_perishable = True
@@ -205,13 +181,8 @@ def edit_sku(inventory_item_id):
                 sku.inventory_item.shelf_life_days = None
 
                 # Clear expiration data from FIFO entries when marking as non-perishable
-                fifo_entries = (
-                    UnifiedInventoryHistory.scoped()
-                    .filter(
-                        UnifiedInventoryHistory.inventory_item_id
-                        == sku.inventory_item_id
-                    )
-                    .all()
+                fifo_entries = SkuRouteService.list_history_entries_for_item(
+                    inventory_item_id=sku.inventory_item_id
                 )
 
                 for entry in fifo_entries:
@@ -224,14 +195,14 @@ def edit_sku(inventory_item_id):
             "success",
         )
 
-        db.session.commit()
+        SkuRouteService.commit_session()
 
     except Exception as e:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/products/sku.py:211",
             exc_info=True,
         )
-        db.session.rollback()
+        SkuRouteService.rollback_session()
         flash(f"Error updating SKU: {str(e)}", "error")
 
     return redirect(url_for("sku.view_sku", inventory_item_id=sku.inventory_item_id))
@@ -254,15 +225,8 @@ def select_skus_to_merge():
     if not _merge_skus_enabled():
         flash("SKU merge is not enabled for your plan.", "warning")
         return redirect(url_for("products.list_products"))
-    skus = (
-        ProductSKU.scoped()
-        .join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id)
-        .filter(
-            ProductSKU.organization_id == current_user.organization_id,
-            ProductSKU.is_active,
-        )
-        .order_by(ProductSKU.product_id, ProductSKU.variant_id, ProductSKU.size_label)
-        .all()
+    skus = SkuRouteService.list_active_org_skus_for_merge(
+        organization_id=current_user.organization_id
     )
 
     return render_template("pages/products/merge_select.html", skus=skus)
@@ -285,13 +249,9 @@ def configure_merge():
         return redirect(url_for("sku.select_skus_to_merge"))
 
     # Get selected SKUs
-    skus = (
-        ProductSKU.scoped()
-        .filter(
-            ProductSKU.inventory_item_id.in_(sku_ids),
-            ProductSKU.organization_id == current_user.organization_id,
-        )
-        .all()
+    skus = SkuRouteService.list_org_skus_by_inventory_ids(
+        inventory_item_ids=sku_ids,
+        organization_id=current_user.organization_id,
     )
 
     # Validate all SKUs have same product and variant
@@ -350,13 +310,9 @@ def execute_merge():
             return redirect(url_for("sku.select_skus_to_merge"))
 
         # Get all SKUs
-        skus = (
-            ProductSKU.scoped()
-            .filter(
-                ProductSKU.inventory_item_id.in_(sku_ids),
-                ProductSKU.organization_id == current_user.organization_id,
-            )
-            .all()
+        skus = SkuRouteService.list_org_skus_by_inventory_ids(
+            inventory_item_ids=sku_ids,
+            organization_id=current_user.organization_id,
         )
 
         target_sku = next(
@@ -442,14 +398,16 @@ def execute_merge():
         # Merge history entries
         for source_sku in source_skus:
             # Update all history entries to point to target SKU
-            UnifiedInventoryHistory.scoped().filter_by(
-                inventory_item_id=source_sku.inventory_item_id
-            ).update({"inventory_item_id": target_sku.inventory_item_id})
+            SkuRouteService.repoint_history_inventory_item(
+                from_inventory_item_id=source_sku.inventory_item_id,
+                to_inventory_item_id=target_sku.inventory_item_id,
+            )
 
             # Update reservations
-            Reservation.scoped().filter_by(
-                product_item_id=source_sku.inventory_item_id
-            ).update({"product_item_id": target_sku.inventory_item_id})
+            SkuRouteService.repoint_reservations_product_item(
+                from_inventory_item_id=source_sku.inventory_item_id,
+                to_inventory_item_id=target_sku.inventory_item_id,
+            )
 
         # Create merge record in history
         merge_note = f"Merged SKUs: {', '.join(sku.sku_code for sku in source_skus)} into {target_sku.sku_code}"
@@ -469,13 +427,12 @@ def execute_merge():
 
         # Delete source SKUs and their inventory items
         for source_sku in source_skus:
-            db.session.delete(source_sku.inventory_item)
-            db.session.delete(source_sku)
+            SkuRouteService.delete_inventory_item_and_sku(source_sku=source_sku)
 
         # Update target SKU timestamp
         target_sku.updated_at = datetime.now(timezone.utc)
 
-        db.session.commit()
+        SkuRouteService.commit_session()
 
         flash(
             f"Successfully merged {len(source_skus)} SKUs into {target_sku.sku_code}",
@@ -490,7 +447,7 @@ def execute_merge():
             "Suppressed exception fallback at app/blueprints/products/sku.py:459",
             exc_info=True,
         )
-        db.session.rollback()
+        SkuRouteService.rollback_session()
         logger.error(f"Error merging SKUs: {str(e)}")
         flash(f"Error merging SKUs: {str(e)}", "error")
         return redirect(url_for("sku.select_skus_to_merge"))
@@ -503,22 +460,19 @@ def execute_merge():
 @require_permission("products.manage_variants")
 def get_merge_preview(sku_id):
     """Get preview data for SKU merge"""
-    sku = (
-        ProductSKU.scoped()
-        .filter_by(
-            inventory_item_id=sku_id, organization_id=current_user.organization_id
-        )
-        .first_or_404()
+    sku = SkuRouteService.get_org_sku_or_404(
+        inventory_item_id=sku_id,
+        organization_id=current_user.organization_id,
     )
 
     # Get history count
-    history_count = (
-        UnifiedInventoryHistory.scoped().filter_by(inventory_item_id=sku_id).count()
+    history_count = SkuRouteService.count_history_entries_for_item(
+        inventory_item_id=sku_id
     )
 
     # Get reservations count
-    reservations_count = (
-        Reservation.scoped().filter_by(product_item_id=sku_id, status="active").count()
+    reservations_count = SkuRouteService.count_active_reservations_for_item(
+        inventory_item_id=sku_id
     )
 
     return jsonify(

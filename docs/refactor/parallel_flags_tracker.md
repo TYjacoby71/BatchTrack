@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **SKU route-local ORM/session access across view/edit/merge flows**
+  - **Closed by:** moving SKU lookup/history queries, lot/history/reservation updates, and route-level commit/rollback handling into `app/services/sku_route_service.py`.
+  - **Routes affected:** `app/blueprints/products/sku.py` (`view_sku`, `edit_sku`, `select_skus_to_merge`, `configure_merge`, `execute_merge`, `get_merge_preview`)
+
 - **Product inventory routes retained direct SKU/lot lookups and route-level session control**
   - **Closed by:** moving SKU-by-inventory/code/id lookups, fresh/expired lot listing, quantity summation, and commit/rollback helpers into `app/services/product_inventory_route_service.py`.
   - **Routes affected:** `app/blueprints/products/product_inventory_routes.py` (`adjust_sku_inventory`, `get_sku_fifo_status`, `dispose_expired_sku`, `process_sale_webhook`, `process_return_webhook`, `create_manual_reservation`, `add_inventory_from_batch`)
