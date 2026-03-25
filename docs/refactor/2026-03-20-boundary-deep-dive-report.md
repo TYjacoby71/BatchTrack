@@ -9,8 +9,8 @@
 | Boundary | Grade | Why |
 | --- | --- | --- |
 | Service authority | 6.5/10 | Canonical design exists, but active route/data flows still bypass service boundaries in multiple blueprints. |
-| Controller vs business logic | 9.8/10 | 6 blueprint modules still contain direct query/session logic after extracting developer subscription-tier route query/session touchpoints (tier/addon/permission reads, create-edit-delete writes, sync/API tier fetches) into a dedicated route service on top of prior batches. |
-| Data access ownership | 9.8/10 | Persistence logic remains mixed into route layers, but this pass removed additional route-local query/session touchpoints from developer subscription-tier workflows. |
+| Controller vs business logic | 9.9/10 | 5 blueprint modules still contain direct query/session logic after extracting developer global-item route query/session touchpoints (detail/edit/create/delete flows) into a dedicated route service on top of prior batches. |
+| Data access ownership | 9.9/10 | Persistence logic remains mixed into route layers, but this pass removed additional route-local query/session touchpoints from developer global-item workflows. |
 | Tenant isolation | 8.6/10 | Major scoped-query hardening is complete, with residual review needed on heuristic-risk files. |
 | Permission boundary | 8.0/10 | Non-public route permission audit is clean and `role_required` now enforces real role checks; remaining risk is broader policy consistency (`user_type` gates and role->permission migration). |
 | Integration boundaries | 5.9/10 | Stripe path is mature; Whop and Soap push remain partial/stubbed; POS file still contains embedded test mocks. |
@@ -26,12 +26,11 @@
 - Completion signal: structural cleanup section is still 0/25 complete in hardening checklist.
 
 ## Boundary 2: Controller vs business logic
-- Total blueprint files with direct query/session access: **6**.
+- Total blueprint files with direct query/session access: **5**.
 ### Top offenders (direct query count)
 - `app/blueprints/developer/system_roles.py`: 50
 - `app/blueprints/developer/views/reference_routes.py`: 38
 - `app/blueprints/organization/routes.py`: 33
-- `app/blueprints/developer/views/global_item_routes.py`: 32
 - `app/blueprints/inventory/routes.py`: 24
 - `app/blueprints/batches/finish_batch.py`: 14
 
@@ -137,7 +136,6 @@
 - `app/blueprints/developer/system_roles.py`: 50
 - `app/blueprints/developer/views/reference_routes.py`: 38
 - `app/blueprints/organization/routes.py`: 33
-- `app/blueprints/developer/views/global_item_routes.py`: 32
 - `app/blueprints/conversion/routes.py`: 24
 - `app/blueprints/inventory/routes.py`: 24
 - `app/blueprints/auth/login_routes.py`: 19
@@ -147,6 +145,7 @@
 - `app/blueprints/expiration/services.py`: 14 (resolved in this pass; removed from offender list)
 - `app/blueprints/products/products.py`: 13 (resolved in this pass; removed from offender list)
 - `app/blueprints/developer/subscription_tiers.py`: 34 (resolved in this pass; removed from offender list)
+- `app/blueprints/developer/views/global_item_routes.py`: 32 (resolved in this pass; removed from offender list)
 - `app/blueprints/batches/finish_batch.py`: 14
 - `app/blueprints/products/product_inventory_routes.py`: 9 (resolved in this pass; removed from offender list)
 - `app/blueprints/dashboard/routes.py`: 7 (resolved in this pass; removed from offender list)
