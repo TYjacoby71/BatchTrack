@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Recipe manage routes retained direct ORM/session access across list/view/note/lock/make-parent flows**
+  - **Closed by:** moving recipe list pagination/grouped variations, view-note/group-version lookups, note insertion, lock/unlock persistence, and legacy make-parent conversion/session handling into `app/services/recipe_manage_view_service.py`.
+  - **Routes affected:** `app/blueprints/recipes/views/manage_routes.py` (`list_recipes`, `view_recipe`, `add_recipe_note`, `make_parent_recipe`, `lock_recipe`, `unlock_recipe`)
+
 - **SKU route-local ORM/session access across view/edit/merge flows**
   - **Closed by:** moving SKU lookup/history queries, lot/history/reservation updates, and route-level commit/rollback handling into `app/services/sku_route_service.py`.
   - **Routes affected:** `app/blueprints/products/sku.py` (`view_sku`, `edit_sku`, `select_skus_to_merge`, `configure_merge`, `execute_merge`, `get_merge_preview`)
