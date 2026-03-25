@@ -24,6 +24,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
 
 ## Recently closed flags
 
+- **Product variants routes retained direct ORM/session access across add/view/create-sku/edit/delete flows**
+  - **Closed by:** moving product/variant/SKU/container lookups, variant/SKU creation mutations, variant update/deactivation, base-variant fallback creation, and rollback handling into `app/services/product_variant_route_service.py`.
+  - **Routes affected:** `app/blueprints/products/product_variants.py` (`add_variant`, `view_variant`, `create_sku_for_variant`, `edit_variant`, `delete_variant`)
+
 - **Auth login/quick-signup routes retained direct ORM/session access**
   - **Closed by:** moving login-user lookup, verification token persistence, login commit/rollback helpers, free-tier resolution, quick-signup org/user creation, global-item lookup, and logout token-clear session handling into `app/services/auth_login_route_service.py`.
   - **Routes affected:** `app/blueprints/auth/login_routes.py` (`_send_verification_if_needed`, `login`, `quick_signup`, `logout`)

@@ -3,9 +3,9 @@ import logging
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from ...models import InventoryItem, ProductSKU, db
-from ...models.product import Product, ProductVariant
+from ...models import ProductSKU
 from ...services.product_service import ProductService
+from ...services.product_variant_route_service import ProductVariantRouteService
 from ...utils.permissions import require_permission
 from ...utils.settings import is_feature_enabled
 from ...utils.unit_utils import get_global_unit_list
@@ -23,32 +23,12 @@ product_variants_bp = Blueprint("product_variants", __name__)
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
     try:
-        # First try to get the Product record
-        product = (
-            Product.scoped()
-            .filter_by(id=product_id, organization_id=current_user.organization_id)
-            .first()
+        product = ProductVariantRouteService.get_product_for_variant_flow(
+            product_id=product_id,
+            organization_id=current_user.organization_id,
         )
-
-        # If no Product record exists, try to find it via ProductSKU and create Product
         if not product:
-            # Look for existing SKU with this product_id
-            base_sku = (
-                ProductSKU.scoped()
-                .filter_by(id=product_id, organization_id=current_user.organization_id)
-                .first()
-            )
-
-            if not base_sku:
-                return jsonify({"error": "Product not found"}), 404
-
-            # For legacy data, the product_id in the URL might be a SKU ID
-            # Try to find or create the actual Product record
-            if base_sku.product_id:
-                product = db.session.get(Product, base_sku.product_id)
-
-            if not product:
-                return jsonify({"error": "Product record not found"}), 404
+            return jsonify({"error": "Product not found"}), 404
 
         # Get variant name from request
         auto_create_bulk_sku = is_feature_enabled("FEATURE_AUTO_BULK_SKU_ON_VARIANT")
@@ -68,11 +48,9 @@ def add_variant(product_id):
 
         variant_name = variant_name.strip()
 
-        # Check if variant already exists for this product
-        existing_variant = (
-            ProductVariant.scoped()
-            .filter_by(product_id=product.id, name=variant_name)
-            .first()
+        existing_variant = ProductVariantRouteService.get_variant_for_product_by_name(
+            product_id=product.id,
+            variant_name=variant_name,
         )
 
         if existing_variant:
@@ -100,55 +78,16 @@ def add_variant(product_id):
                 )
             default_bulk_label = ProductService.resolve_bulk_size_label(unit)
 
-        # Create the ProductVariant
-        new_variant = ProductVariant(
-            product_id=product.id,
-            name=variant_name,
+        new_variant, new_sku = ProductVariantRouteService.create_variant_with_optional_bulk_sku(
+            product=product,
+            variant_name=variant_name,
             description=description,
             organization_id=current_user.organization_id,
-            created_by=current_user.id,
+            actor_user_id=current_user.id,
+            auto_create_bulk_sku=auto_create_bulk_sku,
+            unit=unit,
+            default_bulk_label=default_bulk_label,
         )
-        db.session.add(new_variant)
-
-        new_sku = None
-        if auto_create_bulk_sku:
-            db.session.flush()  # Ensure new_variant has an ID
-            sku_code = ProductService.generate_sku_code(
-                product.name, variant_name, default_bulk_label
-            )
-            sku_name = f"{variant_name} {product.name} ({default_bulk_label})"
-
-            inventory_item = InventoryItem(
-                name=f"{product.name} - {variant_name} - {default_bulk_label}",
-                type="product",
-                unit=unit,
-                quantity=0.0,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id,
-            )
-            db.session.add(inventory_item)
-            db.session.flush()
-
-            new_sku = ProductSKU(
-                inventory_item_id=inventory_item.id,
-                product_id=product.id,
-                variant_id=new_variant.id,
-                size_label=default_bulk_label,
-                sku_code=sku_code,
-                sku=sku_code,
-                sku_name=sku_name,
-                unit=unit,
-                low_stock_threshold=0,
-                description=description,
-                is_active=True,
-                is_product_active=True,
-                organization_id=current_user.organization_id,
-                created_by=current_user.id,
-            )
-            db.session.add(new_sku)
-
-        # Commit changes
-        db.session.commit()
 
         response = {
             "success": True,
@@ -177,7 +116,7 @@ def add_variant(product_id):
             "Suppressed exception fallback at app/blueprints/products/product_variants.py:163",
             exc_info=True,
         )
-        db.session.rollback()
+        ProductVariantRouteService.rollback_session()
         # Log the full error for debugging
         import traceback
 
@@ -191,40 +130,28 @@ def add_variant(product_id):
 @require_permission("products.view")
 def view_variant(product_id, variant_name):
     """View individual product variation details"""
-    # Get the product using the new Product model
-    from ...models.product import Product, ProductVariant
-
-    product = (
-        Product.scoped()
-        .filter_by(id=product_id, organization_id=current_user.organization_id)
-        .first()
+    product = ProductVariantRouteService.get_product_for_org(
+        product_id=product_id,
+        organization_id=current_user.organization_id,
     )
 
     if not product:
         flash("Product not found", "error")
         return redirect(url_for("products.list_products"))
 
-    # Get the variant by name
-    variant = (
-        ProductVariant.scoped()
-        .filter_by(product_id=product.id, name=variant_name)
-        .first()
+    variant = ProductVariantRouteService.get_variant_for_product_by_name(
+        product_id=product.id,
+        variant_name=variant_name,
     )
 
     if not variant:
         flash("Variant not found", "error")
         return redirect(url_for("products.view_product", product_id=product_id))
 
-    # Get all SKUs for this product/variant combination
-    skus = (
-        ProductSKU.scoped()
-        .filter_by(
-            product_id=product.id,
-            variant_id=variant.id,
-            is_active=True,
-            organization_id=current_user.organization_id,
-        )
-        .all()
+    skus = ProductVariantRouteService.list_active_variant_skus_for_org(
+        product_id=product.id,
+        variant_id=variant.id,
+        organization_id=current_user.organization_id,
     )
 
     # Group SKUs by size_label
@@ -256,24 +183,15 @@ def view_variant(product_id, variant_name):
             if batch.final_quantity and batch.final_quantity > 0:
                 size_groups[key]["batches"].append(batch)
 
-    # Get available containers for manual stock addition
-    available_containers = (
-        InventoryItem.scoped()
-        .filter_by(type="container", is_archived=False)
-        .filter(InventoryItem.quantity > 0)
-        .all()
+    available_containers = ProductVariantRouteService.list_available_containers_for_org(
+        organization_id=current_user.organization_id
     )
 
-    # Get the base SKU inventory item ID for breadcrumb navigation
-    base_sku = (
-        ProductSKU.scoped()
-        .filter_by(
-            product_id=product.id,
-            variant_id=product.base_variant.id if product.base_variant else variant.id,
-            organization_id=current_user.organization_id,
-        )
-        .filter(ProductSKU.size_label.ilike("Bulk%"))
-        .first()
+    base_variant_id = product.base_variant.id if product.base_variant else variant.id
+    base_sku = ProductVariantRouteService.get_bulk_sku_for_variant_org(
+        product_id=product.id,
+        variant_id=base_variant_id,
+        organization_id=current_user.organization_id,
     )
 
     product_breadcrumb_id = (
@@ -315,20 +233,18 @@ def view_variant(product_id, variant_name):
 @require_permission("products.manage_variants")
 def create_sku_for_variant(product_id, variant_name):
     """Create a new SKU for an existing variant."""
-    product = (
-        Product.scoped()
-        .filter_by(id=product_id, organization_id=current_user.organization_id)
-        .first()
+    product = ProductVariantRouteService.get_product_for_org(
+        product_id=product_id,
+        organization_id=current_user.organization_id,
     )
 
     if not product:
         flash("Product not found", "error")
         return redirect(url_for("products.list_products"))
 
-    variant = (
-        ProductVariant.scoped()
-        .filter_by(product_id=product.id, name=variant_name)
-        .first()
+    variant = ProductVariantRouteService.get_variant_for_product_by_name(
+        product_id=product.id,
+        variant_name=variant_name,
     )
 
     if not variant:
@@ -359,15 +275,11 @@ def create_sku_for_variant(product_id, variant_name):
             )
         )
 
-    existing_sku = (
-        ProductSKU.scoped()
-        .filter_by(
-            product_id=product.id,
-            variant_id=variant.id,
-            size_label=size_label,
-            organization_id=current_user.organization_id,
-        )
-        .first()
+    existing_sku = ProductVariantRouteService.get_existing_sku_for_variant_size_org(
+        product_id=product.id,
+        variant_id=variant.id,
+        size_label=size_label,
+        organization_id=current_user.organization_id,
     )
 
     if existing_sku:
@@ -381,48 +293,22 @@ def create_sku_for_variant(product_id, variant_name):
         )
 
     try:
-        inventory_item = InventoryItem(
-            name=f"{product.name} - {variant.name} - {size_label}",
-            type="product",
-            unit=unit,
-            quantity=0.0,
-            organization_id=current_user.organization_id,
-            created_by=current_user.id,
-        )
-        db.session.add(inventory_item)
-        db.session.flush()
-
-        sku_code = ProductService.generate_sku_code(
-            product.name, variant.name, size_label
-        )
-
-        new_sku = ProductSKU(
-            inventory_item_id=inventory_item.id,
-            product_id=product.id,
-            variant_id=variant.id,
+        ProductVariantRouteService.create_sku_for_variant(
+            product=product,
+            variant=variant,
             size_label=size_label,
-            sku_code=sku_code,
-            sku=sku_code,
-            sku_name=f"{variant.name} {product.name} ({size_label})",
             unit=unit,
-            low_stock_threshold=(
-                float(low_stock_threshold) if low_stock_threshold else 0
-            ),
+            low_stock_threshold=low_stock_threshold,
             organization_id=current_user.organization_id,
-            created_by=current_user.id,
-            is_active=True,
-            is_product_active=True,
+            actor_user_id=current_user.id,
         )
-        db.session.add(new_sku)
-        db.session.commit()
-
         flash(f'SKU "{size_label}" created successfully.', "success")
     except Exception as e:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/products/product_variants.py:383",
             exc_info=True,
         )
-        db.session.rollback()
+        ProductVariantRouteService.rollback_session()
         flash(f"Failed to create SKU: {str(e)}", "error")
 
     return redirect(
@@ -441,24 +327,18 @@ def create_sku_for_variant(product_id, variant_name):
 @require_permission("products.manage_variants")
 def edit_variant(product_id, variant_name):
     """Edit product variation details"""
-    from ...models.product import Product, ProductVariant
-
-    # Get the product using the new Product model
-    product = (
-        Product.scoped()
-        .filter_by(id=product_id, organization_id=current_user.organization_id)
-        .first()
+    product = ProductVariantRouteService.get_product_for_org(
+        product_id=product_id,
+        organization_id=current_user.organization_id,
     )
 
     if not product:
         flash("Product not found", "error")
         return redirect(url_for("products.list_products"))
 
-    # Get the variant
-    variant = (
-        ProductVariant.scoped()
-        .filter_by(product_id=product.id, name=variant_name)
-        .first()
+    variant = ProductVariantRouteService.get_variant_for_product_by_name(
+        product_id=product.id,
+        variant_name=variant_name,
     )
 
     if not variant:
@@ -478,15 +358,10 @@ def edit_variant(product_id, variant_name):
             )
         )
 
-    # Check if another variant has this name for the same product
-    existing = (
-        ProductVariant.scoped()
-        .filter(
-            ProductVariant.product_id == product.id,
-            ProductVariant.name == name,
-            ProductVariant.id != variant.id,
-        )
-        .first()
+    existing = ProductVariantRouteService.get_other_variant_by_name(
+        product_id=product.id,
+        variant_name=name,
+        exclude_variant_id=variant.id,
     )
 
     if existing:
@@ -499,11 +374,11 @@ def edit_variant(product_id, variant_name):
             )
         )
 
-    # Update the variant
-    variant.name = name
-    variant.description = description
-
-    db.session.commit()
+    ProductVariantRouteService.update_variant(
+        variant=variant,
+        name=name,
+        description=description,
+    )
     flash("Variant updated successfully", "success")
 
     return redirect(
@@ -518,39 +393,28 @@ def edit_variant(product_id, variant_name):
 @require_permission("products.manage_variants")
 def delete_variant(product_id, variant_name):
     """Delete a product variant and all its SKUs"""
-    from ...models.product import Product, ProductVariant
-
-    # Get the product using the new Product model
-    product = (
-        Product.scoped()
-        .filter_by(id=product_id, organization_id=current_user.organization_id)
-        .first()
+    product = ProductVariantRouteService.get_product_for_org(
+        product_id=product_id,
+        organization_id=current_user.organization_id,
     )
 
     if not product:
         flash("Product not found", "error")
         return redirect(url_for("products.list_products"))
 
-    # Get the variant
-    variant = (
-        ProductVariant.scoped()
-        .filter_by(product_id=product.id, name=variant_name)
-        .first()
+    variant = ProductVariantRouteService.get_variant_for_product_by_name(
+        product_id=product.id,
+        variant_name=variant_name,
     )
 
     if not variant:
         flash("Variant not found", "error")
         return redirect(url_for("products.view_product", product_id=product_id))
 
-    # Get all SKUs for this variant
-    skus = (
-        ProductSKU.scoped()
-        .filter_by(
-            product_id=product.id,
-            variant_id=variant.id,
-            organization_id=current_user.organization_id,
-        )
-        .all()
+    skus = ProductVariantRouteService.list_variant_skus_for_org(
+        product_id=product.id,
+        variant_id=variant.id,
+        organization_id=current_user.organization_id,
     )
 
     if not skus:
@@ -569,28 +433,20 @@ def delete_variant(product_id, variant_name):
             )
         )
 
-    # Delete the variant and its SKUs
-    variant.is_active = False
-    for sku in skus:
-        sku.is_active = False
+    ProductVariantRouteService.deactivate_variant_and_skus(
+        variant=variant,
+        skus=skus,
+    )
 
-    db.session.commit()
-
-    # Check if this was the last variant for the product
-    remaining_variants = (
-        ProductVariant.scoped().filter_by(product_id=product.id, is_active=True).count()
+    remaining_variants = ProductVariantRouteService.count_active_variants_for_product(
+        product_id=product.id
     )
 
     if remaining_variants == 0:
-        # Create a Base variant
-        base_variant = ProductVariant(
+        ProductVariantRouteService.create_default_base_variant(
             product_id=product.id,
-            name="Base",
-            description="Default base variant",
             organization_id=current_user.organization_id,
         )
-        db.session.add(base_variant)
-        db.session.commit()
         flash(
             f'Variant "{variant_name}" deleted. Created default "Base" variant.',
             "success",
