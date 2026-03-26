@@ -21,21 +21,11 @@ from ...services.cache_invalidation import (
 from ...services.product_route_service import ProductRouteService
 from ...services.product_service import ProductService
 from ...utils.cache_utils import should_bypass_cache
+from ...utils.permissions import require_permission
 from ...utils.settings import is_feature_enabled
 from ...utils.unit_utils import get_global_unit_list
 
 logger = logging.getLogger(__name__)
-
-
-try:
-    from ...utils.permissions import require_permission
-except ImportError:
-
-    def require_permission(permission_name):
-        def _wrap(f):
-            return f
-
-        return _wrap
 
 
 # Helper for product audit entries, now using canonical service

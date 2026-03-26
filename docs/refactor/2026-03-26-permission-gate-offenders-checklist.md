@@ -107,7 +107,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] Organization scope resolver now uses `get_effective_organization_id()` helper instead of inline persona branch.
 
 - [ ] `app/blueprints/products/products.py`
-  - Fallback import path can disable permission enforcement behavior if imports fail.
+  - [x] Fallback import path removed; canonical `require_permission` import is now required.
 
 - [ ] `app/blueprints/auth/verification_routes.py`
   - Post-verify redirect path branches on persona string.
