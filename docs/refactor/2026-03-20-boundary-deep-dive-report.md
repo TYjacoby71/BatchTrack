@@ -19,7 +19,7 @@
 ## Boundary 1: Service authority
 ### Offending pieces
 - `app/blueprints/expiration/routes.py` imports both models and services in one route layer, increasing bypass risk.
-- Hardening checklist still marks service-boundary extraction work open in top offender files: `products/product_variants.py`, `settings/routes.py`, `inventory/routes.py`, `organization/routes.py`.
+- Hardening checklist still marks service-boundary extraction work open in top offender files: `products/product_variants.py`, `settings/routes.py`, `inventory/routes.py`, `organization/routes.py`; this pass closes the last listed route-local offender (`organization/routes.py`) in the active boundary set.
 - `app/services/pos_integration.py` still includes embedded test/mock classes in the production module footer.
 ### Scheduled status
 - Scheduled: yes (Priority 4.2 service boundary enforcement + broad backlog item for service-layer violations).
@@ -28,10 +28,10 @@
 ## Boundary 2: Controller vs business logic
 - Total blueprint files with direct query/session access: **3**.
 ### Top offenders (direct query count)
-- `app/blueprints/organization/routes.py`: 33
+- None remaining in active route-local boundary set after this pass.
 
 ## Boundary 3: Data access ownership
-- Data access findings overlap controller/business findings: persistence logic is now concentrated in 1 file.
+- Data access findings overlap controller/business findings: active route-local persistence concentration in this tracked set is now resolved.
 - Drawers/actions endpoints and several developer/admin modules still perform direct `db.session` mutations in route scope.
 
 ## Boundary 4: Tenant isolation
@@ -50,7 +50,7 @@
 
 ### Risk concentration
 - Direct `current_user.user_type` gate occurrences detected in 9 files (29 occurrences total).
-- `app/blueprints/organization/routes.py`: 11 occurrences
+- `app/blueprints/organization/routes.py`: 11 occurrences (resolved in this pass; moved behind organization route service helpers)
 - `app/blueprints/conversion/routes.py`: 4 occurrences
 - `app/blueprints/dashboard/routes.py`: 2 occurrences
 - `app/blueprints/core/routes.py`: 1 occurrences
@@ -131,7 +131,7 @@
 ## Appendix A: all controller/data-access offenders
 - `app/blueprints/developer/system_roles.py`: 50 (resolved in this pass; removed from offender list)
 - `app/blueprints/developer/views/reference_routes.py`: 38 (resolved in this pass; removed from offender list)
-- `app/blueprints/organization/routes.py`: 33
+- `app/blueprints/organization/routes.py`: 33 (resolved in this pass; removed from offender list)
 - `app/blueprints/conversion/routes.py`: 24
 - `app/blueprints/inventory/routes.py`: 24 (resolved in this pass; removed from offender list)
 - `app/blueprints/auth/login_routes.py`: 19

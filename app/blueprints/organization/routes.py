@@ -16,6 +16,7 @@ from flask_login import current_user, login_required
 from app.extensions import db
 from app.models import Role, User
 from app.services.affiliate_service import AffiliateService
+from app.services.organization_route_service import OrganizationRouteService
 from app.utils.permissions import (
     any_permission_required,
     has_permission,
@@ -62,7 +63,7 @@ def dashboard():
     from ...models.subscription_tier import SubscriptionTier
 
     try:
-        db_tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
+        db_tiers = OrganizationRouteService.list_customer_facing_tiers()
         tiers_config = {
             str(t.id): {
                 "name": t.name,
@@ -102,14 +103,12 @@ def dashboard():
     top_recipes = dashboard_metrics.get("top_recipes", [])
 
     # Count pending invites (inactive users)
-    pending_invites = User.query.filter_by(
-        organization_id=org_id, is_active=False, user_type="team_member"
-    ).count()
+    pending_invites = OrganizationRouteService.count_pending_invites(org_id)
 
     # Get permission categories for role creation modal (all permissions are now organization permissions)
     from app.models.permission import Permission
 
-    permissions = Permission.query.filter_by(is_active=True).all()
+    permissions = OrganizationRouteService.list_active_permissions()
     permission_categories = {}
     for perm in permissions:
         category = perm.category or "general"
@@ -121,11 +120,7 @@ def dashboard():
     roles = Role.get_organization_roles(org_id)
 
     # Get users for the user management tab (exclude developers from organization view)
-    users = (
-        User.query.filter(User.organization_id == org_id, User.user_type != "developer")
-        .order_by(User.created_at.desc())
-        .all()
-    )
+    users = OrganizationRouteService.list_org_users(org_id)
 
     is_developer_user = current_user.user_type == "developer"
     affiliate_feature_visible = bool(
@@ -244,11 +239,11 @@ def create_role():
         permission_ids = data.get("permission_ids", [])
         from app.models.permission import Permission
 
-        permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
+        permissions = OrganizationRouteService.list_permissions_by_ids(permission_ids)
         role.permissions = permissions
 
-        db.session.add(role)
-        db.session.commit()
+        OrganizationRouteService.add_entity(role)
+        OrganizationRouteService.commit_session()
 
         return jsonify({"success": True, "message": "Role created successfully"})
 
@@ -257,7 +252,7 @@ def create_role():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:178",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -309,7 +304,7 @@ def update_organization_settings():
 
                     organization.inventory_cost_method_changed_at = _TZ.utc_now()
 
-        db.session.commit()
+        OrganizationRouteService.commit_session()
 
         return jsonify(
             {"success": True, "message": "Organization settings updated successfully"}
@@ -320,7 +315,7 @@ def update_organization_settings():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:237",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -357,7 +352,7 @@ def update_subscription_tier():
             _tier_id = int(tier_key)
         except (TypeError, ValueError):
             _tier_id = None
-        if not _tier_id or not db.session.get(SubscriptionTier, _tier_id):
+        if not _tier_id or not OrganizationRouteService.get_subscription_tier(_tier_id):
             return jsonify({"success": False, "error": "Invalid subscription tier"})
 
         # Update or create subscription
@@ -368,12 +363,12 @@ def update_subscription_tier():
             subscription = Subscription(
                 organization_id=organization.id, tier=tier_key, status="active"
             )
-            db.session.add(subscription)
+            OrganizationRouteService.add_entity(subscription)
         else:
             subscription.tier = tier_key
             subscription.status = "active"
 
-        db.session.commit()
+        OrganizationRouteService.commit_session()
 
         return jsonify(
             {"success": True, "message": f"Subscription tier updated to {tier_key}"}
@@ -384,7 +379,7 @@ def update_subscription_tier():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:297",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -431,7 +426,7 @@ def invite_user():
             )
 
         # Validate role exists and is not developer role
-        role = Role.scoped().filter_by(id=role_id).first()
+        role = OrganizationRouteService.get_scoped_role(role_id)
         if not role:
             return jsonify({"success": False, "error": "Invalid role selected"})
 
@@ -493,7 +488,7 @@ def invite_user():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:413",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         print(f"Error inviting user: {str(e)}")  # For debugging
         return jsonify({"success": False, "error": f"Failed to invite user: {str(e)}"})
 
@@ -522,7 +517,7 @@ def update_organization():
 
         # Add other organization settings here as needed
 
-        db.session.commit()
+        OrganizationRouteService.commit_session()
 
         return jsonify({"success": True, "message": "Organization settings updated"})
 
@@ -531,7 +526,7 @@ def update_organization():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:447",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -552,10 +547,7 @@ def export_report(report_type):
     try:
         if report_type == "users":
             # Export users CSV - exclude developers from org exports
-            User.query.filter(
-                User.organization_id == current_user.organization_id,
-                User.user_type != "developer",
-            ).all()
+            OrganizationRouteService.list_export_users(current_user.organization_id)
             flash("User export functionality coming soon", "info")
         elif report_type == "batches":
             flash("Batch export functionality coming soon", "info")
@@ -633,8 +625,8 @@ def add_user():
         )
         new_user.set_password(password)
 
-        db.session.add(new_user)
-        db.session.commit()
+        OrganizationRouteService.add_entity(new_user)
+        OrganizationRouteService.commit_session()
 
         return jsonify({"success": True, "message": "User added successfully"})
 
@@ -643,7 +635,7 @@ def add_user():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:551",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -655,9 +647,7 @@ def add_user():
 @require_permission("organization.manage_users")
 def get_user(user_id):
     """Get user details for editing"""
-    user = User.query.filter_by(
-        id=user_id, organization_id=current_user.organization_id
-    ).first()
+    user = OrganizationRouteService.get_user_in_org(user_id, current_user.organization_id)
 
     if not user:
         return jsonify({"success": False, "error": "User not found"})
@@ -725,9 +715,7 @@ def update_user(user_id):
         data = request.get_json()
 
         # Get user from same organization
-        user = User.query.filter_by(
-            id=user_id, organization_id=current_user.organization_id
-        ).first()
+        user = OrganizationRouteService.get_user_in_org(user_id, current_user.organization_id)
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
@@ -755,7 +743,7 @@ def update_user(user_id):
             user.phone = data["phone"]
         if "role_id" in data:
             # Validate role exists and is not developer role
-            role = Role.scoped().filter_by(id=data["role_id"]).first()
+            role = OrganizationRouteService.get_scoped_role(data["role_id"])
             if role and role.name not in ["developer", "organization_owner"]:
                 user.role_id = data["role_id"]
 
@@ -766,19 +754,10 @@ def update_user(user_id):
             if new_owner_status and not user.is_organization_owner:
                 # User is being made an organization owner
                 # First, remove organization owner status and role from all other users in this org
-                other_owners = User.query.filter(
-                    User.organization_id == user.organization_id,
-                    User.id != user.id,
-                    User._is_organization_owner,
-                ).all()
-
-                from app.models.role import Role
-
-                org_owner_role = (
-                    Role.scoped()
-                    .filter_by(name="organization_owner", is_system_role=True)
-                    .first()
+                other_owners = OrganizationRouteService.list_other_org_owners(
+                    user.organization_id, user.id
                 )
+                org_owner_role = OrganizationRouteService.get_org_owner_role()
 
                 for other_owner in other_owners:
                     other_owner.is_organization_owner = False
@@ -798,13 +777,7 @@ def update_user(user_id):
                 user.is_organization_owner = False
 
                 # Remove the organization owner role
-                from app.models.role import Role
-
-                org_owner_role = (
-                    Role.scoped()
-                    .filter_by(name="organization_owner", is_system_role=True)
-                    .first()
-                )
+                org_owner_role = OrganizationRouteService.get_org_owner_role()
                 if org_owner_role:
                     user.remove_role(org_owner_role)
 
@@ -823,7 +796,7 @@ def update_user(user_id):
                     )
             user.is_active = new_status
 
-        db.session.commit()
+        OrganizationRouteService.commit_session()
 
         return jsonify(
             {"success": True, "message": f"User {user.full_name} updated successfully"}
@@ -834,7 +807,7 @@ def update_user(user_id):
             "Suppressed exception fallback at app/blueprints/organization/routes.py:734",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -853,9 +826,7 @@ def toggle_user_status(user_id):
 
     try:
         # Get user from same organization
-        user = User.query.filter_by(
-            id=user_id, organization_id=current_user.organization_id
-        ).first()
+        user = OrganizationRouteService.get_user_in_org(user_id, current_user.organization_id)
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
@@ -888,7 +859,7 @@ def toggle_user_status(user_id):
                 )
 
         user.is_active = new_status
-        db.session.commit()
+        OrganizationRouteService.commit_session()
 
         status_text = "activated" if new_status else "deactivated"
         return jsonify(
@@ -903,7 +874,7 @@ def toggle_user_status(user_id):
             "Suppressed exception fallback at app/blueprints/organization/routes.py:799",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -922,9 +893,7 @@ def delete_user(user_id):
 
     try:
         # Get user from same organization
-        user = User.query.filter_by(
-            id=user_id, organization_id=current_user.organization_id
-        ).first()
+        user = OrganizationRouteService.get_user_in_org(user_id, current_user.organization_id)
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
@@ -959,7 +928,7 @@ def delete_user(user_id):
             "Suppressed exception fallback at app/blueprints/organization/routes.py:851",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -978,9 +947,7 @@ def restore_user(user_id):
 
     try:
         # Get user from same organization (including deleted users)
-        user = User.query.filter_by(
-            id=user_id, organization_id=current_user.organization_id
-        ).first()
+        user = OrganizationRouteService.get_user_in_org(user_id, current_user.organization_id)
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
@@ -1006,5 +973,5 @@ def restore_user(user_id):
             "Suppressed exception fallback at app/blueprints/organization/routes.py:894",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})

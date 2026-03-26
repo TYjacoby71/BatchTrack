@@ -36,6 +36,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
   - **Closed by:** moving category/form/variation/tag lookups and route-level commit/rollback ownership behind `app/services/developer/reference_route_service.py`.
   - **Routes affected:** `app/blueprints/developer/views/reference_routes.py` (`reference_categories`, `add_reference_category`, `delete_reference_category`, `update_reference_category_density`, `calculate_category_density`, `manage_ingredient_attributes`, `create_physical_form`, `toggle_physical_form`, `create_variation`, `toggle_variation`, `create_function_tag`, `create_application_tag`, `create_category_tag`)
 
+- **Organization routes retained direct ORM/session access across dashboard/role/tier/user-management flows**
+  - **Closed by:** moving organization dashboard reads, permission/user/role lookup helpers, and route-level commit/rollback ownership behind `app/services/organization_route_service.py`.
+  - **Routes affected:** `app/blueprints/organization/routes.py` (`dashboard`, `create_role`, `update_organization_settings`, `update_subscription_tier`, `invite_user`, `update_organization`, `export_report`, `add_user`, `get_user`, `update_user`, `toggle_user_status`, `delete_user`, `restore_user`)
+
 - **Batch finish routes retained direct ORM/session access across completion/output-posting workflows**
   - **Closed by:** moving batch/product/variant/sku/container/lot query boundaries and commit/rollback ownership behind `app/services/batch_finish_route_service.py`.
   - **Routes affected:** `app/blueprints/batches/finish_batch.py` (`complete_batch`, `fail_batch`, `_complete_batch_internal`, `_create_intermediate_ingredient`, `_create_product_output`, `_process_container_allocations`, `_create_container_sku`, `_create_bulk_sku`)
