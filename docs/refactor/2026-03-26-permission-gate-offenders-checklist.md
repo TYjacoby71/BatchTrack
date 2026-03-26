@@ -86,7 +86,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] `can_edit_inventory_item(...)` now uses effective organization context instead of blanket developer bypass.
 
 - [ ] `app/blueprints/conversion/routes.py`
-  - Unit/mapping management branches keyed on developer persona checks.
+  - [x] Unit/mapping management branches now use effective organization context helper instead of inline developer persona conditionals.
 
 - [ ] `app/blueprints/recipes/form_templates.py`
   - Feature exposure for sharing/purchase controls bypassed for developer persona instead of pure permission entitlements.

@@ -7,11 +7,16 @@ from wtforms.validators import ValidationError
 
 from app.services.conversion_route_service import ConversionRouteService
 from app.services.unit_conversion.unit_conversion import ConversionEngine
-from app.utils.permissions import require_permission
+from app.utils.permissions import get_effective_organization_id, require_permission
 
 from . import conversion_bp
 
 logger = logging.getLogger(__name__)
+
+
+def _selected_org_id() -> int | None:
+    """Resolve effective organization scope for conversion route actions."""
+    return get_effective_organization_id()
 
 
 @conversion_bp.route("/convert/<float:amount>/<from_unit>/<to_unit>", methods=["GET"])
@@ -58,12 +63,8 @@ def delete_unit(unit_id):
         flash("Cannot delete system units", "error")
         return redirect(url_for("conversion_bp.manage_units"))
 
-    if current_user.user_type == "developer":
-        selected_org_id = session.get("dev_selected_org_id")
-        if selected_org_id and unit.organization_id != selected_org_id:
-            flash("Cannot delete units outside the selected organization", "error")
-            return redirect(url_for("conversion_bp.manage_units"))
-    elif unit.organization_id != current_user.organization_id:
+    effective_org_id = _selected_org_id()
+    if effective_org_id and unit.organization_id != effective_org_id:
         flash("Cannot delete units from another organization", "error")
         return redirect(url_for("conversion_bp.manage_units"))
 
@@ -103,16 +104,11 @@ def manage_units():
                     return redirect(url_for("conversion_bp.manage_units"))
 
                 # Check for existing unit with same name in the same organization
-                if current_user.user_type == "developer":
-                    selected_org_id = session.get("dev_selected_org_id")
-                else:
-                    selected_org_id = None
-
                 existing = ConversionRouteService.find_existing_unit_for_scope(
                     name=name,
                     user_type=getattr(current_user, "user_type", None),
                     user_organization_id=getattr(current_user, "organization_id", None),
-                    selected_org_id=selected_org_id,
+                    selected_org_id=_selected_org_id(),
                 )
 
                 if existing:
@@ -247,7 +243,7 @@ def manage_units():
             is_authenticated=True,
             user_type=getattr(current_user, "user_type", None),
             user_organization_id=getattr(current_user, "organization_id", None),
-            selected_org_id=session.get("dev_selected_org_id"),
+            selected_org_id=_selected_org_id(),
         )
     else:
         mappings = []
@@ -273,7 +269,7 @@ def delete_mapping(mapping_id):
         mapping_id=mapping_id,
         user_type=getattr(current_user, "user_type", None),
         user_organization_id=getattr(current_user, "organization_id", None),
-        selected_org_id=session.get("dev_selected_org_id"),
+        selected_org_id=_selected_org_id(),
     )
     try:
         ConversionRouteService.delete_mapping(mapping=mapping)
