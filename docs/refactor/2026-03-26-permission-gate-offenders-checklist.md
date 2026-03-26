@@ -45,19 +45,27 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
 
 ### A) High-priority route/service policy offenders
 
+#### Progress notes
+
+- [x] **Phase 1A complete (this pass):** invalid `user_type` literals normalized in
+  `organization` + `organization_route_service` + `user_invite_service`.
+  - Removed `user_type="team_member"` writes (now `customer`).
+  - Removed `user_type=="organization_owner"` checks in org routes; replaced with
+    owner helper predicates.
+
 - [ ] `app/blueprints/organization/routes.py`
   - Repeated permission duplication with `user_type`/owner checks in routes already permission-decorated.
-  - Invalid `user_type` values/branches: `"organization_owner"` checks and `"team_member"` assignment.
-  - Role-name authorization in route logic (`role.name in ["developer", "organization_owner"]`).
+  - [x] Invalid `user_type` values/branches: `"organization_owner"` checks and `"team_member"` assignment.
+  - [x] Role-name authorization in route logic (`role.name in ["developer", "organization_owner"]`) removed from route branch checks.
 
 - [ ] `app/services/organization_route_service.py`
-  - Invalid `user_type="team_member"` writes and reads.
+  - [x] Invalid `user_type="team_member"` writes and reads.
   - Mixed capability gating by owner/developer persona for settings mutation.
   - Role-name checks in service authorization branch.
 
 - [ ] `app/blueprints/auth/permissions.py`
-  - Role-management authority split by `current_user.user_type` rather than canonical permission policy.
-  - System-role and cross-org update branches keyed on persona string.
+  - [x] Role-management authority split by `current_user.user_type` normalized through local helper checks.
+  - [x] System-role and cross-org update branches keyed on persona string normalized through local helper checks.
 
 - [ ] `app/blueprints/global_library/routes.py`
   - Manual permission metadata tagging (`_tag_required_permissions`) + inline `has_permission(...)` path where canonical decorator usage is expected.
@@ -67,7 +75,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
 
 - [ ] `app/services/user_invite_service.py`
   - Role-name authorization check (`developer`/`organization_owner`) instead of permission-model authority.
-  - Invalid `user_type="team_member"` assignment.
+  - [x] Invalid `user_type="team_member"` assignment.
 
 - [ ] `app/services/affiliate_service.py`
   - Customer-only gate via `user.user_type != "customer"` in access paths that already depend on permission entitlements.

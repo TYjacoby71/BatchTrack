@@ -22,7 +22,7 @@ class OrganizationRouteService:
     @staticmethod
     def count_pending_invites(org_id: int) -> int:
         return User.query.filter_by(
-            organization_id=org_id, is_active=False, user_type="team_member"
+            organization_id=org_id, is_active=False, user_type="customer"
         ).count()
 
     @staticmethod
@@ -178,7 +178,7 @@ class OrganizationRouteService:
             role_id=role_id,
             organization_id=organization_id,
             is_active=True,
-            user_type="team_member",
+            user_type="customer",
         )
         new_user.set_password(password)
         db.session.add(new_user)

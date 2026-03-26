@@ -24,6 +24,10 @@ from . import auth_bp
 logger = logging.getLogger(__name__)
 
 
+def _is_developer_user(user) -> bool:
+    return getattr(user, "user_type", None) == "developer"
+
+
 # --- Get tier permissions ---
 # Purpose: Resolve active permissions available for a subscription tier.
 # Inputs: Tier key (id-like token).
@@ -316,7 +320,7 @@ def toggle_permission_status():
 @login_required
 def manage_roles():
     """Manage roles (org owners and system admins)"""
-    if current_user.user_type == "developer":
+    if _is_developer_user(current_user):
         # System admin can see all roles and all permissions
         roles = AuthPermissionRouteService.list_all_roles()
         available_permissions = AuthPermissionRouteService.list_active_permissions()
@@ -349,13 +353,13 @@ def create_role():
         data = request.get_json()
 
         role_organization_id = (
-            current_user.organization_id if current_user.user_type != "developer" else None
+            current_user.organization_id if not _is_developer_user(current_user) else None
         )
 
         # Add permissions - but only allow permissions available to the organization's tier
         permission_ids = data.get("permission_ids", [])
 
-        if current_user.user_type == "developer":
+        if _is_developer_user(current_user):
             # Developers can assign any permission
             permissions = AuthPermissionRouteService.list_permissions_by_ids(
                 permission_ids=permission_ids
@@ -404,12 +408,12 @@ def update_role(role_id):
         role = AuthPermissionRouteService.get_role_or_404(role_id=role_id)
 
         # Check permissions
-        if role.is_system_role and current_user.user_type != "developer":
+        if role.is_system_role and not _is_developer_user(current_user):
             return jsonify({"success": False, "error": "Cannot edit system roles"})
 
         if (
             role.organization_id != current_user.organization_id
-            and current_user.user_type != "developer"
+            and not _is_developer_user(current_user)
         ):
             return jsonify(
                 {

@@ -30,6 +30,19 @@ logger = logging.getLogger(__name__)
 organization_bp = Blueprint("organization", __name__)
 
 
+def _is_owner_user(user) -> bool:
+    """Return True for current/legacy organization-owner representations."""
+    return bool(
+        getattr(user, "is_organization_owner", False)
+        or getattr(user, "_is_organization_owner", False)
+    )
+
+
+def _is_protected_org_user(user) -> bool:
+    """Identify users that org-admin routes should not mutate directly."""
+    return bool(getattr(user, "user_type", None) == "developer" or _is_owner_user(user))
+
+
 @organization_bp.route("/dashboard")
 @login_required
 @require_permission("organization.view")
@@ -47,13 +60,6 @@ def dashboard():
                 "info",
             )
             return redirect(url_for("settings.index"))
-
-    # Check permissions - use require_permission decorator logic
-    if not has_permission(current_user, "organization.view"):
-        flash(
-            "You do not have permission to access the organization dashboard.", "error"
-        )
-        return redirect(url_for("settings.index"))
 
     from ...services.billing_service import BillingService
 
@@ -208,14 +214,6 @@ def affiliate_dashboard():
 @require_permission("organization.manage_roles")
 def create_role():
     """Create a new organization role"""
-    # Check if user is organization owner or developer
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-        or current_user.user_type == "developer"
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
-
     try:
         data = request.get_json()
 
@@ -260,11 +258,7 @@ def create_role():
 @login_required
 @require_permission("organization.edit")
 def update_organization_settings():
-    """Update organization settings (organization owners only)"""
-
-    # Check permissions - only organization owners can update
-    if not current_user.is_organization_owner:
-        return jsonify({"success": False, "error": "Insufficient permissions"})
+    """Update organization settings"""
 
     try:
         data = request.get_json()
@@ -289,20 +283,15 @@ def update_organization_settings():
         if "timezone" in data:
             organization.timezone = data["timezone"]
 
-        # Inventory cost method toggle (org owners only)
+        # Inventory cost method toggle
         method = data.get("inventory_cost_method")
         if method in ["fifo", "average"]:
-            # Only allow if current user is org owner
-            if (
-                current_user.is_organization_owner
-                or current_user.user_type == "developer"
-            ):
-                # Only update if changed
-                if getattr(organization, "inventory_cost_method", None) != method:
-                    organization.inventory_cost_method = method
-                    from app.utils.timezone_utils import TimezoneUtils as _TZ
+            # Only update if changed
+            if getattr(organization, "inventory_cost_method", None) != method:
+                organization.inventory_cost_method = method
+                from app.utils.timezone_utils import TimezoneUtils as _TZ
 
-                    organization.inventory_cost_method_changed_at = _TZ.utc_now()
+                organization.inventory_cost_method_changed_at = _TZ.utc_now()
 
         OrganizationRouteService.commit_session()
 
@@ -388,16 +377,6 @@ def update_subscription_tier():
 @require_permission("organization.manage_users")
 def invite_user():
     """Invite a new user to the organization"""
-    # Check if user is organization owner - developers can access for testing but normal team members cannot
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-        or current_user.user_type == "developer"
-    ):
-        return jsonify(
-            {"success": False, "error": "Insufficient permissions to invite users"}
-        )
-    """Invite a new user to the organization"""
     try:
         data = request.get_json()
 
@@ -430,7 +409,7 @@ def invite_user():
         if not role:
             return jsonify({"success": False, "error": "Invalid role selected"})
 
-        if role.name in ["developer", "organization_owner"]:
+        if role.is_system_role:
             return jsonify(
                 {
                     "success": False,
@@ -499,14 +478,6 @@ def invite_user():
 def update_organization():
     """Update organization settings"""
 
-    # Check permissions
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-        or current_user.user_type == "developer"
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
-
     try:
         data = request.get_json()
         organization = current_user.organization
@@ -535,14 +506,6 @@ def update_organization():
 @require_permission("reports.export")
 def export_report(report_type):
     """Export various organization reports"""
-
-    # Check permissions - only org owners and developers can export
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-        or current_user.user_type == "developer"
-    ):
-        abort(403)
 
     try:
         if report_type == "users":
@@ -576,16 +539,7 @@ def export_report(report_type):
 @require_permission("organization.manage_users")
 def add_user():
     """Add a new user to the organization (org owners only) - legacy endpoint"""
-    # Check if user is organization owner - developers can access for testing but normal team members cannot
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-        or current_user.user_type == "developer"
-    ):
-        return jsonify(
-            {"success": False, "error": "Insufficient permissions to add users"}
-        )
-    """Add a new user to the organization (org owners only) - legacy endpoint"""
+    """Add a new user to the organization - legacy endpoint"""
     try:
         data = request.get_json()
 
@@ -621,7 +575,7 @@ def add_user():
             role_id=role_id,
             organization_id=current_user.organization_id,
             is_active=True,
-            user_type="team_member",
+            user_type="customer",
         )
         new_user.set_password(password)
 
@@ -653,10 +607,7 @@ def get_user(user_id):
         return jsonify({"success": False, "error": "User not found"})
 
     # Don't allow editing of developers or other org owners (except self)
-    if (
-        user.user_type in ["developer", "organization_owner"]
-        and user.id != current_user.id
-    ):
+    if _is_protected_org_user(user) and user.id != current_user.id:
         return jsonify(
             {
                 "success": False,
@@ -702,14 +653,7 @@ def get_user(user_id):
 @login_required
 @require_permission("organization.manage_users")
 def update_user(user_id):
-    """Update user details (organization owners only)"""
-
-    # Check permissions - only organization owners can update
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
+    """Update user details"""
 
     try:
         data = request.get_json()
@@ -721,10 +665,7 @@ def update_user(user_id):
             return jsonify({"success": False, "error": "User not found"})
 
         # Don't allow editing of developers or other org owners (except self)
-        if (
-            user.user_type in ["developer", "organization_owner"]
-            and user.id != current_user.id
-        ):
+        if _is_protected_org_user(user) and user.id != current_user.id:
             return jsonify(
                 {
                     "success": False,
@@ -744,7 +685,7 @@ def update_user(user_id):
         if "role_id" in data:
             # Validate role exists and is not developer role
             role = OrganizationRouteService.get_scoped_role(data["role_id"])
-            if role and role.name not in ["developer", "organization_owner"]:
+            if role and not role.is_system_role:
                 user.role_id = data["role_id"]
 
         # Handle organization owner flag with single owner constraint and role transfer
@@ -815,14 +756,7 @@ def update_user(user_id):
 @login_required
 @require_permission("organization.manage_users")
 def toggle_user_status(user_id):
-    """Toggle user active/inactive status (organization owners only)"""
-
-    # Check permissions - only organization owners can toggle status
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
+    """Toggle user active/inactive status"""
 
     try:
         # Get user from same organization
@@ -832,7 +766,7 @@ def toggle_user_status(user_id):
             return jsonify({"success": False, "error": "User not found"})
 
         # Don't allow toggling status of developers, org owners, or self
-        if user.user_type in ["developer", "organization_owner"]:
+        if _is_protected_org_user(user):
             return jsonify(
                 {
                     "success": False,
@@ -882,14 +816,7 @@ def toggle_user_status(user_id):
 @login_required
 @require_permission("organization.manage_users")
 def delete_user(user_id):
-    """Delete user permanently (organization owners only)"""
-
-    # Check permissions - only organization owners can delete
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
+    """Delete user permanently"""
 
     try:
         # Get user from same organization
@@ -899,7 +826,7 @@ def delete_user(user_id):
             return jsonify({"success": False, "error": "User not found"})
 
         # Don't allow deleting developers, org owners, or self
-        if user.user_type in ["developer", "organization_owner"]:
+        if _is_protected_org_user(user):
             return jsonify(
                 {
                     "success": False,
@@ -936,14 +863,7 @@ def delete_user(user_id):
 @login_required
 @require_permission("organization.manage_users")
 def restore_user(user_id):
-    """Restore a soft-deleted user (organization owners only)"""
-
-    # Check permissions - only organization owners can restore
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
+    """Restore a soft-deleted user"""
 
     try:
         # Get user from same organization (including deleted users)

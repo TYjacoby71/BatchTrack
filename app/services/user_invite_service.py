@@ -91,7 +91,7 @@ class UserInviteService:
             phone=phone,
             organization_id=organization.id,
             is_active=not will_be_inactive,
-            user_type="team_member",
+            user_type="customer",
         )
         # Temporary random password; user sets a permanent password during setup.
         temp_password = EmailService.generate_reset_token(username)
