@@ -89,7 +89,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] Unit/mapping management branches now use effective organization context helper instead of inline developer persona conditionals.
 
 - [ ] `app/blueprints/recipes/form_templates.py`
-  - Feature exposure for sharing/purchase controls bypassed for developer persona instead of pure permission entitlements.
+  - [x] Sharing/purchase controls now rely on permission entitlements only (developer persona bypass removed).
 
 - [ ] `app/blueprints/recipe_library/routes.py`
   - `reveal_details` behavior keyed on developer persona/masquerade session rather than explicit capability policy.

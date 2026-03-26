@@ -103,11 +103,6 @@ def get_recipe_form_data():
 def is_recipe_sharing_enabled():
     if not is_feature_enabled("FEATURE_RECIPE_MARKETPLACE_LISTINGS"):
         return False
-    if (
-        current_user.is_authenticated
-        and getattr(current_user, "user_type", "") == "developer"
-    ):
-        return True
     return has_permission(current_user, "recipes.sharing_controls")
 
 
@@ -116,11 +111,6 @@ def is_recipe_sharing_enabled():
 def is_recipe_purchase_enabled():
     if not is_feature_enabled("FEATURE_RECIPE_MARKETPLACE_LISTINGS"):
         return False
-    if (
-        current_user.is_authenticated
-        and getattr(current_user, "user_type", "") == "developer"
-    ):
-        return True
     return has_permission(current_user, "recipes.purchase_options")
 
 
