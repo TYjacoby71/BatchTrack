@@ -110,7 +110,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] Fallback import path removed; canonical `require_permission` import is now required.
 
 - [ ] `app/blueprints/auth/verification_routes.py`
-  - Post-verify redirect path branches on persona string.
+  - [x] Post-verify redirect now uses permission-based routing (`dev.dashboard`) instead of persona string.
 
 ### C) Template authorization offenders (UX policy drift)
 

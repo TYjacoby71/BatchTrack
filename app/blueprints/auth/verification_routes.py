@@ -21,6 +21,7 @@ from ...extensions import limiter
 from ...models import User
 from ...services.auth_account_service import AuthAccountService
 from ...services.email_service import EmailService
+from ...utils.permissions import has_permission
 from ...utils.timezone_utils import TimezoneUtils
 from . import auth_bp
 
@@ -114,7 +115,7 @@ def _resolve_verify_redirect_target() -> str:
     if next_candidate:
         return next_candidate
     if current_user.is_authenticated:
-        if getattr(current_user, "user_type", None) == "developer":
+        if has_permission(current_user, "dev.dashboard"):
             return url_for("developer.dashboard")
         return url_for("app_routes.dashboard")
     return url_for("auth.login")
