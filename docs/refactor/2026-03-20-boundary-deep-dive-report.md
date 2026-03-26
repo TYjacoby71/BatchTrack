@@ -19,7 +19,7 @@
 ## Boundary 1: Service authority
 ### Offending pieces
 - `app/blueprints/expiration/routes.py` imports both models and services in one route layer, increasing bypass risk.
-- Hardening checklist still marks service-boundary extraction work open in top offender files: `developer/views/reference_routes.py`, `products/product_variants.py`, `settings/routes.py`, `inventory/routes.py`, `organization/routes.py`.
+- Hardening checklist still marks service-boundary extraction work open in top offender files: `products/product_variants.py`, `settings/routes.py`, `inventory/routes.py`, `organization/routes.py`.
 - `app/services/pos_integration.py` still includes embedded test/mock classes in the production module footer.
 ### Scheduled status
 - Scheduled: yes (Priority 4.2 service boundary enforcement + broad backlog item for service-layer violations).
@@ -28,11 +28,10 @@
 ## Boundary 2: Controller vs business logic
 - Total blueprint files with direct query/session access: **3**.
 ### Top offenders (direct query count)
-- `app/blueprints/developer/views/reference_routes.py`: 38
 - `app/blueprints/organization/routes.py`: 33
 
 ## Boundary 3: Data access ownership
-- Data access findings overlap controller/business findings: persistence logic is still route-adjacent in 3 files.
+- Data access findings overlap controller/business findings: persistence logic is now concentrated in 1 file.
 - Drawers/actions endpoints and several developer/admin modules still perform direct `db.session` mutations in route scope.
 
 ## Boundary 4: Tenant isolation
@@ -131,7 +130,7 @@
 
 ## Appendix A: all controller/data-access offenders
 - `app/blueprints/developer/system_roles.py`: 50 (resolved in this pass; removed from offender list)
-- `app/blueprints/developer/views/reference_routes.py`: 38
+- `app/blueprints/developer/views/reference_routes.py`: 38 (resolved in this pass; removed from offender list)
 - `app/blueprints/organization/routes.py`: 33
 - `app/blueprints/conversion/routes.py`: 24
 - `app/blueprints/inventory/routes.py`: 24 (resolved in this pass; removed from offender list)
