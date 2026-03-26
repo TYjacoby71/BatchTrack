@@ -131,6 +131,77 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
 
 ---
 
+## Full scan coverage ledger (all flagged files classified)
+
+This ledger classifies every file currently flagged by repository scans for
+permission-boundary-adjacent patterns.
+
+### 1) Confirmed remediation scope in this program (offenders)
+
+- `app/blueprints/organization/routes.py`
+- `app/services/organization_route_service.py`
+- `app/blueprints/auth/permissions.py`
+- `app/blueprints/global_library/routes.py`
+- `app/blueprints/developer/decorators.py`
+- `app/services/user_invite_service.py`
+- `app/services/affiliate_service.py`
+- `app/blueprints/inventory/routes.py`
+- `app/blueprints/conversion/routes.py`
+- `app/blueprints/recipes/form_templates.py`
+- `app/blueprints/recipe_library/routes.py`
+- `app/blueprints/settings/routes.py`
+- `app/blueprints/dashboard/routes.py`
+- `app/blueprints/core/routes.py`
+- `app/blueprints/api/routes.py`
+- `app/blueprints/products/products.py`
+- `app/blueprints/auth/verification_routes.py`
+- `app/templates/settings/index.html`
+- `app/templates/components/layout/navbar_authenticated_customer.html`
+- `app/templates/components/layout/navbar.html`
+- `app/templates/layout.html`
+- `app/templates/pages/auth/roles.html`
+- `app/templates/settings/components/affiliate_tab.html`
+- `app/templates/settings/components/billing_tab.html`
+- `app/templates/components/layout/navbar_guest.html`
+- `app/templates/components/layout/navbar_authenticated_developer.html`
+- `app/templates/components/shared/public_marketing_header.html`
+- `app/templates/pages/public/pricing.html`
+- `app/templates/pages/public/landing_hormozi.html`
+- `app/templates/pages/public/landing_robbins.html`
+- `app/utils/permissions.py` (legacy wrappers/decorators section only)
+
+### 2) Flagged by scan, but classified as contextual/expected (not checklist blockers)
+
+- `app/blueprints/auth/login_routes.py` (auth/login flow routing and verification handling)
+- `app/blueprints/auth/oauth_routes.py` (provider callback routing logic)
+- `app/blueprints/onboarding/routes.py` (invite/onboarding workflow filtering; monitor)
+- `app/blueprints/developer/views/user_routes.py` (developer admin transport layer; monitor for role-name gates)
+- `app/services/developer/user_service.py` (developer admin business logic; monitor for migration opportunities)
+- `app/services/settings_route_service.py` (preference segmentation by persona)
+- `app/services/base_service.py` (effective-org context helper behavior)
+- `app/template_context.py` (template/view-model context shaping)
+- `app/utils/template_filters.py` (template helper behavior)
+- `app/authz.py` (session/user-loader and login-manager concerns, not route capability gates)
+
+### 3) Flagged by scan, data model/seed layer (not route permission-gate remediation)
+
+- `app/models/models.py`
+- `app/models/mixins.py`
+- `app/models/statistics.py`
+- `app/models/user_preferences.py`
+- `app/services/signup_service.py`
+- `app/services/auth_login_route_service.py`
+- `app/services/developer/organization_service.py`
+- `app/services/statistics/analytics_service.py`
+- `app/seeders/user_seeder.py`
+
+Notes:
+- This section exists to ensure the inventory is complete and auditable.
+- If policy changes require these files to be remediated, promote them into the
+  check-off sections above.
+
+---
+
 ## Program order (recommended fix sequence)
 
 1. **Normalize invalid `user_type` usage first**
