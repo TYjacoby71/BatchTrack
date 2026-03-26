@@ -28,6 +28,10 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
   - **Closed by:** moving inventory/global-item/category/unit/lot/history lookups and route-level commit/rollback ownership behind `app/services/inventory_route_service.py`.
   - **Routes affected:** `app/blueprints/inventory/routes.py` (`_expired_quantity_map`, `api_get_inventory_item`, `api_toggle_global_link`, `api_quick_create_inventory`, `list_inventory`, `set_column_visibility`, `view_inventory`, `adjust_inventory`, `edit_inventory`, `archive_inventory`, `restore_inventory`, `debug_inventory`, `bulk_inventory_updates`)
 
+- **Developer system-roles routes retained direct ORM/session access across role/user CRUD and permission payload flows**
+  - **Closed by:** moving system-role/developer-role/developer-user query and transaction ownership behind `app/services/developer/system_role_service.py`.
+  - **Routes affected:** `app/blueprints/developer/system_roles.py` (`manage_system_roles`, `create_system_role`, `get_system_role`, `update_system_role`, `delete_system_role`, `create_developer_role`, `get_developer_role`, `update_developer_role`, `delete_developer_role`, `create_developer_user`, `update_developer_user_role`, `get_developer_user_role`, `delete_developer_user`, `get_permissions_api`, `get_developer_permissions_api`, `get_developer_roles_api`)
+
 - **Batch finish routes retained direct ORM/session access across completion/output-posting workflows**
   - **Closed by:** moving batch/product/variant/sku/container/lot query boundaries and commit/rollback ownership behind `app/services/batch_finish_route_service.py`.
   - **Routes affected:** `app/blueprints/batches/finish_batch.py` (`complete_batch`, `fail_batch`, `_complete_batch_internal`, `_create_intermediate_ingredient`, `_create_product_output`, `_process_container_allocations`, `_create_container_sku`, `_create_bulk_sku`)

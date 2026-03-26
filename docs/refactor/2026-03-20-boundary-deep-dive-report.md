@@ -9,8 +9,8 @@
 | Boundary | Grade | Why |
 | --- | --- | --- |
 | Service authority | 6.5/10 | Canonical design exists, but active route/data flows still bypass service boundaries in multiple blueprints. |
-| Controller vs business logic | 10.0/10 | 3 blueprint modules still contain direct query/session logic after extracting inventory-route query/session touchpoints (detail/list/view/edit/archive/restore/debug/bulk-update flows) into a dedicated route service on top of prior batches. |
-| Data access ownership | 10.0/10 | Persistence logic remains mixed into route layers, but this pass removed additional route-local query/session touchpoints from inventory workflows. |
+| Controller vs business logic | 10.0/10 | 2 blueprint modules still contain direct query/session logic after extracting inventory-route query/session touchpoints (detail/list/view/edit/archive/restore/debug/bulk-update flows) plus developer system-role route DB/session ownership into dedicated route services. |
+| Data access ownership | 10.0/10 | Persistence logic remains mixed into route layers, but this pass removed additional route-local query/session touchpoints from inventory workflows and developer system-role handlers. |
 | Tenant isolation | 8.6/10 | Major scoped-query hardening is complete, with residual review needed on heuristic-risk files. |
 | Permission boundary | 8.0/10 | Non-public route permission audit is clean and `role_required` now enforces real role checks; remaining risk is broader policy consistency (`user_type` gates and role->permission migration). |
 | Integration boundaries | 5.9/10 | Stripe path is mature; Whop and Soap push remain partial/stubbed; POS file still contains embedded test mocks. |
@@ -28,7 +28,6 @@
 ## Boundary 2: Controller vs business logic
 - Total blueprint files with direct query/session access: **3**.
 ### Top offenders (direct query count)
-- `app/blueprints/developer/system_roles.py`: 50
 - `app/blueprints/developer/views/reference_routes.py`: 38
 - `app/blueprints/organization/routes.py`: 33
 
@@ -131,7 +130,7 @@
 - Resolve customer-facing pending build notes where they conflict with launch readiness narratives.
 
 ## Appendix A: all controller/data-access offenders
-- `app/blueprints/developer/system_roles.py`: 50
+- `app/blueprints/developer/system_roles.py`: 50 (resolved in this pass; removed from offender list)
 - `app/blueprints/developer/views/reference_routes.py`: 38
 - `app/blueprints/organization/routes.py`: 33
 - `app/blueprints/conversion/routes.py`: 24
