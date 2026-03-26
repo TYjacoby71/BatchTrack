@@ -45,7 +45,7 @@ from app.services.unit_catalog_service import (
 )
 from app.utils.cache_utils import should_bypass_cache
 from app.utils.code_generator import generate_recipe_prefix
-from app.utils.permissions import require_permission
+from app.utils.permissions import get_effective_organization_id, require_permission
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -69,12 +69,7 @@ def _resolve_org_id():
     """
     Determine the organization scope for the current request, respecting developer masquerade.
     """
-    org_id = getattr(current_user, "organization_id", None)
-    if getattr(current_user, "user_type", None) == "developer":
-        dev_selected = session.get("dev_selected_org_id")
-        if dev_selected:
-            org_id = dev_selected
-    return org_id
+    return get_effective_organization_id()
 
 
 # =========================================================

@@ -104,7 +104,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] Authenticated landing-route split now uses permission check (`dev.dashboard`) instead of persona string.
 
 - [ ] `app/blueprints/api/routes.py`
-  - Organization scope resolver uses persona string branch.
+  - [x] Organization scope resolver now uses `get_effective_organization_id()` helper instead of inline persona branch.
 
 - [ ] `app/blueprints/products/products.py`
   - Fallback import path can disable permission enforcement behavior if imports fail.
