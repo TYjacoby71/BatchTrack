@@ -68,7 +68,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] System-role and cross-org update branches keyed on persona string normalized through local helper checks.
 
 - [ ] `app/blueprints/global_library/routes.py`
-  - Manual permission metadata tagging (`_tag_required_permissions`) + inline `has_permission(...)` path where canonical decorator usage is expected.
+  - [x] Manual permission metadata tagging (`_tag_required_permissions`) + inline `has_permission(...)` path replaced with canonical decorator usage.
 
 - [ ] `app/blueprints/developer/decorators.py`
   - `require_developer_permission(...)` duplicates `user_type` gating on top of permission decorator, creating parallel policy.

@@ -37,9 +37,7 @@ from app.services.inventory_adjustment import create_inventory_item
 from app.services.statistics import AnalyticsDataService
 from app.utils.cache_utils import should_bypass_cache, stable_cache_key
 from app.utils.permissions import (
-    _permission_denied_response,
-    _record_required_permissions,
-    has_permission,
+    require_permission,
 )
 from app.utils.seo import slugify_value
 from app.utils.settings import is_feature_enabled
@@ -51,14 +49,6 @@ global_library_bp = Blueprint("global_library_bp", __name__)
 PUBLIC_LIBRARY_SEARCH_LIMIT = 10
 PUBLIC_LIBRARY_DETAIL_LIMIT = 10
 PUBLIC_LIBRARY_WINDOW_HOURS = 24
-
-
-def _tag_required_permissions(*permissions: str):
-    def decorator(func):
-        _record_required_permissions(func, permissions)
-        return func
-
-    return decorator
 
 
 def _global_library_rate_limit() -> str:
@@ -448,7 +438,7 @@ def global_item_detail(item_id: int, slug: Optional[str] = None):
 
 @global_library_bp.route("/global-items/<int:item_id>/save-to-inventory")
 @limiter.limit("6000/hour;300/minute")
-@_tag_required_permissions("inventory.edit")
+@require_permission("inventory.edit")
 def save_global_item_to_inventory(item_id: int):
     """Save a public global item into the authenticated user's inventory.
 
@@ -472,9 +462,6 @@ def save_global_item_to_inventory(item_id: int):
                 source=source_hint,
             )
         )
-
-    if not has_permission(current_user, "inventory.edit"):
-        return _permission_denied_response("inventory.edit")
 
     org_id = getattr(current_user, "organization_id", None)
     if not org_id:
