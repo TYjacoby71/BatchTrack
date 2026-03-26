@@ -78,7 +78,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] Invalid `user_type="team_member"` assignment.
 
 - [ ] `app/services/affiliate_service.py`
-  - Customer-only gate via `user.user_type != "customer"` in access paths that already depend on permission entitlements.
+  - [x] Customer-only gate via `user.user_type != "customer"` replaced with organization-context checks.
 
 ### B) Route-level persona-gate drift (permission bypass/duplication risk)
 

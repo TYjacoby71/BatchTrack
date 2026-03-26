@@ -43,6 +43,17 @@ class AffiliateService:
     _CODE_PATTERN = re.compile(r"^[a-z0-9_-]{4,64}$")
 
     @classmethod
+    def _customer_org_member(cls, user: User | None) -> User | None:
+        """Return user only when they are an org-scoped customer account."""
+        if not user:
+            return None
+        if getattr(user, "user_type", None) == "developer":
+            return None
+        if not getattr(user, "organization_id", None):
+            return None
+        return user
+
+    @classmethod
     def _schema_ready(cls) -> bool:
         try:
             inspector = inspect(db.engine)
@@ -126,7 +137,8 @@ class AffiliateService:
     def get_or_create_affiliate_profile(
         cls, user: User | None, *, auto_commit: bool = True
     ) -> AffiliateProfile | None:
-        if not user or user.user_type != "customer" or not user.organization_id:
+        user = cls._customer_org_member(user)
+        if not user:
             return None
         if not cls._schema_ready():
             return None
@@ -261,7 +273,8 @@ class AffiliateService:
             "recent_payout_batches": [],
             "reason": None,
         }
-        if not user or user.user_type != "customer" or not user.organization_id:
+        user = cls._customer_org_member(user)
+        if not user:
             default_payload["reason"] = (
                 "Affiliate program is available to organization members only."
             )
