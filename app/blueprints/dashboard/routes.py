@@ -27,13 +27,18 @@ from app.extensions import limiter
 from app.services.app_dashboard_service import AppDashboardService
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.services.statistics import AnalyticsDataService
-from app.utils.permissions import permission_required
+from app.utils.permissions import get_effective_organization_id, permission_required
 
 logger = logging.getLogger(__name__)
 
 app_routes_bp = Blueprint("app_routes", __name__)
 
 # Dashboard no longer performs stock checks - this is handled by production planning
+
+
+def _effective_org_id() -> int | None:
+    """Resolve effective organization scope for dashboard routes."""
+    return get_effective_organization_id()
 
 
 # --- Dashboard ---
@@ -47,37 +52,32 @@ app_routes_bp = Blueprint("app_routes", __name__)
 @permission_required("dashboard.view")
 def dashboard():
     """Main dashboard view with stock checking and alerts."""
-    # Developer users should only access this dashboard when viewing an organization.
-    if current_user.user_type == "developer":
-        selected_org_id = session.get("dev_selected_org_id")
-        if not selected_org_id:
-            flash(
-                "Developers must select an organization to view customer dashboard",
-                "warning",
-            )
-            return redirect(url_for("developer.dashboard"))
+    effective_org_id = _effective_org_id()
+    if not effective_org_id:
+        flash("Select an organization to view this dashboard.", "warning")
+        return redirect(url_for("settings.index"))
 
-        try:
-            selected_org_exists = AppDashboardService.organization_exists(selected_org_id)
-        except Exception as org_error:
-            logger.warning(
-                "Suppressed exception fallback at app/blueprints/dashboard/routes.py:74",
-                exc_info=True,
-            )
-            print("---!!! ORGANIZATION QUERY ERROR (ORIGINAL SIN?) !!!---")
-            print(f"Error: {org_error}")
-            print("----------------------------------------------------")
-            AppDashboardService.rollback_session()
-            flash("Database error accessing organization. Please try again.", "error")
-            return redirect(url_for("developer.dashboard"))
-        if not selected_org_exists:
-            session.pop("dev_selected_org_id", None)
-            session.pop("dev_masquerade_context", None)
-            flash(
-                "Selected organization no longer exists. Masquerade cleared.",
-                "error",
-            )
-            return redirect(url_for("developer.dashboard"))
+    try:
+        selected_org_exists = AppDashboardService.organization_exists(effective_org_id)
+    except Exception as org_error:
+        logger.warning(
+            "Suppressed exception fallback at app/blueprints/dashboard/routes.py:74",
+            exc_info=True,
+        )
+        print("---!!! ORGANIZATION QUERY ERROR (ORIGINAL SIN?) !!!---")
+        print(f"Error: {org_error}")
+        print("----------------------------------------------------")
+        AppDashboardService.rollback_session()
+        flash("Database error accessing organization. Please try again.", "error")
+        return redirect(url_for("settings.index"))
+    if not selected_org_exists:
+        session.pop("dev_selected_org_id", None)
+        session.pop("dev_masquerade_context", None)
+        flash(
+            "Selected organization no longer exists. Masquerade cleared.",
+            "error",
+        )
+        return redirect(url_for("settings.index"))
 
     # Initialize with safe defaults.
     active_batch = None
@@ -96,7 +96,7 @@ def dashboard():
         # Get active batch with explicit error catching.
         try:
             active_batch = AppDashboardService.get_active_in_progress_batch(
-                organization_id=getattr(current_user, "organization_id", None)
+                organization_id=effective_org_id
             )
         except Exception as batch_error:
             logger.warning(
@@ -205,22 +205,10 @@ def view_fault_log():
             "true",
             "yes",
         )
-        if current_user.user_type == "developer":
-            selected_org_id = session.get("dev_selected_org_id")
-            if selected_org_id:
-                faults = AnalyticsDataService.get_fault_log_entries(
-                    organization_id=selected_org_id,
-                    include_all=False,
-                    force_refresh=force_refresh,
-                )
-            else:
-                faults = AnalyticsDataService.get_fault_log_entries(
-                    include_all=True,
-                    force_refresh=force_refresh,
-                )
-        elif current_user.organization_id:
+        effective_org_id = _effective_org_id()
+        if effective_org_id:
             faults = AnalyticsDataService.get_fault_log_entries(
-                organization_id=current_user.organization_id,
+                organization_id=effective_org_id,
                 include_all=False,
                 force_refresh=force_refresh,
             )

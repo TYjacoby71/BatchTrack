@@ -98,7 +98,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] Affiliate tab visibility and profile save redirects now use permission/context checks (persona branches removed).
 
 - [ ] `app/blueprints/dashboard/routes.py`
-  - Dashboard/fault-log behavior switches on developer persona in route layer.
+  - [x] Dashboard/fault-log organization selection now uses effective organization context helper (no inline developer persona route branches).
 
 - [ ] `app/blueprints/core/routes.py`
   - Authenticated landing-route split on persona string.
