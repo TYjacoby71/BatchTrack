@@ -83,7 +83,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
 ### B) Route-level persona-gate drift (permission bypass/duplication risk)
 
 - [ ] `app/blueprints/inventory/routes.py`
-  - `can_edit_inventory_item(...)` grants blanket edit authority when `current_user.user_type == "developer"`.
+  - [x] `can_edit_inventory_item(...)` now uses effective organization context instead of blanket developer bypass.
 
 - [ ] `app/blueprints/conversion/routes.py`
   - Unit/mapping management branches keyed on developer persona checks.

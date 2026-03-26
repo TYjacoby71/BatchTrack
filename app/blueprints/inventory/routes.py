@@ -200,9 +200,12 @@ def can_edit_inventory_item(item):
     """Helper function to check if current user can edit an inventory item"""
     if not current_user.is_authenticated:
         return False
-    if current_user.user_type == "developer":
-        return True
-    return item.organization_id == current_user.organization_id
+    from app.utils.permissions import get_effective_organization_id
+
+    effective_org_id = get_effective_organization_id()
+    if not effective_org_id:
+        return False
+    return item.organization_id == effective_org_id
 
 
 # =========================================================
