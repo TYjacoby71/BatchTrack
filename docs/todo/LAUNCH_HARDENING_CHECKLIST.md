@@ -129,11 +129,11 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [ ] Verify `make lint` passes clean
 
 ### 4.2 Service boundary enforcement (top 5 offenders)
-- [ ] `app/blueprints/developer/views/reference_routes.py` (11 violations): extract DB operations into a developer reference service
-- [ ] `app/blueprints/products/product_variants.py` (9 violations): move DB operations into `product_service.py`
-- [ ] `app/blueprints/settings/routes.py` (9 violations): extract into a settings service
-- [ ] `app/blueprints/inventory/routes.py` (8 violations): move remaining DB operations into `inventory_adjustment` service
-- [ ] `app/blueprints/organization/routes.py` (8 violations): extract into an organization service
+- [x] `app/blueprints/developer/views/reference_routes.py` (11 violations): extract DB operations into a developer reference service
+- [x] `app/blueprints/products/product_variants.py` (9 violations): move DB operations into `product_service.py`
+- [x] `app/blueprints/settings/routes.py` (9 violations): extract into a settings service
+- [x] `app/blueprints/inventory/routes.py` (8 violations): move remaining DB operations into `inventory_adjustment` service
+- [x] `app/blueprints/organization/routes.py` (8 violations): extract into an organization service
 
 ### 4.3 God file refactoring
 - [ ] `app/services/billing_service.py` (1,612 lines): split into billing_checkout, billing_webhook, billing_query modules

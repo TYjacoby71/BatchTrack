@@ -22,6 +22,12 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
    - **Parallel action:** execute Workstream C items from boundary report + consolidated backlog.
    - **Status:** open
 
+4. **Boundary checklist/report drift after extractions**
+   - **Surface:** `docs/todo/LAUNCH_HARDENING_CHECKLIST.md`, `docs/refactor/2026-03-20-boundary-deep-dive-report.md`
+   - **Flag:** extraction status can drift from tracker counts when batches are committed before docs are updated in the same loop.
+   - **Parallel action:** after each extraction commit, immediately update checklist and report counts in the same commit.
+   - **Status:** open
+
 ## Recently closed flags
 
 - **Inventory routes retained direct ORM/session access across item-detail/global-link/list/view/archive/restore/debug/bulk-update flows**
