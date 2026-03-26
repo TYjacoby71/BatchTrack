@@ -95,7 +95,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] `reveal_details` now requires explicit support permission (`dev.all_organizations`) plus selected-org context.
 
 - [ ] `app/blueprints/settings/routes.py`
-  - Affiliate tab and post-save redirects include persona gating.
+  - [x] Affiliate tab visibility and profile save redirects now use permission/context checks (persona branches removed).
 
 - [ ] `app/blueprints/dashboard/routes.py`
   - Dashboard/fault-log behavior switches on developer persona in route layer.

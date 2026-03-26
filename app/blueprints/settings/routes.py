@@ -86,14 +86,16 @@ def index():
         current_user.organization
     )
     pricing_data = billing_context.pricing_data
-    is_developer_user = current_user.user_type == "developer"
+    can_view_affiliate_tab = bool(
+        has_permission(current_user, "affiliates.view")
+        or has_permission(current_user, "affiliates.generate_links")
+        or has_permission(current_user, "organization.manage_billing")
+        or has_permission(current_user, "affiliates.view_org_dashboard")
+    )
     affiliate_tab_visible = bool(
-        is_developer_user
-        or (
-            is_feature_enabled("FEATURE_AFFILIATE_PROGRAM_UI")
-            and current_user.user_type == "customer"
-            and current_user.organization
-        )
+        is_feature_enabled("FEATURE_AFFILIATE_PROGRAM_UI")
+        and current_user.organization
+        and can_view_affiliate_tab
     )
     affiliate_context = {}
     if affiliate_tab_visible:
@@ -400,11 +402,7 @@ def save_profile():
             return jsonify({"success": True, "message": "Profile updated successfully"})
         else:
             flash("Profile updated successfully!", "success")
-            # Determine redirect target
-            redirect_url = request.referrer or url_for("settings.index")
-            if current_user.user_type == "developer":
-                redirect_url = url_for("developer.dashboard")
-            return redirect(redirect_url)
+            return redirect(request.referrer or url_for("settings.index"))
 
     except Exception as e:
         logger.warning(
@@ -423,11 +421,7 @@ def save_profile():
             return jsonify({"success": False, "error": error_msg}), 500
         else:
             flash(error_msg, "error")
-            # Safe fallback redirect
-            if current_user.user_type == "developer":
-                return redirect(url_for("developer.dashboard"))
-            else:
-                return redirect(url_for("settings.index"))
+            return redirect(url_for("settings.index"))
 
 
 @settings_bp.route("/password/change", methods=["POST"])
