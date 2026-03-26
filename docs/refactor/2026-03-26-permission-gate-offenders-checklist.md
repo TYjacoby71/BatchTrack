@@ -101,7 +101,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] Dashboard/fault-log organization selection now uses effective organization context helper (no inline developer persona route branches).
 
 - [ ] `app/blueprints/core/routes.py`
-  - Authenticated landing-route split on persona string.
+  - [x] Authenticated landing-route split now uses permission check (`dev.dashboard`) instead of persona string.
 
 - [ ] `app/blueprints/api/routes.py`
   - Organization scope resolver uses persona string branch.
