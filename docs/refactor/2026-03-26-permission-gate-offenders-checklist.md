@@ -71,7 +71,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] Manual permission metadata tagging (`_tag_required_permissions`) + inline `has_permission(...)` path replaced with canonical decorator usage.
 
 - [ ] `app/blueprints/developer/decorators.py`
-  - `require_developer_permission(...)` duplicates `user_type` gating on top of permission decorator, creating parallel policy.
+  - [x] `require_developer_permission(...)` now delegates to canonical `permission_required(...)` without extra route-local persona gate logic.
 
 - [ ] `app/services/user_invite_service.py`
   - Role-name authorization check (`developer`/`organization_owner`) instead of permission-model authority.
