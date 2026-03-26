@@ -92,7 +92,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] Sharing/purchase controls now rely on permission entitlements only (developer persona bypass removed).
 
 - [ ] `app/blueprints/recipe_library/routes.py`
-  - `reveal_details` behavior keyed on developer persona/masquerade session rather than explicit capability policy.
+  - [x] `reveal_details` now requires explicit support permission (`dev.all_organizations`) plus selected-org context.
 
 - [ ] `app/blueprints/settings/routes.py`
   - Affiliate tab and post-save redirects include persona gating.

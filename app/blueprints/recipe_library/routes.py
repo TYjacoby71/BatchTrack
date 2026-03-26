@@ -32,7 +32,11 @@ from app.services.cache_invalidation import recipe_library_cache_key
 from app.services.recipe_library_view_service import RecipeLibraryViewService
 from app.services.statistics import AnalyticsDataService
 from app.utils.cache_utils import should_bypass_cache, stable_cache_key
-from app.utils.permissions import _org_tier_includes_permission
+from app.utils.permissions import (
+    _org_tier_includes_permission,
+    get_effective_organization_id,
+    has_permission,
+)
 from app.utils.seo import slugify_value
 from app.utils.settings import is_feature_enabled
 
@@ -276,10 +280,11 @@ def recipe_library_detail(recipe_id: int, slug: str):
     org_marketplace_enabled = marketplace_display_enabled and _org_allows_permission(
         recipe.organization, RECIPE_MARKETPLACE_PERMISSION
     )
-    reveal_details = False
-    if getattr(current_user, "is_authenticated", False):
-        if current_user.user_type == "developer" or session.get("dev_selected_org_id"):
-            reveal_details = True
+    reveal_details = bool(
+        getattr(current_user, "is_authenticated", False)
+        and has_permission(current_user, "dev.all_organizations")
+        and get_effective_organization_id()
+    )
 
     return render_template(
         "library/recipe_detail.html",
