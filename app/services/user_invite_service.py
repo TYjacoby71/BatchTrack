@@ -60,7 +60,7 @@ class UserInviteService:
         role: Optional[Role] = Role.query.filter_by(id=role_id).first()
         if not role:
             return InviteResult(False, "Invalid role selected")
-        if role.name in ["developer", "organization_owner"]:
+        if role.is_system_role:
             return InviteResult(
                 False,
                 "Cannot assign system or organization owner roles to invited users",

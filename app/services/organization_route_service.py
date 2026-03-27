@@ -128,12 +128,11 @@ class OrganizationRouteService:
 
         method = data.get("inventory_cost_method")
         if method in ["fifo", "average"]:
-            if current_user_obj.is_organization_owner or current_user_obj.user_type == "developer":
-                if getattr(organization, "inventory_cost_method", None) != method:
-                    organization.inventory_cost_method = method
-                    from app.utils.timezone_utils import TimezoneUtils as _TZ
+            if getattr(organization, "inventory_cost_method", None) != method:
+                organization.inventory_cost_method = method
+                from app.utils.timezone_utils import TimezoneUtils as _TZ
 
-                    organization.inventory_cost_method_changed_at = _TZ.utc_now()
+                organization.inventory_cost_method_changed_at = _TZ.utc_now()
         db.session.commit()
 
     @staticmethod
@@ -197,7 +196,7 @@ class OrganizationRouteService:
             user.phone = data["phone"]
         if "role_id" in data:
             role = OrganizationRouteService.get_scoped_role(data["role_id"])
-            if role and role.name not in ["developer", "organization_owner"]:
+            if role and not role.is_system_role:
                 user.role_id = data["role_id"]
 
         if "is_organization_owner" in data:

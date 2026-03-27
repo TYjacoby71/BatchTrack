@@ -58,21 +58,19 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   `affiliate_service`, `inventory`, `conversion`, `recipes/form_templates`,
   `recipe_library`, `settings`, `dashboard`, `core`, `api`, `products`,
   `auth/verification_routes`).
-  - Remaining route/service policy cleanup is concentrated in
-    `organization/routes.py`, `organization_route_service.py`,
-    `auth/permissions.py`, and `user_invite_service.py`.
+  - Route/service policy cleanup in this tracked offender set is complete.
 
-- [ ] `app/blueprints/organization/routes.py`
+- [x] `app/blueprints/organization/routes.py`
   - Repeated permission duplication with `user_type`/owner checks in routes already permission-decorated.
   - [x] Invalid `user_type` values/branches: `"organization_owner"` checks and `"team_member"` assignment.
   - [x] Role-name authorization in route logic (`role.name in ["developer", "organization_owner"]`) removed from route branch checks.
 
-- [ ] `app/services/organization_route_service.py`
+- [x] `app/services/organization_route_service.py`
   - [x] Invalid `user_type="team_member"` writes and reads.
   - Mixed capability gating by owner/developer persona for settings mutation.
   - Role-name checks in service authorization branch.
 
-- [ ] `app/blueprints/auth/permissions.py`
+- [x] `app/blueprints/auth/permissions.py`
   - [x] Role-management authority split by `current_user.user_type` normalized through local helper checks.
   - [x] System-role and cross-org update branches keyed on persona string normalized through local helper checks.
 
@@ -82,7 +80,7 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
 - [x] `app/blueprints/developer/decorators.py`
   - [x] `require_developer_permission(...)` now delegates to canonical `permission_required(...)` without extra route-local persona gate logic.
 
-- [ ] `app/services/user_invite_service.py`
+- [x] `app/services/user_invite_service.py`
   - Role-name authorization check (`developer`/`organization_owner`) instead of permission-model authority.
   - [x] Invalid `user_type="team_member"` assignment.
 

@@ -43,13 +43,17 @@ def _is_protected_org_user(user) -> bool:
     return bool(getattr(user, "user_type", None) == "developer" or _is_owner_user(user))
 
 
+def _is_developer_user(user) -> bool:
+    return bool(has_permission(user, "dev.manage_roles"))
+
+
 @organization_bp.route("/dashboard")
 @login_required
 @require_permission("organization.view")
 def dashboard():
     """Organization management dashboard"""
     # Check subscription tier first (except for developers)
-    if current_user.user_type != "developer":
+    if not _is_developer_user(current_user):
         effective_tier = current_user.organization.effective_subscription_tier
         has_affiliate_access = has_permission(
             current_user, "affiliates.view_org_dashboard"
@@ -89,7 +93,7 @@ def dashboard():
 
     organization = get_effective_organization()
     if not organization:
-        if current_user.user_type == "developer":
+        if _is_developer_user(current_user):
             flash("Please select an organization first", "error")
             return redirect(url_for("developer.organizations"))
         else:
@@ -128,7 +132,7 @@ def dashboard():
     # Get users for the user management tab (exclude developers from organization view)
     users = OrganizationRouteService.list_org_users(org_id)
 
-    is_developer_user = current_user.user_type == "developer"
+    is_developer_user = _is_developer_user(current_user)
     affiliate_feature_visible = bool(
         is_feature_enabled("FEATURE_AFFILIATE_PROGRAM_UI") or is_developer_user
     )
@@ -183,7 +187,7 @@ def affiliate_dashboard():
 
     organization = get_effective_organization()
     if not organization:
-        if current_user.user_type == "developer":
+        if _is_developer_user(current_user):
             flash("Please select an organization first", "error")
             return redirect(url_for("developer.organizations"))
         flash("No organization found", "error")
@@ -312,12 +316,14 @@ def update_organization_settings():
 @login_required
 @require_permission("organization.manage_billing")
 def update_subscription_tier():
-    """Update organization subscription tier (developers only)"""
+    """Update organization subscription tier (support/developer only)."""
 
-    # Only developers can update subscription tiers directly
-    if current_user.user_type != "developer":
+    if not _is_developer_user(current_user):
         return jsonify(
-            {"success": False, "error": "Only developers can update subscription tiers"}
+            {
+                "success": False,
+                "error": "Only support users can update subscription tiers",
+            }
         )
 
     try:

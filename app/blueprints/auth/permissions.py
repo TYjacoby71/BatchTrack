@@ -17,15 +17,20 @@ from flask_login import current_user, login_required
 
 from app.models import Permission
 from app.services.auth_permission_route_service import AuthPermissionRouteService
-from app.utils.permissions import clear_permission_scope_cache, require_permission
+from app.utils.permissions import (
+    clear_permission_scope_cache,
+    has_permission,
+    require_permission,
+)
 
 from . import auth_bp
 
 logger = logging.getLogger(__name__)
 
 
-def _is_developer_user(user) -> bool:
-    return getattr(user, "user_type", None) == "developer"
+def _can_manage_system_roles(user) -> bool:
+    """Return True when user can manage global/system roles."""
+    return has_permission(user, "dev.manage_roles")
 
 
 # --- Get tier permissions ---
@@ -320,7 +325,7 @@ def toggle_permission_status():
 @login_required
 def manage_roles():
     """Manage roles (org owners and system admins)"""
-    if _is_developer_user(current_user):
+    if _can_manage_system_roles(current_user):
         # System admin can see all roles and all permissions
         roles = AuthPermissionRouteService.list_all_roles()
         available_permissions = AuthPermissionRouteService.list_active_permissions()
@@ -353,13 +358,15 @@ def create_role():
         data = request.get_json()
 
         role_organization_id = (
-            current_user.organization_id if not _is_developer_user(current_user) else None
+            current_user.organization_id
+            if not _can_manage_system_roles(current_user)
+            else None
         )
 
         # Add permissions - but only allow permissions available to the organization's tier
         permission_ids = data.get("permission_ids", [])
 
-        if _is_developer_user(current_user):
+        if _can_manage_system_roles(current_user):
             # Developers can assign any permission
             permissions = AuthPermissionRouteService.list_permissions_by_ids(
                 permission_ids=permission_ids
@@ -408,12 +415,12 @@ def update_role(role_id):
         role = AuthPermissionRouteService.get_role_or_404(role_id=role_id)
 
         # Check permissions
-        if role.is_system_role and not _is_developer_user(current_user):
+        if role.is_system_role and not _can_manage_system_roles(current_user):
             return jsonify({"success": False, "error": "Cannot edit system roles"})
 
         if (
             role.organization_id != current_user.organization_id
-            and not _is_developer_user(current_user)
+            and not _can_manage_system_roles(current_user)
         ):
             return jsonify(
                 {

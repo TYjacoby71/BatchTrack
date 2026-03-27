@@ -154,10 +154,10 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
   - [ ] Remove stub/unused paths (`role_required` TODO path, deprecated enum/wrappers not used by callsites) only after import migration + parity verification
 
 ### 4.4 Permission-gate enforcement program
-- [ ] Execute the comprehensive offender checklist in `docs/refactor/2026-03-26-permission-gate-offenders-checklist.md`
-- [ ] Normalize invalid `user_type` usage (`team_member` writes and `organization_owner` user_type checks)
-- [ ] Remove route/service authorization via persona or role-name checks where permission gates already exist
-- [ ] Migrate template visibility checks from `has_role(...)`/`user_type` to permission-driven context
+- [x] Execute the comprehensive offender checklist in `docs/refactor/2026-03-26-permission-gate-offenders-checklist.md`
+- [x] Normalize invalid `user_type` usage (`team_member` writes and `organization_owner` user_type checks)
+- [x] Remove route/service authorization via persona or role-name checks where permission gates already exist
+- [x] Migrate template visibility checks from `has_role(...)`/`user_type` to permission-driven context
 - [ ] Retire legacy auth decorators/shims after callsites are migrated (`role_required`, `tier_required`, owner/system wrappers)
 
 ---
