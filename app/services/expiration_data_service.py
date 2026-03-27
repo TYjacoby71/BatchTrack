@@ -73,7 +73,9 @@ class ExpirationDataService:
         return ExpirationDataService._db_get(Batch, batch_id)
 
     @staticmethod
-    def list_fifo_lots(*, now_utc, expired: bool = False, days_ahead: int | None = None):
+    def list_fifo_lots(
+        *, now_utc, expired: bool = False, days_ahead: int | None = None
+    ):
         query = (
             InventoryLot.scoped()
             .join(InventoryItem)
@@ -125,7 +127,9 @@ class ExpirationDataService:
 
     @staticmethod
     def get_product_sku_by_inventory_item(*, inventory_item_id: int):
-        return ProductSKU.scoped().filter_by(inventory_item_id=inventory_item_id).first()
+        return (
+            ProductSKU.scoped().filter_by(inventory_item_id=inventory_item_id).first()
+        )
 
     @staticmethod
     def get_product(*, product_id: int):

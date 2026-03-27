@@ -239,7 +239,9 @@ class UserService:
             "last_login": (
                 user.last_login.strftime("%Y-%m-%d %H:%M") if user.last_login else None
             ),
-            "created_at": user.created_at.strftime("%Y-%m-%d") if user.created_at else None,
+            "created_at": (
+                user.created_at.strftime("%Y-%m-%d") if user.created_at else None
+            ),
             "roles": roles_data,
         }
 

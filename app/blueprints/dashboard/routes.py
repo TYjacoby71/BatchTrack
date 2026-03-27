@@ -301,5 +301,3 @@ def vendor_signup():
     except Exception as exc:
         logger.error(f"Vendor signup error: {exc}")
         return jsonify({"success": False, "error": "Internal server error"}), 500
-
-

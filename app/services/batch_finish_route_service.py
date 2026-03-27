@@ -102,7 +102,9 @@ class BatchFinishRouteService:
         )
 
     @staticmethod
-    def get_sku_for_variant_and_size(*, product_id: int, variant_id: int, size_label: str):
+    def get_sku_for_variant_and_size(
+        *, product_id: int, variant_id: int, size_label: str
+    ):
         return (
             ProductSKU.scoped()
             .filter_by(
@@ -120,7 +122,9 @@ class BatchFinishRouteService:
         return db.session.get(ProductCategory, category_id)
 
     @staticmethod
-    def get_scoped_inventory_item(*, inventory_item_id: int, organization_id: int | None):
+    def get_scoped_inventory_item(
+        *, inventory_item_id: int, organization_id: int | None
+    ):
         return (
             InventoryItem.scoped()
             .filter_by(id=inventory_item_id, organization_id=organization_id)

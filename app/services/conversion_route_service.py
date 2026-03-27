@@ -59,7 +59,9 @@ class ConversionRouteService:
             | (CustomUnitMapping.to_unit == unit.name)
         )
         if unit.organization_id:
-            mapping_query = mapping_query.filter_by(organization_id=unit.organization_id)
+            mapping_query = mapping_query.filter_by(
+                organization_id=unit.organization_id
+            )
         mapping_query.delete()
         db.session.delete(unit)
         db.session.commit()

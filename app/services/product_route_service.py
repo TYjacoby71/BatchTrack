@@ -182,9 +182,11 @@ class ProductRouteService:
             product_name = str(row.get("product_name") or "")
             if not product_name:
                 continue
-            first_sku = ProductRouteService.find_first_active_sku_by_product_name_for_org(
-                product_name=product_name,
-                organization_id=organization_id,
+            first_sku = (
+                ProductRouteService.find_first_active_sku_by_product_name_for_org(
+                    product_name=product_name,
+                    organization_id=organization_id,
+                )
             )
             if not first_sku:
                 continue
@@ -304,7 +306,9 @@ class ProductRouteService:
         return bool(existing_product or existing_sku)
 
     @staticmethod
-    def list_active_skus_for_product_for_org(*, product_id: int, organization_id: int | None):
+    def list_active_skus_for_product_for_org(
+        *, product_id: int, organization_id: int | None
+    ):
         return (
             ProductSKU.scoped()
             .filter_by(
@@ -393,7 +397,9 @@ class ProductRouteService:
     ) -> None:
         if not base_sku or not base_sku.product:
             return
-        base_sku.product.category_id = int(category_id) if category_id is not None else None
+        base_sku.product.category_id = (
+            int(category_id) if category_id is not None else None
+        )
         threshold = float(low_stock_threshold) if low_stock_threshold else 0
         base_sku.product.low_stock_threshold = threshold
         base_sku.low_stock_threshold = threshold
@@ -417,14 +423,16 @@ class ProductRouteService:
             pass
 
     @staticmethod
-    def delete_product_graph(*, product_id: int, sku_inventory_item_ids: list[int]) -> None:
+    def delete_product_graph(
+        *, product_id: int, sku_inventory_item_ids: list[int]
+    ) -> None:
         for inventory_item_id in sku_inventory_item_ids:
             UnifiedInventoryHistory.scoped().filter_by(
                 inventory_item_id=inventory_item_id
             ).delete(synchronize_session=False)
-            InventoryLot.scoped().filter_by(
-                inventory_item_id=inventory_item_id
-            ).delete(synchronize_session=False)
+            InventoryLot.scoped().filter_by(inventory_item_id=inventory_item_id).delete(
+                synchronize_session=False
+            )
 
         ProductSKU.scoped().filter_by(product_id=product_id).delete()
         ProductVariant.scoped().filter_by(product_id=product_id).delete()

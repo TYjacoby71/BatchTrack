@@ -92,7 +92,9 @@ class ReferenceRouteService:
                 organization_id=None,
                 is_active=True,
                 default_density=(
-                    default_density if isinstance(default_density, (int, float)) else None
+                    default_density
+                    if isinstance(default_density, (int, float))
+                    else None
                 ),
             )
             db.session.add(new_category)
@@ -323,7 +325,9 @@ class ReferenceRouteService:
 
     @staticmethod
     def _save_tag_entry(model, name: str, description: str | None) -> None:
-        existing = model.query.filter(func.lower(model.name) == func.lower(name)).first()
+        existing = model.query.filter(
+            func.lower(model.name) == func.lower(name)
+        ).first()
         if existing:
             return
         tag = model(

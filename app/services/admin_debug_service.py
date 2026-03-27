@@ -14,7 +14,9 @@ class AdminDebugService:
     """Service helpers for admin debug FIFO validation endpoints."""
 
     @staticmethod
-    def list_inventory_items_for_org(organization_id: int | None) -> list[InventoryItem]:
+    def list_inventory_items_for_org(
+        organization_id: int | None,
+    ) -> list[InventoryItem]:
         return InventoryItem.query.filter_by(organization_id=organization_id).all()
 
     @staticmethod

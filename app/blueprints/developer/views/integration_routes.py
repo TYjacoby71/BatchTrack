@@ -18,8 +18,8 @@ from flask import jsonify, render_template, request, url_for
 
 from app.config import ENV_DIAGNOSTICS
 from app.config_schema import build_integration_sections
-from app.services.developer.integration_admin_service import IntegrationAdminService
 from app.services.developer.dashboard_service import DeveloperDashboardService
+from app.services.developer.integration_admin_service import IntegrationAdminService
 from app.services.email_service import EmailService
 from app.services.integrations.registry import build_integration_categories
 from app.utils.settings import get_setting, update_settings_value

@@ -18,8 +18,8 @@ from flask_login import current_user, login_required
 from wtforms.validators import ValidationError
 
 from app.models import Recipe
-from app.services.recipe_create_view_service import RecipeCreateViewService
 from app.services.lineage_service import format_label_prefix, generate_variation_prefix
+from app.services.recipe_create_view_service import RecipeCreateViewService
 from app.services.recipe_proportionality_service import RecipeProportionalityService
 from app.services.recipe_service import (
     build_test_template,

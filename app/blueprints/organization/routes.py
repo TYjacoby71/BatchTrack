@@ -3,7 +3,6 @@ import re
 
 from flask import (
     Blueprint,
-    abort,
     flash,
     jsonify,
     redirect,
@@ -13,7 +12,6 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
-from app.extensions import db
 from app.models import Role, User
 from app.services.affiliate_service import AffiliateService
 from app.services.organization_route_service import OrganizationRouteService
@@ -69,9 +67,6 @@ def dashboard():
 
     pricing_data = BillingService.get_comprehensive_pricing_data()
 
-    # Load subscription tiers from DB for tier display (no JSON)
-    from ...models.subscription_tier import SubscriptionTier
-
     try:
         db_tiers = OrganizationRouteService.list_customer_facing_tiers()
         tiers_config = {
@@ -114,9 +109,6 @@ def dashboard():
 
     # Count pending invites (inactive users)
     pending_invites = OrganizationRouteService.count_pending_invites(org_id)
-
-    # Get permission categories for role creation modal (all permissions are now organization permissions)
-    from app.models.permission import Permission
 
     permissions = OrganizationRouteService.list_active_permissions()
     permission_categories = {}
@@ -239,8 +231,6 @@ def create_role():
 
         # Add permissions
         permission_ids = data.get("permission_ids", [])
-        from app.models.permission import Permission
-
         permissions = OrganizationRouteService.list_permissions_by_ids(permission_ids)
         role.permissions = permissions
 
@@ -339,9 +329,6 @@ def update_subscription_tier():
         organization = get_effective_organization()
         if not organization:
             return jsonify({"success": False, "error": "No organization selected"})
-
-        # Validate tier via DB only
-        from ...models.subscription_tier import SubscriptionTier
 
         try:
             _tier_id = int(tier_key)
@@ -607,7 +594,9 @@ def add_user():
 @require_permission("organization.manage_users")
 def get_user(user_id):
     """Get user details for editing"""
-    user = OrganizationRouteService.get_user_in_org(user_id, current_user.organization_id)
+    user = OrganizationRouteService.get_user_in_org(
+        user_id, current_user.organization_id
+    )
 
     if not user:
         return jsonify({"success": False, "error": "User not found"})
@@ -665,7 +654,9 @@ def update_user(user_id):
         data = request.get_json()
 
         # Get user from same organization
-        user = OrganizationRouteService.get_user_in_org(user_id, current_user.organization_id)
+        user = OrganizationRouteService.get_user_in_org(
+            user_id, current_user.organization_id
+        )
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
@@ -766,7 +757,9 @@ def toggle_user_status(user_id):
 
     try:
         # Get user from same organization
-        user = OrganizationRouteService.get_user_in_org(user_id, current_user.organization_id)
+        user = OrganizationRouteService.get_user_in_org(
+            user_id, current_user.organization_id
+        )
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
@@ -826,7 +819,9 @@ def delete_user(user_id):
 
     try:
         # Get user from same organization
-        user = OrganizationRouteService.get_user_in_org(user_id, current_user.organization_id)
+        user = OrganizationRouteService.get_user_in_org(
+            user_id, current_user.organization_id
+        )
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
@@ -873,7 +868,9 @@ def restore_user(user_id):
 
     try:
         # Get user from same organization (including deleted users)
-        user = OrganizationRouteService.get_user_in_org(user_id, current_user.organization_id)
+        user = OrganizationRouteService.get_user_in_org(
+            user_id, current_user.organization_id
+        )
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})

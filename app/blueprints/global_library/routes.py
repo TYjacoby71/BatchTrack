@@ -16,8 +16,7 @@ from flask import (
 )
 from flask_login import current_user
 
-from app.extensions import cache, db, limiter
-from app.models import GlobalItem, InventoryItem
+from app.extensions import cache, limiter
 from app.services.cache_invalidation import global_library_cache_key
 from app.services.global_item_listing_service import (
     DEFAULT_PER_PAGE_OPTIONS as GLOBAL_LIBRARY_PER_PAGE_OPTIONS,

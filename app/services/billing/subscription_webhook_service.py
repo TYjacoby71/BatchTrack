@@ -25,7 +25,9 @@ class SubscriptionWebhookService:
         return Organization.query.filter_by(stripe_customer_id=customer_id).first()
 
     @staticmethod
-    def apply_subscription_status(organization: Organization, status: str | None) -> None:
+    def apply_subscription_status(
+        organization: Organization, status: str | None
+    ) -> None:
         if status in {"active", "trialing"}:
             organization.subscription_status = status
             organization.billing_status = "active"

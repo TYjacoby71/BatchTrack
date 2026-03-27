@@ -17,7 +17,9 @@ class ProductVariantRouteService:
     """Data/session helpers for product-variant route workflows."""
 
     @staticmethod
-    def get_product_for_org(*, product_id: int, organization_id: int | None) -> Product | None:
+    def get_product_for_org(
+        *, product_id: int, organization_id: int | None
+    ) -> Product | None:
         return (
             Product.scoped()
             .filter_by(id=product_id, organization_id=organization_id)
@@ -312,7 +314,9 @@ class ProductVariantRouteService:
         db.session.add(inventory_item)
         db.session.flush()
 
-        sku_code = ProductService.generate_sku_code(product.name, variant.name, size_label)
+        sku_code = ProductService.generate_sku_code(
+            product.name, variant.name, size_label
+        )
         new_sku = ProductSKU(
             inventory_item_id=inventory_item.id,
             product_id=product.id,
@@ -322,7 +326,9 @@ class ProductVariantRouteService:
             sku=sku_code,
             sku_name=f"{variant.name} {product.name} ({size_label})",
             unit=unit,
-            low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
+            low_stock_threshold=(
+                float(low_stock_threshold) if low_stock_threshold else 0
+            ),
             organization_id=organization_id,
             created_by=actor_user_id,
             is_active=True,
@@ -410,7 +416,11 @@ class ProductVariantRouteService:
 
     @staticmethod
     def count_active_variants_for_product(*, product_id: int) -> int:
-        return ProductVariant.scoped().filter_by(product_id=product_id, is_active=True).count()
+        return (
+            ProductVariant.scoped()
+            .filter_by(product_id=product_id, is_active=True)
+            .count()
+        )
 
     @staticmethod
     def create_default_base_variant(

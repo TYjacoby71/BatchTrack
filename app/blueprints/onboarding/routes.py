@@ -17,8 +17,8 @@ from flask_login import current_user, login_required
 from app.utils.permissions import require_permission
 
 from ...models import User
-from ...services.auth_account_service import AuthAccountService
 from ...services.analytics_tracking_service import AnalyticsTrackingService
+from ...services.auth_account_service import AuthAccountService
 from ...utils.analytics_timing import seconds_since_first_landing
 from ...utils.timezone_utils import TimezoneUtils
 
@@ -177,9 +177,7 @@ def welcome():
                 password_errors.append("Password must be at least 8 characters long.")
 
             if not password_errors:
-                AuthAccountService.set_onboarding_password(
-                    user, password=new_password
-                )
+                AuthAccountService.set_onboarding_password(user, password=new_password)
                 requires_password_setup = False
                 flash("Your password has been updated.", "success")
                 return redirect(url_for("onboarding.welcome"))

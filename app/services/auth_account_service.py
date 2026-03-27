@@ -29,7 +29,9 @@ class AuthAccountService:
         return User.find_by_email(email)
 
     @staticmethod
-    def username_exists(*, username: str | None, exclude_user_id: int | None = None) -> bool:
+    def username_exists(
+        *, username: str | None, exclude_user_id: int | None = None
+    ) -> bool:
         return User.username_exists(username, exclude_user_id=exclude_user_id)
 
     @staticmethod
@@ -122,7 +124,9 @@ class AuthAccountService:
         desired_username: str | None = None,
     ) -> None:
         organization.name = org_name or organization.name
-        organization.contact_email = org_contact_email or organization.contact_email or user.email
+        organization.contact_email = (
+            org_contact_email or organization.contact_email or user.email
+        )
         user.first_name = first_name
         user.last_name = last_name
         user.phone = phone or None

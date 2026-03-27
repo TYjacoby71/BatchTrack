@@ -45,7 +45,9 @@ def serialize_unit(unit: Unit) -> dict:
     }
 
 
-def list_units(*, unit_type: str | None = None, query: str | None = None, limit: int = 50) -> list[dict]:
+def list_units(
+    *, unit_type: str | None = None, query: str | None = None, limit: int = 50
+) -> list[dict]:
     units = get_global_unit_list() or []
     normalized_type = normalize_unit_type(unit_type) if unit_type else None
     q = (query or "").strip().lower()
@@ -53,11 +55,7 @@ def list_units(*, unit_type: str | None = None, query: str | None = None, limit:
     if normalized_type:
         units = [u for u in units if getattr(u, "unit_type", None) == normalized_type]
     if q:
-        units = [
-            u
-            for u in units
-            if q in (getattr(u, "name", "") or "").lower()
-        ]
+        units = [u for u in units if q in (getattr(u, "name", "") or "").lower()]
 
     units.sort(
         key=lambda u: (

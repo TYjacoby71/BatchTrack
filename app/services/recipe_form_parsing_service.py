@@ -186,7 +186,9 @@ class RecipeFormParsingService:
         )
 
     @staticmethod
-    def link_inventory_item_to_global(*, item: InventoryItem, global_item_id: int) -> None:
+    def link_inventory_item_to_global(
+        *, item: InventoryItem, global_item_id: int
+    ) -> None:
         item.global_item_id = global_item_id
         item.ownership = "global"
         db.session.flush()

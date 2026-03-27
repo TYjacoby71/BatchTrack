@@ -60,7 +60,9 @@ class RecipeLibraryViewService:
             return query.order_by(Recipe.updated_at.asc())
         if sort_mode == "downloads":
             return query.order_by(
-                Recipe.download_count.desc(), Recipe.updated_at.desc(), Recipe.name.asc()
+                Recipe.download_count.desc(),
+                Recipe.updated_at.desc(),
+                Recipe.name.asc(),
             )
         if sort_mode == "price_high":
             return query.order_by(

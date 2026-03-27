@@ -16,12 +16,10 @@ class GlobalLibraryViewService:
 
     @staticmethod
     def get_active_global_item_or_404(item_id: int) -> GlobalItem:
-        return (
-            GlobalItem.query.filter(
-                GlobalItem.is_archived.is_(False),
-                GlobalItem.id == item_id,
-            ).first_or_404()
-        )
+        return GlobalItem.query.filter(
+            GlobalItem.is_archived.is_(False),
+            GlobalItem.id == item_id,
+        ).first_or_404()
 
     @staticmethod
     def get_global_item_or_404(item_id: int) -> GlobalItem:
@@ -78,10 +76,8 @@ class GlobalLibraryViewService:
     ) -> InventoryItem | None:
         if not organization_id:
             return None
-        return (
-            InventoryItem.query.filter(
-                InventoryItem.organization_id == organization_id,
-                InventoryItem.global_item_id == global_item_id,
-                InventoryItem.is_archived.is_(False),
-            ).first()
-        )
+        return InventoryItem.query.filter(
+            InventoryItem.organization_id == organization_id,
+            InventoryItem.global_item_id == global_item_id,
+            InventoryItem.is_archived.is_(False),
+        ).first()

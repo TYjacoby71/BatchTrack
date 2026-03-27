@@ -32,7 +32,9 @@ class OrganizationRouteService:
     @staticmethod
     def list_org_users(org_id: int):
         return (
-            User.query.filter(User.organization_id == org_id, User.user_type != "developer")
+            User.query.filter(
+                User.organization_id == org_id, User.user_type != "developer"
+            )
             .order_by(User.created_at.desc())
             .all()
         )
@@ -68,7 +70,11 @@ class OrganizationRouteService:
 
     @staticmethod
     def get_org_owner_role():
-        return Role.scoped().filter_by(name="organization_owner", is_system_role=True).first()
+        return (
+            Role.scoped()
+            .filter_by(name="organization_owner", is_system_role=True)
+            .first()
+        )
 
     @staticmethod
     def get_subscription_tier(tier_id: int):
@@ -102,7 +108,9 @@ class OrganizationRouteService:
             created_by=created_by,
             is_system_role=False,
         )
-        role.permissions = OrganizationRouteService.list_permissions_by_ids(permission_ids)
+        role.permissions = OrganizationRouteService.list_permissions_by_ids(
+            permission_ids
+        )
         db.session.add(role)
         db.session.commit()
         return role
@@ -119,7 +127,9 @@ class OrganizationRouteService:
 
         if "contact_email" in data:
             contact_email = (
-                data["contact_email"].strip() if data["contact_email"] else current_user_obj.email
+                data["contact_email"].strip()
+                if data["contact_email"]
+                else current_user_obj.email
             )
             organization.contact_email = contact_email
 
@@ -228,4 +238,3 @@ class OrganizationRouteService:
         user.is_active = not user.is_active
         db.session.commit()
         return user.is_active
-

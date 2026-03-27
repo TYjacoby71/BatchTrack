@@ -14,8 +14,8 @@ from flask import jsonify, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.services.drawers.payloads import build_drawer_payload
-from app.services.global_link_suggestions import GlobalLinkSuggestionService
 from app.services.global_link_drawer_service import GlobalLinkDrawerService
+from app.services.global_link_suggestions import GlobalLinkSuggestionService
 from app.utils.permissions import require_permission
 
 from .. import drawers_bp, register_cadence_check, register_drawer_action

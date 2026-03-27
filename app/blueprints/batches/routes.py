@@ -15,13 +15,13 @@ from flask import flash, jsonify, redirect, render_template, request, session, u
 from flask_login import current_user, login_required
 
 from ...extensions import limiter
-from ...models import InventoryItem, Recipe
+from ...models import InventoryItem
+from ...services.batch_preferences_service import BatchPreferencesService
 from ...services.batch_service import (
     BatchManagementService,
     BatchOperationsService,
     BatchService,
 )
-from ...services.batch_preferences_service import BatchPreferencesService
 from ...services.batch_start_service import BatchStartService
 from ...services.fifo_api_service import get_batch_inventory_summary_payload
 from ...services.production_planning.service import PlanProductionService

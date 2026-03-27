@@ -13,14 +13,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 from flask_login import current_user
-from sqlalchemy import and_
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import joinedload
 
 from app.services.inventory_adjustment import process_inventory_adjustment
 
 from ...extensions import db
-from ...models import InventoryHistory, InventoryItem, InventoryLot, UnifiedInventoryHistory
+from ...models import InventoryHistory, InventoryLot, UnifiedInventoryHistory
 from ...services.expiration_data_service import ExpirationDataService
 
 # Set logger to INFO level to reduce debug noise
@@ -133,8 +131,11 @@ class ExpirationService:
 
         debug_info = []
         for lot in sku_lots:
-            inventory_item = lot.inventory_item or ExpirationDataService.get_inventory_item(
-                inventory_item_id=lot.inventory_item_id
+            inventory_item = (
+                lot.inventory_item
+                or ExpirationDataService.get_inventory_item(
+                    inventory_item_id=lot.inventory_item_id
+                )
             )
             expiration = ExpirationService.get_effective_sku_expiration_date(lot)
             debug_info.append(
@@ -279,7 +280,6 @@ class ExpirationService:
     @staticmethod
     def _query_fifo_entries(expired=False, days_ahead: int = None):
         """Query inventory lots based on expiration criteria for perishable items"""
-        from app.models.inventory_lot import InventoryLot
 
         from ...utils.timezone_utils import TimezoneUtils
 
@@ -379,7 +379,9 @@ class ExpirationService:
                 return None
 
             product = ExpirationDataService.get_product(product_id=sku.product_id)
-            variant = ExpirationDataService.get_product_variant(variant_id=sku.variant_id)
+            variant = ExpirationDataService.get_product_variant(
+                variant_id=sku.variant_id
+            )
 
             return {
                 "inventory_item_id": lot.inventory_item_id,
@@ -440,7 +442,9 @@ class ExpirationService:
     def update_fifo_expiration_data(inventory_item_id: int, shelf_life_days: int):
         """Update expiration data for inventory item - updates master item and existing lots metadata"""
         # Update the master inventory item
-        item = ExpirationDataService.get_inventory_item(inventory_item_id=inventory_item_id)
+        item = ExpirationDataService.get_inventory_item(
+            inventory_item_id=inventory_item_id
+        )
         if item:
             item.is_perishable = True
             item.shelf_life_days = shelf_life_days
@@ -557,7 +561,6 @@ class ExpirationService:
     @staticmethod
     def get_weighted_average_freshness(inventory_item_id: int) -> Optional[float]:
         """Calculate weighted average freshness for an inventory item based on InventoryLot objects"""
-        from app.models.inventory_lot import InventoryLot
 
         lots = ExpirationDataService.list_lots_for_weighted_freshness(
             inventory_item_id=inventory_item_id

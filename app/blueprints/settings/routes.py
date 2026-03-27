@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+
 from ...models import User
 from ...services.affiliate_service import AffiliateService
 from ...services.billing.orchestrators.settings_billing_orchestrator import (

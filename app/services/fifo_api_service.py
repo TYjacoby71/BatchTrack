@@ -30,7 +30,8 @@ def get_fifo_details_payload(inventory_id: int, *, batch_id: int | None = None) 
     item = InventoryItem.scoped().filter_by(id=inventory_id).first_or_404()
 
     fifo_entries = (
-        UnifiedInventoryHistory.scoped().filter_by(inventory_item_id=inventory_id)
+        UnifiedInventoryHistory.scoped()
+        .filter_by(inventory_item_id=inventory_id)
         .filter(
             or_(
                 UnifiedInventoryHistory.remaining_quantity_base > 0,
@@ -149,7 +150,8 @@ def get_batch_inventory_summary_payload(batch_id: int) -> dict:
 
 def get_batch_fifo_usage(inventory_id: int, batch_id: int) -> list[dict]:
     events = (
-        UnifiedInventoryHistory.scoped().filter(
+        UnifiedInventoryHistory.scoped()
+        .filter(
             UnifiedInventoryHistory.inventory_item_id == inventory_id,
             UnifiedInventoryHistory.batch_id == batch_id,
             UnifiedInventoryHistory.change_type == "batch",
@@ -183,10 +185,8 @@ def get_batch_fifo_usage(inventory_id: int, batch_id: int) -> list[dict]:
                     )
                     age_days = None
             try:
-                life_remaining_percent = (
-                    FreshnessService._compute_lot_freshness_percent_at_time(  # type: ignore
-                        lot, when
-                    )
+                life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(  # type: ignore
+                    lot, when
                 )
             except Exception:
                 logger.warning(
@@ -209,10 +209,8 @@ def get_batch_fifo_usage(inventory_id: int, batch_id: int) -> list[dict]:
                         shelf_life_days = item.shelf_life_days
                         inventory_item = item
 
-                    life_remaining_percent = (
-                        FreshnessService._compute_lot_freshness_percent_at_time(  # type: ignore
-                            _FakeLot, when
-                        )
+                    life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(  # type: ignore
+                        _FakeLot, when
                     )
                     age_days = (when - received_guess).days
             except Exception:
@@ -237,7 +235,8 @@ def get_batch_fifo_usage(inventory_id: int, batch_id: int) -> list[dict]:
 
 def build_merged_ingredient_summary(batch: Batch) -> list[dict]:
     events = (
-        UnifiedInventoryHistory.scoped().filter(
+        UnifiedInventoryHistory.scoped()
+        .filter(
             UnifiedInventoryHistory.batch_id == batch.id,
             UnifiedInventoryHistory.change_type == "batch",
             UnifiedInventoryHistory.quantity_change < 0,
@@ -280,10 +279,8 @@ def build_merged_ingredient_summary(batch: Batch) -> list[dict]:
                         )
                         age_days = None
                 try:
-                    life_remaining_percent = (
-                        FreshnessService._compute_lot_freshness_percent_at_time(  # type: ignore
-                            lot, when
-                        )
+                    life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(  # type: ignore
+                        lot, when
                     )
                 except Exception:
                     logger.warning(
@@ -308,10 +305,8 @@ def build_merged_ingredient_summary(batch: Batch) -> list[dict]:
                         shelf_life_days = item.shelf_life_days
                         inventory_item = item
 
-                    life_remaining_percent = (
-                        FreshnessService._compute_lot_freshness_percent_at_time(  # type: ignore
-                            _FakeLot, when
-                        )
+                    life_remaining_percent = FreshnessService._compute_lot_freshness_percent_at_time(  # type: ignore
+                        _FakeLot, when
                     )
                     age_days = (when - received_guess).days
                 except Exception:

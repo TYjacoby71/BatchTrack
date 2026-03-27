@@ -29,9 +29,9 @@ from ...services.analytics_tracking_service import AnalyticsTrackingService
 from ...services.billing.orchestrators.account_provisioning_orchestrator import (
     AccountProvisioningOrchestrator,
 )
-from ...services.developer.addon_service import AddonService
 from ...services.billing.subscription_webhook_service import SubscriptionWebhookService
 from ...services.billing_service import BillingService
+from ...services.developer.addon_service import AddonService
 from ...services.session_service import SessionService
 from ...services.signup_service import SignupService
 from ...services.subscription_downgrade_service import (

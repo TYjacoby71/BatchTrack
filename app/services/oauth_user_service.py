@@ -34,8 +34,28 @@ class OAuthUserService:
         db.session.commit()
 
     @staticmethod
+    def link_oauth_identity(
+        user: User,
+        *,
+        provider: str,
+        oauth_id: str | None,
+    ) -> None:
+        """Backward-compatible alias for OAuth identity linking."""
+        OAuthUserService.ensure_oauth_identity(
+            user=user,
+            provider=provider,
+            oauth_id=oauth_id,
+        )
+
+    @staticmethod
     def update_last_login(user: User) -> None:
         user.last_login = TimezoneUtils.utc_now()
+        db.session.commit()
+
+    @staticmethod
+    def record_login_timestamp(user: User, timestamp) -> None:
+        """Backward-compatible explicit timestamp setter used by auth routes."""
+        user.last_login = timestamp
         db.session.commit()
 
     @staticmethod

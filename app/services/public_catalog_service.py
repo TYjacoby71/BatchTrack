@@ -93,7 +93,9 @@ class PublicCatalogService:
                 else None
             )
             variation_obj = (
-                global_item.variation if getattr(global_item, "variation", None) else None
+                global_item.variation
+                if getattr(global_item, "variation", None)
+                else None
             )
             physical_form_obj = (
                 variation_obj.physical_form
@@ -184,7 +186,9 @@ class PublicCatalogService:
                 "density": global_item.density,
                 "default_is_perishable": global_item.default_is_perishable,
                 "recommended_shelf_life_days": global_item.recommended_shelf_life_days,
-                "saponification_value": getattr(global_item, "saponification_value", None),
+                "saponification_value": getattr(
+                    global_item, "saponification_value", None
+                ),
                 "iodine_value": getattr(global_item, "iodine_value", None),
                 "fatty_acid_profile": getattr(global_item, "fatty_acid_profile", None),
                 "melting_point_c": getattr(global_item, "melting_point_c", None),
@@ -239,7 +243,9 @@ class PublicCatalogService:
         return PublicCatalogService.search_global_items(
             query_text=query_text,
             item_type=item_type,
-            group_mode=(group == "ingredient" and (not item_type or item_type == "ingredient")),
+            group_mode=(
+                group == "ingredient" and (not item_type or item_type == "ingredient")
+            ),
             limit=limit,
         )
 
@@ -251,8 +257,10 @@ class PublicCatalogService:
         variation_payload: dict[str, Any] | None,
         physical_form_payload: dict[str, Any] | None,
     ) -> str:
-        if ingredient_payload and variation_payload and not variation_payload.get(
-            "form_bypass"
+        if (
+            ingredient_payload
+            and variation_payload
+            and not variation_payload.get("form_bypass")
         ):
             return f"{ingredient_payload['name']}, {variation_payload['name']}"
         if ingredient_payload and physical_form_payload:
@@ -277,16 +285,24 @@ class PublicCatalogService:
         if grouped is None:
             return
 
-        group_key = ingredient_payload["id"] if ingredient_payload else f"item-{global_item.id}"
+        group_key = (
+            ingredient_payload["id"] if ingredient_payload else f"item-{global_item.id}"
+        )
         group_entry = grouped.get(group_key)
         if not group_entry:
             group_entry = {
-                "id": ingredient_payload["id"] if ingredient_payload else global_item.id,
+                "id": (
+                    ingredient_payload["id"] if ingredient_payload else global_item.id
+                ),
                 "ingredient_id": (
                     ingredient_payload["id"] if ingredient_payload else None
                 ),
-                "name": ingredient_payload["name"] if ingredient_payload else display_name,
-                "text": ingredient_payload["name"] if ingredient_payload else display_name,
+                "name": (
+                    ingredient_payload["name"] if ingredient_payload else display_name
+                ),
+                "text": (
+                    ingredient_payload["name"] if ingredient_payload else display_name
+                ),
                 "display_name": (
                     ingredient_payload["name"] if ingredient_payload else display_name
                 ),
@@ -314,7 +330,9 @@ class PublicCatalogService:
                 "display_name": display_name,
                 "raw_name": global_item.name,
                 "item_type": global_item.item_type,
-                "ingredient_id": ingredient_payload["id"] if ingredient_payload else None,
+                "ingredient_id": (
+                    ingredient_payload["id"] if ingredient_payload else None
+                ),
                 "ingredient_name": (
                     ingredient_payload["name"] if ingredient_payload else None
                 ),
@@ -350,7 +368,9 @@ class PublicCatalogService:
                 "brewing_diastatic_power_lintner": (
                     global_item.brewing_diastatic_power_lintner
                 ),
-                "saponification_value": getattr(global_item, "saponification_value", None),
+                "saponification_value": getattr(
+                    global_item, "saponification_value", None
+                ),
                 "iodine_value": getattr(global_item, "iodine_value", None),
                 "fatty_acid_profile": getattr(global_item, "fatty_acid_profile", None),
                 "melting_point_c": getattr(global_item, "melting_point_c", None),

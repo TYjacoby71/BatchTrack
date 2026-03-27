@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
+
 def build_drawer_payload(
     *,
     error_type: str,

@@ -26,7 +26,6 @@ from flask import (
 )
 from flask_login import current_user, login_user, logout_user
 from flask_wtf import FlaskForm
-from sqlalchemy import func, or_
 from sqlalchemy.exc import SQLAlchemyError
 from wtforms import PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired

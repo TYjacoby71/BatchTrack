@@ -7,7 +7,7 @@ Owns inventory route query/session operations so
 
 from __future__ import annotations
 
-from sqlalchemy import and_, case, func, or_
+from sqlalchemy import and_, case, func
 from sqlalchemy.orm import joinedload
 
 from app.extensions import db
@@ -160,7 +160,9 @@ class InventoryRouteService:
         )
 
     @staticmethod
-    def list_bulk_update_inventory_records(*, organization_id: int | None, limit: int = 750):
+    def list_bulk_update_inventory_records(
+        *, organization_id: int | None, limit: int = 750
+    ):
         query = InventoryRouteService.build_inventory_item_org_query(
             organization_id=organization_id
         )

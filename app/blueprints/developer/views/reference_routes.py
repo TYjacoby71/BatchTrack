@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
+
 from app.services.developer.reference_data_service import ReferenceDataService
 from app.services.developer.reference_route_service import ReferenceRouteService
 
@@ -20,6 +21,7 @@ from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 logger = logging.getLogger(__name__)
+
 
 # --- Reference Categories ---
 # Purpose: Define the top-level behavior of `reference_categories` in this module.
@@ -46,7 +48,9 @@ def reference_categories():
 @require_developer_permission("dev.system_admin")
 def add_reference_category():
     """Add a new global ingredient category."""
-    return jsonify(ReferenceRouteService.add_reference_category(request.get_json() or {}))
+    return jsonify(
+        ReferenceRouteService.add_reference_category(request.get_json() or {})
+    )
 
 
 # --- Delete Reference Category ---
@@ -71,7 +75,9 @@ def delete_reference_category():
 def update_reference_category_density():
     """Update default density for category and linked items."""
     return jsonify(
-        ReferenceRouteService.update_reference_category_density(request.get_json() or {})
+        ReferenceRouteService.update_reference_category_density(
+            request.get_json() or {}
+        )
     )
 
 
@@ -83,7 +89,9 @@ def update_reference_category_density():
 @require_developer_permission("dev.system_admin")
 def calculate_category_density():
     """Calculate average density for category."""
-    return jsonify(ReferenceRouteService.calculate_category_density(request.get_json() or {}))
+    return jsonify(
+        ReferenceRouteService.calculate_category_density(request.get_json() or {})
+    )
 
 
 # --- Container Management ---

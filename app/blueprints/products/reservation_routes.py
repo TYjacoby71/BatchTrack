@@ -1,12 +1,8 @@
 import logging
-from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user, login_required
-from sqlalchemy import and_, desc
 
-from ...models import Reservation
-from ...models.product import ProductSKU
 from ...services.pos_integration import POSIntegrationService
 from ...services.reservation_view_service import ReservationViewService
 from ...utils.permissions import require_permission
@@ -66,7 +62,10 @@ def create_reservation():
         quantity_raw = data.get("quantity")
         order_id = (data.get("order_id") or "").strip()
         if quantity_raw is None or not order_id:
-            return jsonify({"error": "Missing required fields: quantity, order_id"}), 400
+            return (
+                jsonify({"error": "Missing required fields: quantity, order_id"}),
+                400,
+            )
 
         item_id = data.get("item_id")
         if item_id is None:
@@ -219,7 +218,11 @@ def get_item_reservations(item_id):
             organization_id=current_user.organization_id,
         )
         return jsonify(
-            {"reservations": ReservationViewService.serialize_item_reservations(reservations)}
+            {
+                "reservations": ReservationViewService.serialize_item_reservations(
+                    reservations
+                )
+            }
         )
 
     except Exception as e:

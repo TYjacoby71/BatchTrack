@@ -13,8 +13,8 @@ from __future__ import annotations
 from flask import Blueprint, Response, render_template, session
 from flask_login import current_user, login_required
 
-from app.services.exports import ExportService
 from app.services.export_recipe_service import ExportRecipeService
+from app.services.exports import ExportService
 from app.utils.permissions import require_permission
 
 exports_bp = Blueprint("exports", __name__, url_prefix="/exports")

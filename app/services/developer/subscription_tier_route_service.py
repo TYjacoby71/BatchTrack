@@ -21,7 +21,9 @@ class SubscriptionTierRouteService:
 
     @staticmethod
     def list_active_permissions_ordered():
-        return Permission.query.filter_by(is_active=True).order_by(Permission.name).all()
+        return (
+            Permission.query.filter_by(is_active=True).order_by(Permission.name).all()
+        )
 
     @staticmethod
     def list_active_permissions_for_names(*, names: list[str]):
@@ -66,15 +68,21 @@ class SubscriptionTierRouteService:
         selected_addon_ids = set(addon_ids or []) | set(included_ids or [])
         if selected_addon_ids:
             selected_addons = Addon.query.filter(Addon.id.in_(selected_addon_ids)).all()
-            addon_perm_names = [a.permission_name for a in selected_addons if a.permission_name]
+            addon_perm_names = [
+                a.permission_name for a in selected_addons if a.permission_name
+            ]
             if addon_perm_names:
-                addon_perms = SubscriptionTierRouteService.list_active_permissions_for_names(
-                    names=addon_perm_names
+                addon_perms = (
+                    SubscriptionTierRouteService.list_active_permissions_for_names(
+                        names=addon_perm_names
+                    )
                 )
                 permission_ids.update({p.id for p in addon_perms})
 
         if permission_ids:
-            tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
+            tier.permissions = Permission.query.filter(
+                Permission.id.in_(permission_ids)
+            ).all()
         if addon_ids is not None:
             tier.allowed_addons = (
                 Addon.query.filter(Addon.id.in_(addon_ids)).all() if addon_ids else []
@@ -115,14 +123,20 @@ class SubscriptionTierRouteService:
         selected_addon_ids = set(addon_ids or []) | set(included_ids or [])
         if selected_addon_ids:
             selected_addons = Addon.query.filter(Addon.id.in_(selected_addon_ids)).all()
-            addon_perm_names = [a.permission_name for a in selected_addons if a.permission_name]
+            addon_perm_names = [
+                a.permission_name for a in selected_addons if a.permission_name
+            ]
             if addon_perm_names:
-                addon_perms = SubscriptionTierRouteService.list_active_permissions_for_names(
-                    names=addon_perm_names
+                addon_perms = (
+                    SubscriptionTierRouteService.list_active_permissions_for_names(
+                        names=addon_perm_names
+                    )
                 )
                 permission_ids.update({p.id for p in addon_perms})
 
-        tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
+        tier.permissions = Permission.query.filter(
+            Permission.id.in_(permission_ids)
+        ).all()
         db.session.commit()
 
     @staticmethod
@@ -141,4 +155,3 @@ class SubscriptionTierRouteService:
     @staticmethod
     def rollback_session() -> None:
         db.session.rollback()
-

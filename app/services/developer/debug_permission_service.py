@@ -22,11 +22,15 @@ class DebugPermissionService:
     @staticmethod
     def resolve_tier_permissions(current_tier) -> list[str]:
         try:
-            tier_id = int(current_tier) if isinstance(current_tier, str) else current_tier
+            tier_id = (
+                int(current_tier) if isinstance(current_tier, str) else current_tier
+            )
         except Exception:
             tier_id = None
         tier_obj = db.session.get(SubscriptionTier, tier_id) if tier_id else None
-        return [p.name for p in getattr(tier_obj, "permissions", [])] if tier_obj else []
+        return (
+            [p.name for p in getattr(tier_obj, "permissions", [])] if tier_obj else []
+        )
 
     @staticmethod
     def list_tier_configs() -> dict[str, dict]:

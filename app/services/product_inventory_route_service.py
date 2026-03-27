@@ -69,7 +69,9 @@ class ProductInventoryRouteService:
         )
 
     @staticmethod
-    def get_sku_by_id_for_org(*, sku_id: int, organization_id: int | None) -> ProductSKU | None:
+    def get_sku_by_id_for_org(
+        *, sku_id: int, organization_id: int | None
+    ) -> ProductSKU | None:
         if not organization_id:
             return None
         return (

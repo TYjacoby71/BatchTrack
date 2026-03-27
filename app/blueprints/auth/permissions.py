@@ -15,7 +15,6 @@ import logging
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
 
-from app.models import Permission
 from app.services.auth_permission_route_service import AuthPermissionRouteService
 from app.utils.permissions import (
     clear_permission_scope_cache,

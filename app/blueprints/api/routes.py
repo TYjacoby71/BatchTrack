@@ -23,6 +23,7 @@ from app.models import (
 )
 from app.models.product import ProductSKU
 from app.services.ai import GoogleAIClientError
+from app.services.api_bootstrap_service import ApiBootstrapService
 from app.services.batchbot_credit_service import BatchBotCreditService
 from app.services.batchbot_service import BatchBotService, BatchBotServiceError
 from app.services.batchbot_usage_service import (
@@ -35,11 +36,12 @@ from app.services.cache_invalidation import (
     product_bootstrap_cache_key,
     recipe_bootstrap_cache_key,
 )
-from app.services.api_bootstrap_service import ApiBootstrapService
 from app.services.fifo_api_service import get_fifo_details_payload
 from app.services.unit_catalog_service import (
     create_or_get_custom_unit,
-    list_units as list_catalog_units,
+)
+from app.services.unit_catalog_service import list_units as list_catalog_units
+from app.services.unit_catalog_service import (
     normalize_unit_type,
     serialize_unit,
 )
@@ -99,6 +101,7 @@ def health_check():
 def server_time():
     """Get current server time in user's timezone"""
     from app.services.timer_service import TimerService
+
     from ...utils.timezone_utils import TimezoneUtils
 
     # Keep timer auto-complete behavior on the canonical server-time endpoint.
@@ -231,7 +234,6 @@ def get_dashboard_alerts():
 
 # Import sub-blueprints to register their routes
 
-from app.models.product_category import ProductCategory
 from .container_routes import container_api_bp
 from .ingredient_routes import ingredient_api_bp
 

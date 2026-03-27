@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user
+
 from app.services.developer.system_role_service import SystemRoleService
 
 from .decorators import require_developer_permission
@@ -136,7 +137,9 @@ def get_permissions_api():
 @require_developer_permission("dev.manage_roles")
 def get_developer_permissions_api():
     """API endpoint for developer permissions grouped by category"""
-    return jsonify({"categories": SystemRoleService.get_developer_permissions_grouped()})
+    return jsonify(
+        {"categories": SystemRoleService.get_developer_permissions_grouped()}
+    )
 
 
 @system_roles_bp.route("/developer-roles/api")

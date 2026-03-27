@@ -29,7 +29,9 @@ class UserPreferencesService:
         return bool(_SCOPE_RE.fullmatch(scope or ""))
 
     @classmethod
-    def get_list_preferences(cls, user_id: int, scope: str) -> tuple[dict[str, Any], int]:
+    def get_list_preferences(
+        cls, user_id: int, scope: str
+    ) -> tuple[dict[str, Any], int]:
         """Fetch list preferences for a user/scope pair."""
         if not cls._scope_is_valid(scope):
             return {"success": False, "error": "Invalid preference scope"}, 400
@@ -64,14 +66,19 @@ class UserPreferencesService:
             merge = True
 
         if not isinstance(values, dict):
-            return {"success": False, "error": "Preference values must be an object"}, 400
+            return {
+                "success": False,
+                "error": "Preference values must be an object",
+            }, 400
 
         user_prefs = UserPreferences.get_for_user(user_id)
         if not user_prefs:
             return {"success": False, "error": "Preferences unavailable"}, 400
 
         try:
-            next_scope_values = user_prefs.set_list_preferences(scope, values, merge=merge)
+            next_scope_values = user_prefs.set_list_preferences(
+                scope, values, merge=merge
+            )
             user_prefs.updated_at = datetime.now(timezone.utc)
             db.session.commit()
             return {

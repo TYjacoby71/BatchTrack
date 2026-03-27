@@ -19,9 +19,9 @@ from flask_login import current_user
 from app.extensions import cache, csrf, limiter
 from app.services.ai import GoogleAIClientError
 from app.services.cache_invalidation import global_library_cache_key
-from app.services.public_catalog_service import PublicCatalogService
 from app.services.public_bot_service import PublicBotService, PublicBotServiceError
 from app.services.public_bot_trap_service import PublicBotTrapService
+from app.services.public_catalog_service import PublicCatalogService
 from app.services.soapcalc_oils_service import (
     search_soapcalc_items,
     search_soapcalc_oils,

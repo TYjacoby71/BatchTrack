@@ -69,7 +69,9 @@ def _get_or_create_tags(model, names: list[str]):
             tags.append(existing)
             continue
         unique_slug = _generate_unique_slug(model, slug_candidate)
-        tag = GlobalItemRouteService.create_tag(model=model, name=name, slug=unique_slug)
+        tag = GlobalItemRouteService.create_tag(
+            model=model, name=name, slug=unique_slug
+        )
         tags.append(tag)
     return tags
 
@@ -363,7 +365,9 @@ def global_items_admin():
 @require_developer_permission("dev.system_admin")
 def global_item_detail(item_id):
     item = GlobalItemRouteService.get_global_item_or_404(item_id=item_id)
-    global_ingredient_categories = GlobalItemRouteService.list_global_ingredient_categories()
+    global_ingredient_categories = (
+        GlobalItemRouteService.list_global_ingredient_categories()
+    )
     physical_forms = GlobalItemRouteService.list_physical_forms()
     selected_ingredient = item.ingredient
     selected_physical_form = item.physical_form
@@ -635,7 +639,9 @@ def create_global_item():
     def render_form(
         form_data=None, selected_ingredient=None, selected_physical_form=None
     ):
-        global_ingredient_categories = GlobalItemRouteService.list_global_ingredient_categories()
+        global_ingredient_categories = (
+            GlobalItemRouteService.list_global_ingredient_categories()
+        )
         physical_forms = GlobalItemRouteService.list_physical_forms()
 
         ingredient_id = (
@@ -726,9 +732,11 @@ def create_global_item():
                         f"Invalid Ingredient Category ID format: '{ingredient_category_id_str}'"
                     )
 
-            existing = GlobalItemRouteService.find_existing_global_item_by_name_and_type(
-                name=name,
-                item_type=item_type,
+            existing = (
+                GlobalItemRouteService.find_existing_global_item_by_name_and_type(
+                    name=name,
+                    item_type=item_type,
+                )
             )
             if existing and not existing.is_archived:
                 return _error_response(

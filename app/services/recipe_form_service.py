@@ -111,8 +111,12 @@ class RecipeFormService:
                 "product_groups": [],
             }
 
-        all_ingredients = cls._list_inventory_items(org_id=org_id, item_type="ingredient")
-        all_consumables = cls._list_inventory_items(org_id=org_id, item_type="consumable")
+        all_ingredients = cls._list_inventory_items(
+            org_id=org_id, item_type="ingredient"
+        )
+        all_consumables = cls._list_inventory_items(
+            org_id=org_id, item_type="consumable"
+        )
         all_containers = cls._list_inventory_items(
             org_id=org_id,
             item_type="container",

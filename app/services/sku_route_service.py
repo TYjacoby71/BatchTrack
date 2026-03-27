@@ -18,7 +18,9 @@ class SkuRouteService:
     @staticmethod
     def get_sku_or_404(*, inventory_item_id: int) -> ProductSKU:
         return (
-            ProductSKU.scoped().filter_by(inventory_item_id=inventory_item_id).first_or_404()
+            ProductSKU.scoped()
+            .filter_by(inventory_item_id=inventory_item_id)
+            .first_or_404()
         )
 
     @staticmethod
@@ -95,7 +97,9 @@ class SkuRouteService:
                 ProductSKU.organization_id == organization_id,
                 ProductSKU.is_active,
             )
-            .order_by(ProductSKU.product_id, ProductSKU.variant_id, ProductSKU.size_label)
+            .order_by(
+                ProductSKU.product_id, ProductSKU.variant_id, ProductSKU.size_label
+            )
             .all()
         )
 
@@ -175,9 +179,11 @@ class SkuRouteService:
 
     @staticmethod
     def count_history_entries_for_item(*, inventory_item_id: int) -> int:
-        return UnifiedInventoryHistory.scoped().filter_by(
-            inventory_item_id=inventory_item_id
-        ).count()
+        return (
+            UnifiedInventoryHistory.scoped()
+            .filter_by(inventory_item_id=inventory_item_id)
+            .count()
+        )
 
     @staticmethod
     def count_active_reservations_for_item(
@@ -188,9 +194,11 @@ class SkuRouteService:
         )
         if resolved_product_item_id is None:
             return 0
-        return Reservation.scoped().filter_by(
-            product_item_id=resolved_product_item_id, status="active"
-        ).count()
+        return (
+            Reservation.scoped()
+            .filter_by(product_item_id=resolved_product_item_id, status="active")
+            .count()
+        )
 
     @staticmethod
     def commit_session() -> None:

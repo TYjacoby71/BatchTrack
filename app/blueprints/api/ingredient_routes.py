@@ -168,9 +168,7 @@ def list_forms_for_ingredient_definition(ingredient_id: int):
 def search_physical_forms():
     """Search physical forms with lightweight typeahead payloads."""
     q = (request.args.get("q") or "").strip()
-    return jsonify(
-        IngredientRouteService.search_physical_forms(query_text=q, limit=30)
-    )
+    return jsonify(IngredientRouteService.search_physical_forms(query_text=q, limit=30))
 
 
 # --- Search variations ---

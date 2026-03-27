@@ -284,8 +284,10 @@ def list_products():
                 if product:
                     self.id = product.id
 
-                    actual_variants = ProductRouteService.list_active_variants_for_product(
-                        product_id=product.id
+                    actual_variants = (
+                        ProductRouteService.list_active_variants_for_product(
+                            product_id=product.id
+                        )
                     )
 
                     self.variations = []
@@ -307,9 +309,13 @@ def list_products():
 
                     self.variant_count = len(actual_variants)
 
-                    product_skus = ProductRouteService.list_active_skus_for_product_for_org(
-                        product_id=product.id,
-                        organization_id=getattr(current_user, "organization_id", None),
+                    product_skus = (
+                        ProductRouteService.list_active_skus_for_product_for_org(
+                            product_id=product.id,
+                            organization_id=getattr(
+                                current_user, "organization_id", None
+                            ),
+                        )
                     )
 
                     for sku in product_skus:
@@ -629,7 +635,8 @@ def view_product_by_name(product_name):
 def edit_product(product_id):
     """Edit product details by product ID"""
     product = ProductRouteService.get_product_for_org(
-        product_id=product_id, organization_id=getattr(current_user, "organization_id", None)
+        product_id=product_id,
+        organization_id=getattr(current_user, "organization_id", None),
     )
 
     if not product:

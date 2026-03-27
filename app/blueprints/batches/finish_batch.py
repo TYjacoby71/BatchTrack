@@ -20,7 +20,7 @@ from app.utils.permissions import (
     require_permission,
 )
 
-from ...models import InventoryItem, ProductSKU
+from ...models import InventoryItem
 from ...services.batch_finish_route_service import BatchFinishRouteService
 from ...services.inventory_adjustment import process_inventory_adjustment
 
@@ -178,7 +178,6 @@ def _complete_batch_internal(batch_id, form_data):
 
             if product_id and variant_id:
                 # Check existing SKUs that might be updated
-                from app.models.product import ProductSKU
                 from app.services.inventory_adjustment import (
                     validate_inventory_fifo_sync,
                 )
@@ -289,7 +288,6 @@ def _complete_batch_internal(batch_id, form_data):
 
         # Persist fill efficiency to BatchStats if available (post output creation)
         try:
-            from app.models.statistics import BatchStats as _BatchStats
 
             stats = BatchFinishRouteService.get_batch_stats(batch_id=batch.id)
             if stats and batch.final_quantity and output_unit:
@@ -429,7 +427,9 @@ def _create_product_output(
     """Create product SKUs from batch completion using centralized inventory adjustment"""
     try:
         # Get product and variant with proper organization scoping
-        inv_org_id = getattr(current_user, "organization_id", None) or batch.organization_id
+        inv_org_id = (
+            getattr(current_user, "organization_id", None) or batch.organization_id
+        )
         product = BatchFinishRouteService.get_scoped_product(
             product_id=product_id,
             organization_id=inv_org_id,
@@ -441,7 +441,9 @@ def _create_product_output(
         )
 
         if not product:
-            product = BatchFinishRouteService.get_product_any_scope(product_id=product_id)
+            product = BatchFinishRouteService.get_product_any_scope(
+                product_id=product_id
+            )
         if not variant:
             variant = BatchFinishRouteService.get_variant_any_scope(
                 variant_id=variant_id,

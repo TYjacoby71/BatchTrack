@@ -19,7 +19,9 @@ class ContainerUnitMismatchService:
     """Service helpers for container unit-mismatch drawer flows."""
 
     @staticmethod
-    def get_recipe_for_org(*, recipe_id: int, organization_id: int | None) -> Recipe | None:
+    def get_recipe_for_org(
+        *, recipe_id: int, organization_id: int | None
+    ) -> Recipe | None:
         if not recipe_id or not organization_id:
             return None
         return (

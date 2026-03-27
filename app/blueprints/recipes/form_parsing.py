@@ -210,12 +210,10 @@ def extract_ingredients_from_form(form):
             gi = RecipeFormParsingService.get_global_item(int(gi_id)) if gi_id else None
 
             if gi:
-                existing = (
-                    RecipeFormParsingService.find_org_inventory_item_for_global(
-                        organization_id=getattr(current_user, "organization_id", None),
-                        global_item_id=gi.id,
-                        item_type=gi.item_type,
-                    )
+                existing = RecipeFormParsingService.find_org_inventory_item_for_global(
+                    organization_id=getattr(current_user, "organization_id", None),
+                    global_item_id=gi.id,
+                    item_type=gi.item_type,
                 )
 
                 if existing:
@@ -223,7 +221,9 @@ def extract_ingredients_from_form(form):
                 else:
                     name_match = (
                         RecipeFormParsingService.find_org_inventory_item_name_match(
-                            organization_id=getattr(current_user, "organization_id", None),
+                            organization_id=getattr(
+                                current_user, "organization_id", None
+                            ),
                             name=gi.name,
                             item_type=gi.item_type,
                         )

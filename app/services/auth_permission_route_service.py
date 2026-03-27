@@ -17,7 +17,9 @@ class AuthPermissionRouteService:
     """Data/session helpers for auth permission/role route workflows."""
 
     @staticmethod
-    def get_subscription_tier_by_key(*, tier_key: str | None) -> SubscriptionTier | None:
+    def get_subscription_tier_by_key(
+        *, tier_key: str | None
+    ) -> SubscriptionTier | None:
         try:
             tier_id = int(tier_key)
         except (TypeError, ValueError):
@@ -61,7 +63,9 @@ class AuthPermissionRouteService:
         org_description: str,
         org_category: str,
     ) -> None:
-        dev_perm = AuthPermissionRouteService.find_developer_permission_by_name(name=name)
+        dev_perm = AuthPermissionRouteService.find_developer_permission_by_name(
+            name=name
+        )
         org_perm = AuthPermissionRouteService.find_permission_by_name(name=name)
 
         if dev_enabled:
@@ -114,7 +118,9 @@ class AuthPermissionRouteService:
             is_system_role=True,
         ).first()
         if org_owner_role:
-            org_owner_role.permissions = Permission.query.filter_by(is_active=True).all()
+            org_owner_role.permissions = Permission.query.filter_by(
+                is_active=True
+            ).all()
 
         db.session.commit()
 
@@ -127,7 +133,9 @@ class AuthPermissionRouteService:
         return db.get_or_404(Permission, permission_id)
 
     @staticmethod
-    def set_permission_active_status(*, permission: DeveloperPermission | Permission, is_active: bool) -> None:
+    def set_permission_active_status(
+        *, permission: DeveloperPermission | Permission, is_active: bool
+    ) -> None:
         permission.is_active = is_active
         db.session.commit()
 

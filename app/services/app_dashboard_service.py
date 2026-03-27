@@ -22,7 +22,9 @@ class AppDashboardService:
 
     @staticmethod
     def organization_exists(selected_org_id: int | None) -> bool:
-        return AppDashboardService.get_selected_organization(selected_org_id) is not None
+        return (
+            AppDashboardService.get_selected_organization(selected_org_id) is not None
+        )
 
     @staticmethod
     def get_active_in_progress_batch(

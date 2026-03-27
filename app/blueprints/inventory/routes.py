@@ -23,24 +23,29 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required
-from sqlalchemy import and_, case, func, or_
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import or_
+from sqlalchemy.orm import selectinload
 
 from app.extensions import cache, limiter
-from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory, UserPreferences
+from app.models import (
+    GlobalItem,
+    InventoryItem,
+    UnifiedInventoryHistory,
+    UserPreferences,
+)
 from app.models.inventory_lot import InventoryLot
 from app.services.bulk_inventory_service import (
     BulkInventoryService,
     BulkInventoryServiceError,
 )
 from app.services.cache_invalidation import inventory_list_cache_key
-from app.services.inventory_route_service import InventoryRouteService
 from app.services.inventory_adjustment import (
     create_inventory_item,
     process_inventory_adjustment,
     update_inventory_item,
 )
 from app.services.inventory_adjustment._fifo_ops import INFINITE_ANCHOR_SOURCE_TYPE
+from app.services.inventory_route_service import InventoryRouteService
 from app.services.inventory_tracking_policy import (
     org_allows_inventory_quantity_tracking,
 )
@@ -336,7 +341,9 @@ def api_toggle_global_link(item_id: int):
                 400,
             )
 
-        gi = InventoryRouteService.get_global_item(global_item_id=int(item.global_item_id))
+        gi = InventoryRouteService.get_global_item(
+            global_item_id=int(item.global_item_id)
+        )
         if not gi:
             return jsonify({"success": False, "error": "Global item not found"}), 404
 
@@ -716,7 +723,9 @@ def view_inventory(id):
     if not hasattr(item, "temp_available_quantity"):
         item.temp_available_quantity = float(item.quantity)
 
-    history_query = InventoryRouteService.build_unified_history_query(inventory_item_id=id)
+    history_query = InventoryRouteService.build_unified_history_query(
+        inventory_item_id=id
+    )
 
     # Lots: retrieve via FIFO service to preserve service authority
     history_query = history_query.order_by(UnifiedInventoryHistory.timestamp.desc())
@@ -1283,11 +1292,9 @@ def bulk_inventory_updates():
     if not _bulk_inventory_updates_enabled():
         flash("Bulk inventory updates are not enabled for your plan.", "warning")
         return redirect(url_for("inventory.list_inventory"))
-    inventory_records = (
-        InventoryRouteService.list_bulk_update_inventory_records(
-            organization_id=current_user.organization_id,
-            limit=750,
-        )
+    inventory_records = InventoryRouteService.list_bulk_update_inventory_records(
+        organization_id=current_user.organization_id,
+        limit=750,
     )
 
     inventory_payload = [

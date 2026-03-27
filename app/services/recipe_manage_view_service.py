@@ -117,7 +117,9 @@ class RecipeManageViewService:
         )
 
     @staticmethod
-    def list_recent_recipe_notes(*, recipe_id: int, limit: int = 25) -> list[RecipeLineage]:
+    def list_recent_recipe_notes(
+        *, recipe_id: int, limit: int = 25
+    ) -> list[RecipeLineage]:
         note_types = ("NOTE", "EDIT", "EDIT_OVERRIDE")
         return (
             RecipeLineage.scoped()

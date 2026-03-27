@@ -16,7 +16,11 @@ from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models import GlobalItem, IngredientCategory, InventoryItem
-from app.models.ingredient_reference import IngredientDefinition, PhysicalForm, Variation
+from app.models.ingredient_reference import (
+    IngredientDefinition,
+    PhysicalForm,
+    Variation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +89,12 @@ class IngredientRouteService:
         payload: list[dict[str, Any]] = []
         for item in rows:
             global_obj = getattr(item, "global_item", None)
-            ingredient_obj = getattr(global_obj, "ingredient", None) if global_obj else None
-            variation_obj = getattr(global_obj, "variation", None) if global_obj else None
+            ingredient_obj = (
+                getattr(global_obj, "ingredient", None) if global_obj else None
+            )
+            variation_obj = (
+                getattr(global_obj, "variation", None) if global_obj else None
+            )
             physical_form_obj = (
                 getattr(variation_obj, "physical_form", None) if variation_obj else None
             )
@@ -100,10 +108,14 @@ class IngredientRouteService:
                     "type": item.type,
                     "global_item_id": item.global_item_id,
                     "ingredient_id": ingredient_obj.id if ingredient_obj else None,
-                    "ingredient_name": ingredient_obj.name if ingredient_obj else item.name,
+                    "ingredient_name": (
+                        ingredient_obj.name if ingredient_obj else item.name
+                    ),
                     "variation_id": variation_obj.id if variation_obj else None,
                     "variation_name": variation_obj.name if variation_obj else None,
-                    "physical_form_id": physical_form_obj.id if physical_form_obj else None,
+                    "physical_form_id": (
+                        physical_form_obj.id if physical_form_obj else None
+                    ),
                     "physical_form_name": (
                         physical_form_obj.name if physical_form_obj else None
                     ),
@@ -196,7 +208,9 @@ class IngredientRouteService:
                     "physical_form_name": (
                         physical_form_obj.name if physical_form_obj else None
                     ),
-                    "physical_form_id": physical_form_obj.id if physical_form_obj else None,
+                    "physical_form_id": (
+                        physical_form_obj.id if physical_form_obj else None
+                    ),
                     "inci_name": getattr(item, "inci_name", None),
                     "cas_number": getattr(item, "cas_number", None),
                 }
@@ -226,10 +240,15 @@ class IngredientRouteService:
         if query_text:
             ilike_term = f"%{query_text}%"
             query = query.filter(
-                or_(PhysicalForm.name.ilike(ilike_term), PhysicalForm.slug.ilike(ilike_term))
+                or_(
+                    PhysicalForm.name.ilike(ilike_term),
+                    PhysicalForm.slug.ilike(ilike_term),
+                )
             )
         forms = (
-            query.order_by(func.length(PhysicalForm.name).asc(), PhysicalForm.name.asc())
+            query.order_by(
+                func.length(PhysicalForm.name).asc(), PhysicalForm.name.asc()
+            )
             .limit(limit)
             .all()
         )
@@ -270,7 +289,9 @@ class IngredientRouteService:
                     "slug": variation.slug,
                     "description": variation.description,
                     "physical_form_name": (
-                        variation.physical_form.name if variation.physical_form else None
+                        variation.physical_form.name
+                        if variation.physical_form
+                        else None
                     ),
                     "physical_form_id": variation.physical_form_id,
                     "default_unit": variation.default_unit,
@@ -401,7 +422,9 @@ class IngredientRouteService:
                 .all()
             )
 
-        group_mode = group_by_ingredient and (not item_type or item_type == "ingredient")
+        group_mode = group_by_ingredient and (
+            not item_type or item_type == "ingredient"
+        )
         grouped = OrderedDict() if group_mode else None
         results: list[dict[str, Any]] = []
         for gi in items:
@@ -428,7 +451,9 @@ class IngredientRouteService:
                     "cas_number": ingredient_obj.cas_number,
                     "ingredient_category_id": ingredient_obj.ingredient_category_id,
                     "ingredient_category_name": (
-                        ingredient_category_obj.name if ingredient_category_obj else None
+                        ingredient_category_obj.name
+                        if ingredient_category_obj
+                        else None
                     ),
                 }
             variation_payload = None
@@ -483,8 +508,12 @@ class IngredientRouteService:
                 "ingredient": ingredient_payload,
                 "variation": variation_payload,
                 "variation_id": variation_payload["id"] if variation_payload else None,
-                "variation_name": variation_payload["name"] if variation_payload else None,
-                "variation_slug": variation_payload["slug"] if variation_payload else None,
+                "variation_name": (
+                    variation_payload["name"] if variation_payload else None
+                ),
+                "variation_slug": (
+                    variation_payload["slug"] if variation_payload else None
+                ),
                 "physical_form": physical_form_payload,
                 "functions": function_names,
                 "applications": application_names,
@@ -520,14 +549,18 @@ class IngredientRouteService:
                 "fatty_acid_profile": getattr(gi, "fatty_acid_profile", None),
                 "melting_point_c": getattr(gi, "melting_point_c", None),
                 "flash_point_c": getattr(gi, "flash_point_c", None),
-                "moisture_content_percent": getattr(gi, "moisture_content_percent", None),
+                "moisture_content_percent": getattr(
+                    gi, "moisture_content_percent", None
+                ),
                 "comedogenic_rating": getattr(gi, "comedogenic_rating", None),
                 "ph_value": getattr(gi, "ph_value", None),
             }
             results.append(item_payload)
 
             if group_mode:
-                group_key = ingredient_payload["id"] if ingredient_payload else f"item-{gi.id}"
+                group_key = (
+                    ingredient_payload["id"] if ingredient_payload else f"item-{gi.id}"
+                )
                 group_entry = grouped.get(group_key)
                 if not group_entry:
                     group_entry = {
@@ -536,13 +569,19 @@ class IngredientRouteService:
                             ingredient_payload["id"] if ingredient_payload else None
                         ),
                         "name": (
-                            ingredient_payload["name"] if ingredient_payload else display_name
+                            ingredient_payload["name"]
+                            if ingredient_payload
+                            else display_name
                         ),
                         "text": (
-                            ingredient_payload["name"] if ingredient_payload else display_name
+                            ingredient_payload["name"]
+                            if ingredient_payload
+                            else display_name
                         ),
                         "display_name": (
-                            ingredient_payload["name"] if ingredient_payload else display_name
+                            ingredient_payload["name"]
+                            if ingredient_payload
+                            else display_name
                         ),
                         "item_type": gi.item_type,
                         "ingredient": ingredient_payload,
@@ -586,7 +625,9 @@ class IngredientRouteService:
                         ),
                         "physical_form": physical_form_payload,
                         "physical_form_name": (
-                            physical_form_payload["name"] if physical_form_payload else None
+                            physical_form_payload["name"]
+                            if physical_form_payload
+                            else None
                         ),
                         "default_unit": gi.default_unit,
                         "density": gi.density,
@@ -605,7 +646,9 @@ class IngredientRouteService:
                         "brewing_diastatic_power_lintner": gi.brewing_diastatic_power_lintner,
                         "ingredient_category_id": gi.ingredient_category_id,
                         "ingredient_category_name": ingredient_category_name,
-                        "saponification_value": getattr(gi, "saponification_value", None),
+                        "saponification_value": getattr(
+                            gi, "saponification_value", None
+                        ),
                         "iodine_value": getattr(gi, "iodine_value", None),
                         "fatty_acid_profile": getattr(gi, "fatty_acid_profile", None),
                         "melting_point_c": getattr(gi, "melting_point_c", None),

@@ -3,7 +3,6 @@ import logging
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from ...models import ProductSKU
 from ...services.product_service import ProductService
 from ...services.product_variant_route_service import ProductVariantRouteService
 from ...utils.permissions import require_permission
@@ -78,15 +77,17 @@ def add_variant(product_id):
                 )
             default_bulk_label = ProductService.resolve_bulk_size_label(unit)
 
-        new_variant, new_sku = ProductVariantRouteService.create_variant_with_optional_bulk_sku(
-            product=product,
-            variant_name=variant_name,
-            description=description,
-            organization_id=current_user.organization_id,
-            actor_user_id=current_user.id,
-            auto_create_bulk_sku=auto_create_bulk_sku,
-            unit=unit,
-            default_bulk_label=default_bulk_label,
+        new_variant, new_sku = (
+            ProductVariantRouteService.create_variant_with_optional_bulk_sku(
+                product=product,
+                variant_name=variant_name,
+                description=description,
+                organization_id=current_user.organization_id,
+                actor_user_id=current_user.id,
+                auto_create_bulk_sku=auto_create_bulk_sku,
+                unit=unit,
+                default_bulk_label=default_bulk_label,
+            )
         )
 
         response = {

@@ -56,7 +56,9 @@ class SystemRoleService:
                 created_by=created_by,
             )
             permission_ids = data.get("permission_ids", [])
-            permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
+            permissions = Permission.query.filter(
+                Permission.id.in_(permission_ids)
+            ).all()
             role.permissions = permissions
             db.session.add(role)
             db.session.commit()
@@ -288,7 +290,9 @@ class SystemRoleService:
         user_id: int, data: Dict[str, Any], *, assigned_by: int
     ) -> Dict[str, Any]:
         try:
-            user = User.query.filter_by(id=user_id, user_type="developer").first_or_404()
+            user = User.query.filter_by(
+                id=user_id, user_type="developer"
+            ).first_or_404()
             developer_role_id = data.get("developer_role_id")
 
             existing_assignments = (
@@ -316,7 +320,11 @@ class SystemRoleService:
                     )
 
             db.session.commit()
-            role_name = developer_role.name if developer_role_id and developer_role else "No role"
+            role_name = (
+                developer_role.name
+                if developer_role_id and developer_role
+                else "No role"
+            )
             return {
                 "success": True,
                 "message": f'Developer user "{user.username}" assigned to role: {role_name}',
@@ -337,13 +345,19 @@ class SystemRoleService:
             .filter(UserRoleAssignment.developer_role_id.isnot(None))
             .first()
         )
-        current_role_id: Optional[int] = assignment.developer_role_id if assignment else None
+        current_role_id: Optional[int] = (
+            assignment.developer_role_id if assignment else None
+        )
         return {"success": True, "current_role_id": current_role_id}
 
     @staticmethod
-    def delete_developer_user(user_id: int, *, current_user_obj: User) -> Dict[str, Any]:
+    def delete_developer_user(
+        user_id: int, *, current_user_obj: User
+    ) -> Dict[str, Any]:
         try:
-            user = User.query.filter_by(id=user_id, user_type="developer").first_or_404()
+            user = User.query.filter_by(
+                id=user_id, user_type="developer"
+            ).first_or_404()
             if user.id == current_user_obj.id:
                 return {"success": False, "error": "Cannot delete your own account"}
             user.soft_delete(deleted_by_user=current_user_obj)

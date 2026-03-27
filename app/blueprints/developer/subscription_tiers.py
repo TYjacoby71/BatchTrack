@@ -14,7 +14,6 @@ from flask import Blueprint, flash, jsonify, redirect, render_template, request,
 from flask_login import login_required
 
 from app.models import SubscriptionTier
-from app.models.addon import Addon
 from app.services.ai import GoogleAIClientError
 from app.services.developer.subscription_tier_route_service import (
     SubscriptionTierRouteService,

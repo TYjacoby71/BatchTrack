@@ -115,11 +115,15 @@ class ReservationViewService:
         sku_code: str,
         organization_id: int | None,
     ) -> int | None:
-        sku = ProductSKU.scoped().filter_by(
-            sku_code=sku_code,
-            organization_id=organization_id,
-            is_active=True,
-        ).first()
+        sku = (
+            ProductSKU.scoped()
+            .filter_by(
+                sku_code=sku_code,
+                organization_id=organization_id,
+                is_active=True,
+            )
+            .first()
+        )
         return sku.inventory_item_id if sku else None
 
     @staticmethod

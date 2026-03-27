@@ -19,7 +19,9 @@ from app.services.production_planning import plan_production_comprehensive
 from app.services.production_planning._container_management import (
     analyze_container_options,
 )
-from app.services.production_planning_debug_service import ProductionPlanningDebugService
+from app.services.production_planning_debug_service import (
+    ProductionPlanningDebugService,
+)
 from app.services.recipe_service import get_recipe_details
 from app.utils.permissions import has_tier_permission, require_permission
 from app.utils.recipe_display import format_recipe_lineage_name
@@ -211,8 +213,10 @@ def debug_recipe_containers(recipe_id):
             return jsonify({"error": "Recipe not found"}), 404
 
         allowed = ProductionPlanningDebugService.serialize_allowed_containers(recipe)
-        container_category = ProductionPlanningDebugService.get_container_category_for_org(
-            getattr(current_user, "organization_id", None)
+        container_category = (
+            ProductionPlanningDebugService.get_container_category_for_org(
+                getattr(current_user, "organization_id", None)
+            )
         )
         all_containers = (
             ProductionPlanningDebugService.list_org_container_options(
