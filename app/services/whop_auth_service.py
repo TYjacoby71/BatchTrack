@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates user/org lookup + persistence for Whop login flows so auth helper
 code avoids direct model queries and commits.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

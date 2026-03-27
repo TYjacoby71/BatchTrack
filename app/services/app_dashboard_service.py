@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates dashboard route data access and transaction reset helpers so
 dashboard controllers remain transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

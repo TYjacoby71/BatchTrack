@@ -3,6 +3,9 @@
 Synopsis:
 Moves debug permission/tier queries out of debug blueprint routes so route
 handlers remain transport-only.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

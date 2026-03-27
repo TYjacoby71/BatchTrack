@@ -3,6 +3,9 @@
 Synopsis:
 Owns subscription-tier route persistence and query operations so
 `app/blueprints/developer/subscription_tiers.py` remains transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

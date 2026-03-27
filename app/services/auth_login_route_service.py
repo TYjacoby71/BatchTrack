@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates auth login-route data/session access so
 `auth/login_routes.py` stays transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

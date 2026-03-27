@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates quick-add ingredient lookup/create persistence so AJAX recipe routes
 remain transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

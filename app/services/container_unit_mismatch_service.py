@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates recipe/container lookup and yield update persistence for container
 unit-mismatch drawer routes so handlers stay transport-only.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

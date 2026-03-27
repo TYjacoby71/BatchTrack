@@ -3,6 +3,9 @@
 Synopsis:
 Owns reference-route persistence/query operations so
 `app/blueprints/developer/views/reference_routes.py` remains transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

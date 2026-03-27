@@ -3,6 +3,9 @@
 Synopsis:
 Owns global-link drawer data access and linking mutations so drawer routes can
 remain transport-only.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

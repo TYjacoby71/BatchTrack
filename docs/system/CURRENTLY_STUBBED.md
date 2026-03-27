@@ -1,8 +1,13 @@
 # Currently Stubbed and Placeholder Implementations
 
+## Synopsis
 This document consolidates stubs, placeholders, no-ops, and partially implemented areas across the app.
-
 Audit status: refreshed from repository scan on 2026-03-20.
+
+## Glossary
+- **Stubbed**: Code path present but intentionally non-functional or incomplete.
+- **Partial**: Feature path with production behavior in some branches but gaps in others.
+- **No-op**: Compatibility shim that intentionally performs no state mutation.
 
 ## Integrations
 

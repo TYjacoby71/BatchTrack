@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates settings route data/session access so `settings/routes.py`
 stays transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

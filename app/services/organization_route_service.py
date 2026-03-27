@@ -3,6 +3,9 @@
 Synopsis:
 Provides query/session helpers for organization blueprint routes so route
 handlers avoid direct ORM/session ownership.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

@@ -3,6 +3,9 @@
 Synopsis:
 Owns global-item route persistence/query operations so
 `app/blueprints/developer/views/global_item_routes.py` can stay transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates organization-scoped tag read/write operations so route handlers
 remain transport-focused and avoid direct persistence calls.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

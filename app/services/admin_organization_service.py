@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates admin-only organization and user lookup operations so admin
 blueprint routes avoid direct persistence access.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

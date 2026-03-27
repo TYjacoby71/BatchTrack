@@ -3,6 +3,9 @@
 Synopsis:
 Owns expiration-related ORM/scoped queries and transaction helpers so
 `app/blueprints/expiration/services.py` can focus on expiration rules.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

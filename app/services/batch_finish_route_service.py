@@ -3,6 +3,9 @@
 Synopsis:
 Owns batch-finish route query/session operations so
 `app/blueprints/batches/finish_batch.py` can stay orchestration-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

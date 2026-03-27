@@ -3,6 +3,9 @@
 Synopsis:
 Provides organization-scoped FIFO validation lookups so admin debug routes can
 avoid direct model queries.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

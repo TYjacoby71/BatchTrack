@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates OAuth-related user lookup and persistence operations so auth route
 handlers avoid direct query/session usage for these paths.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

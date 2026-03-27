@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates reservation list/detail queries and lot-lookup enrichment so
 reservation routes avoid direct persistence access.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

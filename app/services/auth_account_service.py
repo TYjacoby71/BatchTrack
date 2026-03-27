@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates auth/account lookup and token persistence flows so route handlers
 avoid direct query/session usage for verification, reset, and onboarding paths.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

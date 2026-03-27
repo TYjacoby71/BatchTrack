@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates organization/user scoped lookups used by drawer endpoints so
 route handlers avoid direct session/model access for common resolution paths.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

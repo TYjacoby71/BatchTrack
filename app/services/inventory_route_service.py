@@ -3,6 +3,9 @@
 Synopsis:
 Owns inventory route query/session operations so
 `app/blueprints/inventory/routes.py` can stay transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

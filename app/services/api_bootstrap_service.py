@@ -3,6 +3,9 @@
 Synopsis:
 Centralizes read/query helpers used by API bootstrap and lookup routes so the
 blueprint layer stays transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

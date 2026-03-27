@@ -3,6 +3,9 @@
 Synopsis:
 Provides recipe resolution and ownership normalization for export routes so
 controller code avoids direct session/query access.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

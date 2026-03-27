@@ -3,6 +3,9 @@
 Synopsis:
 Moves batch list preference reads/writes behind a service boundary so batch
 routes avoid direct model/session persistence.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

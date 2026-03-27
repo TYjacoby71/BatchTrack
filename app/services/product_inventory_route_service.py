@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates SKU and lot data/session access used by
 `products/product_inventory_routes.py` so routes stay transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

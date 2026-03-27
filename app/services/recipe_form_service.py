@@ -3,6 +3,9 @@
 Synopsis:
 Builds recipe form payloads (inventory, units, categories) so blueprint helper
 code avoids direct query/session access.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

@@ -2,6 +2,9 @@
 
 Synopsis:
 Encapsulates recipe/container debug data retrieval for production planning routes.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

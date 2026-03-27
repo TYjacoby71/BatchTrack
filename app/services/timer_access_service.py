@@ -3,6 +3,9 @@
 Synopsis:
 Provide scoped batch/timer lookup helpers used by timer routes so controller
 code avoids direct model queries and persistence calls.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

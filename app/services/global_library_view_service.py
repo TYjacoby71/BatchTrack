@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates global-library detail/save/stats data lookups so
 `global_library/routes.py` stays transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

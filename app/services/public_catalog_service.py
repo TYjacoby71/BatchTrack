@@ -3,6 +3,9 @@
 Synopsis:
 Owns public unit listing and global-item search query/payload shaping so
 `api/public.py` routes remain transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

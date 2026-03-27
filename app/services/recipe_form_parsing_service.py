@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates DB-backed helpers used by `recipes/form_parsing.py` so form parsing
 stays focused on payload transformation.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

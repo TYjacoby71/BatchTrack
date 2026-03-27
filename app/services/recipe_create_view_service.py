@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates data-access helpers used by recipe create/edit/import routes so
 controllers stay transport-focused.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations

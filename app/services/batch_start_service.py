@@ -3,6 +3,9 @@
 Synopsis:
 Encapsulates recipe lookup for start-batch flows so route handlers avoid direct
 model/session access when resolving the source recipe.
+
+Glossary:
+- Module boundary: Defines the ownership scope and responsibilities for this module.
 """
 
 from __future__ import annotations
