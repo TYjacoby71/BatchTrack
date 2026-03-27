@@ -158,7 +158,7 @@ Ordered checklist of fixes required before BatchTrack can safely serve real cust
 - [x] Normalize invalid `user_type` usage (`team_member` writes and `organization_owner` user_type checks)
 - [x] Remove route/service authorization via persona or role-name checks where permission gates already exist
 - [x] Migrate template visibility checks from `has_role(...)`/`user_type` to permission-driven context
-- [ ] Retire legacy auth decorators/shims after callsites are migrated (`role_required`, `tier_required`, owner/system wrappers)
+- [x] Retire legacy auth decorators/shims after callsites are migrated (`role_required`, `tier_required`, owner/system wrappers)
 
 ---
 

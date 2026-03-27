@@ -16,7 +16,6 @@ from typing import Iterable
 from urllib.parse import urlparse
 
 from flask import (
-    abort,
     current_app,
     flash,
     g,
@@ -29,7 +28,6 @@ from flask import (
 )
 from flask_login import current_user
 from markupsafe import Markup, escape
-from werkzeug.exceptions import Forbidden
 
 logger = logging.getLogger(__name__)
 
@@ -384,125 +382,6 @@ def any_permission_required(*permission_names):
             return f(*args, **named_args)
 
         return _record_required_permissions(decorated_function, permission_names)
-
-    return decorator
-
-
-def tier_required(min_tier: str):
-    """
-    Decorator requiring minimum subscription tier
-    Note: This is now deprecated in favor of permission-based access control.
-    Use require_permission() instead for specific feature gating.
-    """
-
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **named_args):
-            # Check if this should return JSON (API endpoints)
-            wants_json_response = wants_json()
-
-            # Check authentication first, with JSON-aware response
-            if not current_user.is_authenticated:
-                if wants_json_response:
-                    return jsonify(error="Authentication required"), 401
-                # For web requests, let Flask-Login handle the redirect
-                return current_app.login_manager.unauthorized()
-
-            org = getattr(current_user, "organization", None)
-            if not org:
-                if wants_json_response:
-                    return jsonify(error="no_organization"), 403
-                raise Forbidden("No organization found.")
-
-            # Simple tier check - just verify they have a valid tier
-            # For more sophisticated access control, use permission-based decorators
-            if not org.tier:
-                if wants_json_response:
-                    return jsonify(error="no_tier"), 403
-                raise Forbidden("No subscription tier assigned.")
-
-            # Exempt organizations have access to everything
-            if org.tier.name == "Exempt Plan":
-                return f(*args, **named_args)
-
-            # For specific tier requirements, check the tier name directly
-            if min_tier and org.tier.name != min_tier:
-                if wants_json_response:
-                    return (
-                        jsonify(
-                            error="tier_forbidden",
-                            required=min_tier,
-                            current=org.tier.name,
-                        ),
-                        403,
-                    )
-                raise Forbidden(f"Requires {min_tier} tier.")
-
-            return f(*args, **named_args)
-
-        return decorated_function
-
-    return decorator
-
-
-def role_required(*roles):
-    """
-    Decorator to require specific role names.
-
-    This is retained for legacy callsites that still express role constraints
-    directly. Prefer permission-based decorators for new routes.
-    """
-    normalized_roles = {
-        str(getattr(role, "value", role)).strip().lower() for role in roles if role
-    }
-
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **named_args):
-            if current_app.config.get("SKIP_PERMISSIONS"):
-                return f(*args, **named_args)
-
-            if not current_user.is_authenticated:
-                if wants_json():
-                    return jsonify({"error": "Authentication required"}), 401
-                return current_app.login_manager.unauthorized()
-
-            if not normalized_roles:
-                return f(*args, **named_args)
-
-            try:
-                active_roles = current_user.get_active_roles()
-            except Exception:
-                logger.warning(
-                    "Unable to resolve active roles for user %s during role_required.",
-                    getattr(current_user, "id", None),
-                    exc_info=True,
-                )
-                active_roles = []
-
-            active_role_names = {
-                (getattr(role, "name", "") or "").strip().lower()
-                for role in active_roles
-                if getattr(role, "is_active", True)
-            }
-
-            if active_role_names.intersection(normalized_roles):
-                return f(*args, **named_args)
-
-            if wants_json():
-                return (
-                    jsonify(
-                        {
-                            "error": "role_forbidden",
-                            "required_roles": sorted(normalized_roles),
-                        }
-                    ),
-                    403,
-                )
-            flash("You do not have the required role to access this page.", "error")
-            return _redirect_back()
-
-        return decorated_function
 
     return decorator
 
@@ -1108,29 +987,6 @@ class FeatureGate:
         return True, "No limits defined"
 
 
-# Legacy compatibility functions
-def require_permission_with_org_scoping(permission_name, require_org_scoping=True):
-    """Legacy compatibility - use require_permission instead"""
-    return require_permission(permission_name)
-
-
 def require_organization_scoping(f):
-    """Legacy compatibility - organization scoping is handled automatically"""
+    """Compatibility passthrough for legacy org-scoping imports."""
     return f
-
-
-def require_system_admin(f):
-    """Legacy compatibility - use require_permission('dev.system_admin') instead"""
-    return require_permission("dev.system_admin")(f)
-
-
-def require_organization_owner(f):
-    """Legacy compatibility - check in the function itself"""
-
-    @wraps(f)
-    def decorated_function(*args, **named_args):
-        if not is_organization_owner():
-            abort(403)
-        return f(*args, **named_args)
-
-    return decorated_function

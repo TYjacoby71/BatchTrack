@@ -28,11 +28,11 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
    - **Parallel action:** after each extraction commit, immediately update checklist and report counts in the same commit.
    - **Status:** open
 
-5. **Permission-gate policy drift inventory now tracked but not remediated**
+5. **Permission-gate policy drift inventory now tracked and remediated**
    - **Surface:** `docs/refactor/2026-03-26-permission-gate-offenders-checklist.md`, `app/blueprints/organization/routes.py`, `app/blueprints/auth/permissions.py`, `app/services/organization_route_service.py`, template auth surfaces.
-   - **Flag:** route permission decorator coverage is clean, but persona/role-name gates and invalid `user_type` usage (`team_member`, `organization_owner`) remain as policy-drift offenders.
-   - **Parallel action:** execute the new checklist in fix-order batches (normalize `user_type` invariants first, then remove duplicated persona/role-name auth gates, then template migration).
-   - **Status:** open
+   - **Flag:** route/template policy drift items were tracked and then remediated through checklist sections A/B/C, with section D legacy wrappers retired after callsite audit.
+   - **Parallel action:** keep checklist + parent checkbox synchronization in the same commit for any new offenders discovered later.
+   - **Status:** closed
 
 6. **Permission checklist parent-checkbox drift from sub-item completion**
    - **Surface:** `docs/refactor/2026-03-26-permission-gate-offenders-checklist.md`

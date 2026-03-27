@@ -137,12 +137,12 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
 
 ### D) Legacy decorator/shim offenders (deprecation track)
 
-- [ ] `app/utils/permissions.py`
-  - `tier_required(...)`
-  - `role_required(...)`
-  - `require_permission_with_org_scoping(...)`
-  - `require_system_admin(...)`
-  - `require_organization_owner(...)`
+- [x] `app/utils/permissions.py`
+  - [x] `tier_required(...)`
+  - [x] `role_required(...)`
+  - [x] `require_permission_with_org_scoping(...)`
+  - [x] `require_system_admin(...)`
+  - [x] `require_organization_owner(...)`
 
 ---
 
