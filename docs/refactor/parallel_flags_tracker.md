@@ -34,7 +34,23 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
    - **Parallel action:** execute the new checklist in fix-order batches (normalize `user_type` invariants first, then remove duplicated persona/role-name auth gates, then template migration).
    - **Status:** open
 
+6. **Permission checklist parent-checkbox drift from sub-item completion**
+   - **Surface:** `docs/refactor/2026-03-26-permission-gate-offenders-checklist.md`
+   - **Flag:** multiple section A/B file entries had completed sub-bullets but remained unchecked at file level, obscuring true remaining scope.
+   - **Parallel action:** in every remediation loop, update both sub-bullets and parent file checkbox state; keep unresolved files unchecked only when at least one offender bullet remains open.
+   - **Status:** open
+
+7. **Settings affiliate UI feature gate may be too strict after persona removal**
+   - **Surface:** `app/blueprints/settings/routes.py`, `app/templates/settings/index.html`
+   - **Flag:** affiliate tab visibility now requires both feature flag + org context + permissions; developer support views without org context may lose expected visibility.
+   - **Parallel action:** decide policy explicitly (support-only visibility without org context vs strict org-context requirement), then codify in checklist and template context rules.
+   - **Status:** open
+
 ## Recently closed flags
+
+- **Route-level persona branch drift reduced across priority offender set**
+  - **Closed by:** replacing direct persona-string route branches with permission/context-based decisions across conversion, inventory, recipes form/detail, settings, dashboard, core landing, API scope resolver, products permission import path, and verification redirects.
+  - **Routes/services affected:** `app/blueprints/conversion/routes.py`, `app/blueprints/inventory/routes.py`, `app/blueprints/recipes/form_templates.py`, `app/blueprints/recipe_library/routes.py`, `app/blueprints/settings/routes.py`, `app/blueprints/dashboard/routes.py`, `app/blueprints/core/routes.py`, `app/blueprints/api/routes.py`, `app/blueprints/products/products.py`, `app/blueprints/auth/verification_routes.py`, `app/services/affiliate_service.py`, `app/blueprints/developer/decorators.py`, `app/blueprints/global_library/routes.py`
 
 - **Inventory routes retained direct ORM/session access across item-detail/global-link/list/view/archive/restore/debug/bulk-update flows**
   - **Closed by:** moving inventory/global-item/category/unit/lot/history lookups and route-level commit/rollback ownership behind `app/services/inventory_route_service.py`.

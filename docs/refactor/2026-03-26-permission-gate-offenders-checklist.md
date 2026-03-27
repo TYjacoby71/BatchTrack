@@ -53,6 +53,15 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - Removed `user_type=="organization_owner"` checks in org routes; replaced with
     owner helper predicates.
 
+- [x] **Phases 2-15 complete (current pass):** route-level persona drift reduced
+  across the main offender set (`global_library`, `developer/decorators`,
+  `affiliate_service`, `inventory`, `conversion`, `recipes/form_templates`,
+  `recipe_library`, `settings`, `dashboard`, `core`, `api`, `products`,
+  `auth/verification_routes`).
+  - Remaining route/service policy cleanup is concentrated in
+    `organization/routes.py`, `organization_route_service.py`,
+    `auth/permissions.py`, and `user_invite_service.py`.
+
 - [ ] `app/blueprints/organization/routes.py`
   - Repeated permission duplication with `user_type`/owner checks in routes already permission-decorated.
   - [x] Invalid `user_type` values/branches: `"organization_owner"` checks and `"team_member"` assignment.
@@ -67,49 +76,49 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
   - [x] Role-management authority split by `current_user.user_type` normalized through local helper checks.
   - [x] System-role and cross-org update branches keyed on persona string normalized through local helper checks.
 
-- [ ] `app/blueprints/global_library/routes.py`
+- [x] `app/blueprints/global_library/routes.py`
   - [x] Manual permission metadata tagging (`_tag_required_permissions`) + inline `has_permission(...)` path replaced with canonical decorator usage.
 
-- [ ] `app/blueprints/developer/decorators.py`
+- [x] `app/blueprints/developer/decorators.py`
   - [x] `require_developer_permission(...)` now delegates to canonical `permission_required(...)` without extra route-local persona gate logic.
 
 - [ ] `app/services/user_invite_service.py`
   - Role-name authorization check (`developer`/`organization_owner`) instead of permission-model authority.
   - [x] Invalid `user_type="team_member"` assignment.
 
-- [ ] `app/services/affiliate_service.py`
+- [x] `app/services/affiliate_service.py`
   - [x] Customer-only gate via `user.user_type != "customer"` replaced with organization-context checks.
 
 ### B) Route-level persona-gate drift (permission bypass/duplication risk)
 
-- [ ] `app/blueprints/inventory/routes.py`
+- [x] `app/blueprints/inventory/routes.py`
   - [x] `can_edit_inventory_item(...)` now uses effective organization context instead of blanket developer bypass.
 
-- [ ] `app/blueprints/conversion/routes.py`
+- [x] `app/blueprints/conversion/routes.py`
   - [x] Unit/mapping management branches now use effective organization context helper instead of inline developer persona conditionals.
 
-- [ ] `app/blueprints/recipes/form_templates.py`
+- [x] `app/blueprints/recipes/form_templates.py`
   - [x] Sharing/purchase controls now rely on permission entitlements only (developer persona bypass removed).
 
-- [ ] `app/blueprints/recipe_library/routes.py`
+- [x] `app/blueprints/recipe_library/routes.py`
   - [x] `reveal_details` now requires explicit support permission (`dev.all_organizations`) plus selected-org context.
 
-- [ ] `app/blueprints/settings/routes.py`
+- [x] `app/blueprints/settings/routes.py`
   - [x] Affiliate tab visibility and profile save redirects now use permission/context checks (persona branches removed).
 
-- [ ] `app/blueprints/dashboard/routes.py`
+- [x] `app/blueprints/dashboard/routes.py`
   - [x] Dashboard/fault-log organization selection now uses effective organization context helper (no inline developer persona route branches).
 
-- [ ] `app/blueprints/core/routes.py`
+- [x] `app/blueprints/core/routes.py`
   - [x] Authenticated landing-route split now uses permission check (`dev.dashboard`) instead of persona string.
 
-- [ ] `app/blueprints/api/routes.py`
+- [x] `app/blueprints/api/routes.py`
   - [x] Organization scope resolver now uses `get_effective_organization_id()` helper instead of inline persona branch.
 
-- [ ] `app/blueprints/products/products.py`
+- [x] `app/blueprints/products/products.py`
   - [x] Fallback import path removed; canonical `require_permission` import is now required.
 
-- [ ] `app/blueprints/auth/verification_routes.py`
+- [x] `app/blueprints/auth/verification_routes.py`
   - [x] Post-verify redirect now uses permission-based routing (`dev.dashboard`) instead of persona string.
 
 ### C) Template authorization offenders (UX policy drift)
