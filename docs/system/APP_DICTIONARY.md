@@ -227,6 +227,8 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **Extensions Registry** → Shared app extensions (see `app/extensions.py`)
 - **Security Middleware Package** → Request-layer enforcer split into registry/common/guards modules for permission/bot checks, billing decision application, and optional edge-origin shared-header enforcement to reject direct-to-origin bypass requests when enabled (see `app/middleware/registry.py` and `app/middleware/guards.py`)
 - **SessionService** → Centralized session-token lifecycle helper for rotation, retrieval, and context-safe clearing behavior (see `app/services/session_service.py`)
+- **OAuthUserService** → OAuth identity persistence helper that resolves users by email, links provider identity fields, and records login timestamps for callback flows (see `app/services/oauth_user_service.py`)
+- **OrganizationRouteService** → Organization-dashboard service boundary that owns organization role/user/tier data access and transaction helpers for organization routes (see `app/services/organization_route_service.py`)
 - **JSON Store Utilities** → Atomic JSON read/write helpers with advisory file-lock support and safe default fallbacks (see `app/utils/json_store.py`)
 - **Inventory Event Code Generator** → Prefix-driven event/lot code generation and validation utilities using compact base36 suffixes (see `app/utils/inventory_event_code_generator.py`)
 - **Duration Humanization Utilities** → Day-count formatting helpers that convert numeric durations into friendly month/year display strings (see `app/utils/duration_utils.py`)
@@ -320,6 +322,9 @@ This is the living glossary for BatchTrack. It is organized by application layer
 - **SEO Guide (Metadata Prompt)** → Maker-first metadata rules for titles/descriptions (see `docs/system/SEO_GUIDE.md`)
 - **PR Documentation Guard** → Automated PR validator for synopsis/glossary, functional-unit headers, dictionary coverage, and changelog alignment (see `scripts/validate_pr_documentation.py` and `.github/workflows/documentation-guard.yml`)
 - **RouteAccessConfig Public Allow-list** → Middleware public endpoint/path registry used to keep routes like `/pricing` accessible without auth (see `app/route_access.py`)
+- **Boundary Deep Dive Report (2026-03-20)** → Baseline boundary gradecard and fix-order workstreams used to track architectural remediation progress (see `docs/refactor/2026-03-20-boundary-deep-dive-report.md`)
+- **Permission Gate Offenders Checklist (2026-03-26)** → Canonical offender inventory and A/B/C/D check-off tracker for permission-boundary remediation (see `docs/refactor/2026-03-26-permission-gate-offenders-checklist.md`)
+- **Parallel Flags Tracker (Boundary Program)** → Running log of non-blocking risks discovered during boundary/permission refactors, including open-vs-closed parallel hardening items (see `docs/refactor/parallel_flags_tracker.md`)
 - **Landing Route Metadata Context** → Public landing routes set maker-first `page_title`, `page_description`, `canonical_url`, and OG image context consumed by `layout.html` (see `app/blueprints/landing/routes.py`)
 - **Soap Static Asset Manifest Outputs** → Hashed soap bundle map and generated runtime bundles emitted by the scoped asset build pipeline for production cache-busting (see `app/static/dist/manifest.json`, `app/static/dist/js/tools/soaps/soap_tool_bundle_entry-FCLB3YPR.js`, and `app/static/dist/js/tools/soaps/soap_tool_bundle_entry-WSLX7LVI.js`)
 - **flask update-permissions** → Sync permission catalog
