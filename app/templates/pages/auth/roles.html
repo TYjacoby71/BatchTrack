@@ -39,7 +39,7 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            {% if not role.is_system_role or current_user.user_type == 'developer' %}
+                            {% if not role.is_system_role or has_permission(current_user, 'dev.dashboard') %}
                             <button class="btn btn-outline-primary btn-sm" onclick="editRole({{ role.id }})">
                                 <i class="fas fa-edit"></i> Edit
                             </button>

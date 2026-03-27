@@ -46,6 +46,12 @@ Purpose: track non-blocking risks discovered while extracting blueprint boundary
    - **Parallel action:** decide policy explicitly (support-only visibility without org context vs strict org-context requirement), then codify in checklist and template context rules.
    - **Status:** open
 
+8. **Template permission/context variables lack a single canonical naming contract**
+   - **Surface:** `app/templates/components/layout/*.html`, `app/templates/settings/*.html`, `app/templates/pages/public/*.html`
+   - **Flag:** template authorization now uses permission/context checks, but variable names (`dev_dashboard_access`, `org_dashboard_visible`, `help_nav_visible`) are route/template-local and can drift without shared context helpers.
+   - **Parallel action:** define and expose canonical template auth context keys in one place (for example `app/template_context.py`) and migrate templates to those keys incrementally.
+   - **Status:** open
+
 ## Recently closed flags
 
 - **Route-level persona branch drift reduced across priority offender set**

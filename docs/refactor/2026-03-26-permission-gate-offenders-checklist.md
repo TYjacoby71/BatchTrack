@@ -123,19 +123,19 @@ Single source-of-truth checklist for permission-boundary offenders. Use this fil
 
 ### C) Template authorization offenders (UX policy drift)
 
-- [ ] `app/templates/settings/index.html`
-- [ ] `app/templates/components/layout/navbar_authenticated_customer.html`
-- [ ] `app/templates/components/layout/navbar.html`
-- [ ] `app/templates/layout.html`
-- [ ] `app/templates/pages/auth/roles.html`
-- [ ] `app/templates/settings/components/affiliate_tab.html`
-- [ ] `app/templates/settings/components/billing_tab.html`
-- [ ] `app/templates/components/layout/navbar_guest.html`
-- [ ] `app/templates/components/layout/navbar_authenticated_developer.html`
-- [ ] `app/templates/components/shared/public_marketing_header.html`
-- [ ] `app/templates/pages/public/pricing.html`
-- [ ] `app/templates/pages/public/landing_hormozi.html`
-- [ ] `app/templates/pages/public/landing_robbins.html`
+- [x] `app/templates/settings/index.html`
+- [x] `app/templates/components/layout/navbar_authenticated_customer.html`
+- [x] `app/templates/components/layout/navbar.html`
+- [x] `app/templates/layout.html`
+- [x] `app/templates/pages/auth/roles.html`
+- [x] `app/templates/settings/components/affiliate_tab.html`
+- [x] `app/templates/settings/components/billing_tab.html`
+- [x] `app/templates/components/layout/navbar_guest.html`
+- [x] `app/templates/components/layout/navbar_authenticated_developer.html`
+- [x] `app/templates/components/shared/public_marketing_header.html`
+- [x] `app/templates/pages/public/pricing.html`
+- [x] `app/templates/pages/public/landing_hormozi.html`
+- [x] `app/templates/pages/public/landing_robbins.html`
 
 ### D) Legacy decorator/shim offenders (deprecation track)
 

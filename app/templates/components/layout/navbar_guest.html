@@ -2,8 +2,8 @@
 Synopsis:
 Guest navigation with optional public marketing header component.
 #}
-{% set affiliate_nav_visible = is_feature_enabled('FEATURE_AFFILIATE_PROGRAM_UI') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
-{% set help_nav_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
+{% set affiliate_nav_visible = is_feature_enabled('FEATURE_AFFILIATE_PROGRAM_UI') %}
+{% set help_nav_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') %}
 {% if use_public_header %}
 {% set public_header_is_homepage = public_header_is_homepage if public_header_is_homepage is defined else false %}
 {% set public_header_signup_source = public_header_signup_source if public_header_signup_source is defined else none %}

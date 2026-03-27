@@ -25,7 +25,7 @@ Glossary:
       {% set public_shell_full_bleed = requested_public_full_bleed and public_shell_mode %}
       {% set shell_main_id = shell_main_id if shell_main_id is defined else none %}
       {% set shell_main_extra_class = shell_main_extra_class if shell_main_extra_class is defined else '' %}
-      {% set customer_feedback_bubble_enabled = is_feature_enabled('FEATURE_CUSTOMER_FEEDBACK_BUBBLE') and not (current_user.is_authenticated and current_user.user_type == 'developer') %}
+      {% set customer_feedback_bubble_enabled = is_feature_enabled('FEATURE_CUSTOMER_FEEDBACK_BUBBLE') and not (current_user.is_authenticated and has_permission(current_user, 'dev.dashboard')) %}
       {% set requested_lightweight_public_shell = lightweight_public_shell if lightweight_public_shell is defined else false %}
       {% set lightweight_public_shell = requested_lightweight_public_shell and public_shell_mode %}
       {% set load_analytics = (load_analytics if load_analytics is defined else true) if public_shell_mode else true %}
