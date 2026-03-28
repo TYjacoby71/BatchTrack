@@ -14,6 +14,7 @@ from flask_login import current_user, login_required
 
 from app.models import Role, User
 from app.services.affiliate_service import AffiliateService
+from app.services.integrations.connection_service import IntegrationConnectionService
 from app.services.organization_route_service import OrganizationRouteService
 from app.utils.permissions import (
     any_permission_required,
@@ -145,6 +146,19 @@ def dashboard():
         if affiliate_tab_visible
         else None
     )
+    pos_integrations_enabled = bool(
+        is_feature_enabled("FEATURE_ECOMMERCE_INTEGRATIONS")
+        and (
+            has_permission(current_user, "integrations.shopify")
+            or has_permission(current_user, "integrations.marketplace")
+            or has_permission(current_user, "integrations.api_access")
+        )
+    )
+    pos_providers = (
+        IntegrationConnectionService.build_pos_provider_cards(org_id=org_id)
+        if pos_integrations_enabled
+        else []
+    )
 
     # Debug: Print to console to verify data
     print(f"Permission categories: {list(permission_categories.keys())}")
@@ -167,7 +181,31 @@ def dashboard():
         affiliate_context=affiliate_context,
         affiliate_tab_visible=affiliate_tab_visible,
         affiliate_payout_account=affiliate_payout_account,
+        pos_marketplaces_tab_visible=pos_integrations_enabled,
+        pos_providers=pos_providers,
     )
+
+
+@organization_bp.route("/integrations/status")
+@login_required
+@require_permission("organization.view")
+def integration_status():
+    """Return POS/marketplace integration status for the current organization."""
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+
+    if not is_feature_enabled("FEATURE_ECOMMERCE_INTEGRATIONS"):
+        return (
+            jsonify({"success": False, "error": "POS integrations feature is disabled"}),
+            403,
+        )
+
+    summary = IntegrationConnectionService.get_connection_summary(org_id=org_id)
+    onboarding = IntegrationConnectionService.get_onboarding_summary(org_id=org_id)
+    return jsonify({"success": True, "connections": summary, "onboarding": onboarding})
 
 
 @organization_bp.route("/affiliate-dashboard")

@@ -90,6 +90,13 @@ _export(
         ("batchbot_usage", "BatchBotUsage", None),
         ("batchbot_credit", "BatchBotCreditBundle", None),
         ("recipe_marketplace", "RecipeModerationEvent", None),
+        # Integrations
+        ("integration", "IntegrationConnection", None),
+        ("integration", "IntegrationLocationMap", None),
+        ("integration", "IntegrationSkuMap", None),
+        ("integration", "IntegrationWebhookInbox", None),
+        ("integration", "IntegrationSyncEvent", None),
+        ("integration", "IntegrationOnboardingState", None),
     ]
 )
 

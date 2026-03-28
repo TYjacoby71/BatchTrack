@@ -403,6 +403,17 @@ Mitigation: split event records per operation and require clear retry state mach
 
 ## 10) Implementation sequence (report to follow during build)
 
+## 10.0 Progress checklist (live)
+
+- [x] Phase A model foundation: integration connection/mapping/inbox/onboarding/location tables added.
+- [x] Phase A service scaffolding: integration connection/status service added.
+- [x] Phase B shell start: feature-flag-gated POS & Marketplaces tab + org status endpoint added.
+- [ ] Phase B wizard endpoints and state transitions.
+- [ ] Phase C SKU mapping UI/API and per-SKU location selectors.
+- [ ] Phase D Shopify OAuth + sync loop.
+- [ ] Phase E Etsy parity.
+- [ ] Phase F reconciliation hardening.
+
 ## Phase A — Foundations (DB + service scaffolding)
 
 - Add integration connection/mapping/event models + migration.
@@ -483,4 +494,18 @@ Mitigation: split event records per operation and require clear retry state mach
 - Do not let external disconnect/remove delete BatchTrack records.
 - Do not attempt one-shot “all marketplaces at once” abstraction before Shopify MVP works end-to-end.
 - Do not bypass canonical inventory adjustment service for marketplace writes.
+
+---
+
+## 13) Execution checklist progress (live)
+
+- [x] Phase A foundations: integration core models + migration created.
+- [x] Phase A foundations: integration service scaffolding created.
+- [x] Phase B shell start: feature-flag gated `POS & Marketplaces` organization tab added.
+- [x] Phase B shell start: basic organization integration status endpoint added.
+- [ ] Phase B complete: onboarding wizard interaction wiring.
+- [ ] Phase C: SKU mapping UI and per-SKU location selector.
+- [ ] Phase D: Shopify sync + webhook processing.
+- [ ] Phase E: Etsy sync + webhook processing.
+- [ ] Phase F: reconciliation jobs and hardening.
 

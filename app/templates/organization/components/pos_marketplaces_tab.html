@@ -1,0 +1,59 @@
+<div class="row">
+    <div class="col-12">
+        <div class="mb-3">
+            <h5><i class="fas fa-store"></i> POS & Marketplaces</h5>
+            <p class="text-muted">
+                Connect your organization to Shopify or Etsy, configure mappings, and
+                resume onboarding where you left off.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    {% for provider in pos_providers %}
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">{{ provider.label }}</h6>
+                <span class="badge
+                    {% if provider.status == 'connected' %}bg-success
+                    {% elif provider.status == 'error' %}bg-danger
+                    {% elif provider.status == 'paused' %}bg-warning text-dark
+                    {% else %}bg-secondary{% endif %}">
+                    {{ provider.status|capitalize }}
+                </span>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">{{ provider.description }}</p>
+                <ul class="small text-muted mb-3">
+                    <li>Connection present: {{ "Yes" if provider.connected else "No" }}</li>
+                    <li>Onboarding stage: {{ provider.onboarding_stage }}</li>
+                    <li>Mapped SKUs: {{ provider.mapped_skus }}</li>
+                    <li>Tracked locations: {{ provider.location_count }}</li>
+                    <li>Last successful sync: {{ provider.last_successful_sync or "Never" }}</li>
+                    <li>Failed sync events: {{ provider.failed_sync_events }}</li>
+                </ul>
+                <div class="d-flex gap-2">
+                    <button
+                        class="btn btn-primary btn-sm"
+                        type="button"
+                        disabled
+                        title="Wizard wiring lands in next implementation batch">
+                        <i class="fas fa-cog"></i> Configure
+                    </button>
+                    {% if provider.onboarding_stage and provider.onboarding_stage != "not_started" %}
+                    <button
+                        class="btn btn-outline-secondary btn-sm"
+                        type="button"
+                        disabled
+                        title="Resume wiring lands in next implementation batch">
+                        <i class="fas fa-play"></i> Resume
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
