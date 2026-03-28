@@ -424,19 +424,19 @@ Mitigation: split event records per operation and require clear retry state mach
 
 ## Phase B — UI onboarding + org dashboard tab
 
-- Add `POS & Marketplaces` tab to organization dashboard.
-- Add configure button and wizard shell.
-- Add org-level connection status endpoints.
-- Add onboarding state persistence + resume UX.
+- [x] Add `POS & Marketplaces` tab to organization dashboard.
+- [x] Add configure button and wizard shell.
+- [x] Add org-level connection status endpoints.
+- [x] Add onboarding state persistence + resume UX.
 
 **Exit criteria:** Customer can complete connection flow in UI and see connected status.
 
 ## Phase C — SKU mapping + sync toggles
 
-- Add inventory/SKU sync checklist.
-- Persist per-SKU provider mapping and sync flags.
-- Add bulk enable/disable operations.
-- Add per-SKU location selector and organization location management.
+- [ ] Add inventory/SKU sync checklist.
+- [x] Persist per-SKU provider mapping and sync flags.
+- [ ] Add bulk enable/disable operations.
+- [x] Add per-SKU location selector and organization location management.
 
 **Exit criteria:** Customer can select exactly which SKUs sync.
 

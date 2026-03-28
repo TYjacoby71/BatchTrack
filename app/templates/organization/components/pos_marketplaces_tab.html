@@ -38,16 +38,14 @@
                     <button
                         class="btn btn-primary btn-sm"
                         type="button"
-                        disabled
-                        title="Wizard wiring lands in next implementation batch">
+                        onclick="startIntegrationOnboarding('{{ provider.provider }}')">
                         <i class="fas fa-cog"></i> Configure
                     </button>
                     {% if provider.onboarding_stage and provider.onboarding_stage != "not_started" %}
                     <button
                         class="btn btn-outline-secondary btn-sm"
                         type="button"
-                        disabled
-                        title="Resume wiring lands in next implementation batch">
+                        onclick="resumeIntegrationOnboarding('{{ provider.provider }}')">
                         <i class="fas fa-play"></i> Resume
                     </button>
                     {% endif %}
@@ -57,3 +55,149 @@
     </div>
     {% endfor %}
 </div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-map-marker-alt"></i> Integration Locations</h6>
+                <button class="btn btn-sm btn-outline-primary" type="button" onclick="refreshIntegrationLocations()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">
+                    These are provider locations stored for this organization (multi-location V1 foundation).
+                </p>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Provider</th>
+                                <th>Name</th>
+                                <th>External Location ID</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="integrationLocationsTableBody">
+                            <tr>
+                                <td colspan="4" class="text-muted">Loading locations...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function fetchIntegrationStatus() {
+    const response = await fetch('/organization/integrations/status', {
+        method: 'GET',
+        headers: { 'X-CSRFToken': getCSRFToken() }
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to fetch integration status');
+    }
+    return data;
+}
+
+async function fetchIntegrationLocations() {
+    const response = await fetch('/organization/integrations/locations', {
+        method: 'GET',
+        headers: { 'X-CSRFToken': getCSRFToken() }
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to fetch integration locations');
+    }
+    return data.locations || [];
+}
+
+function renderIntegrationLocations(locations) {
+    const body = document.getElementById('integrationLocationsTableBody');
+    if (!body) return;
+    if (!Array.isArray(locations) || locations.length === 0) {
+        body.innerHTML = '<tr><td colspan="4" class="text-muted">No locations synced yet.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = locations.map(location => {
+        const provider = (location.provider || '').toUpperCase();
+        const name = location.provider_location_name || '-';
+        const externalId = location.provider_location_id || '-';
+        const active = location.is_active ? 'Active' : 'Inactive';
+        const activeClass = location.is_active ? 'bg-success' : 'bg-secondary';
+        return `
+            <tr>
+                <td>${provider}</td>
+                <td>${name}</td>
+                <td><code>${externalId}</code></td>
+                <td><span class="badge ${activeClass}">${active}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function refreshIntegrationLocations() {
+    const body = document.getElementById('integrationLocationsTableBody');
+    if (body) {
+        body.innerHTML = '<tr><td colspan="4" class="text-muted">Loading locations...</td></tr>';
+    }
+    try {
+        const locations = await fetchIntegrationLocations();
+        renderIntegrationLocations(locations);
+    } catch (error) {
+        if (body) {
+            body.innerHTML = `<tr><td colspan="4" class="text-danger">${error.message}</td></tr>`;
+        }
+    }
+}
+
+async function startIntegrationOnboarding(provider) {
+    try {
+        const response = await fetch('/organization/integrations/onboarding/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({ provider })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to start onboarding');
+        }
+        notify(`Started ${provider} onboarding at stage: ${data.onboarding.current_stage}`, 'success');
+        setTimeout(() => window.location.reload(), 400);
+    } catch (error) {
+        notify(error.message || 'Failed to start onboarding', 'danger');
+    }
+}
+
+async function resumeIntegrationOnboarding(provider) {
+    try {
+        const response = await fetch('/organization/integrations/onboarding/resume', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({ provider })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to resume onboarding');
+        }
+        notify(`Resumed ${provider} onboarding at stage: ${data.onboarding.current_stage}`, 'success');
+    } catch (error) {
+        notify(error.message || 'Failed to resume onboarding', 'danger');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    refreshIntegrationLocations();
+});
+</script>

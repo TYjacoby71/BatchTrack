@@ -208,6 +208,223 @@ def integration_status():
     return jsonify({"success": True, "connections": summary, "onboarding": onboarding})
 
 
+def _integration_feature_enabled_for_provider(provider: str) -> bool:
+    provider_key = (provider or "").strip().lower()
+    if provider_key == "shopify":
+        return is_feature_enabled("FEATURE_SHOPIFY_INTEGRATION")
+    if provider_key == "etsy":
+        return is_feature_enabled("FEATURE_ETSY_INTEGRATION")
+    return False
+
+
+def _integration_provider_allowed(provider: str) -> tuple[bool, str | None]:
+    provider_key = (provider or "").strip().lower()
+    if provider_key not in {"shopify", "etsy"}:
+        return False, "Unsupported provider"
+    if not is_feature_enabled("FEATURE_ECOMMERCE_INTEGRATIONS"):
+        return False, "POS integrations feature is disabled"
+    if not _integration_feature_enabled_for_provider(provider_key):
+        return False, f"{provider_key.capitalize()} integration feature is disabled"
+    if provider_key == "shopify" and not has_permission(
+        current_user, "integrations.shopify"
+    ):
+        return False, "Missing permission integrations.shopify"
+    if provider_key == "etsy" and not has_permission(
+        current_user, "integrations.marketplace"
+    ):
+        return False, "Missing permission integrations.marketplace"
+    return True, None
+
+
+@organization_bp.route("/integrations/<string:provider>/onboarding/start", methods=["POST"])
+@login_required
+@require_permission("organization.view")
+def start_integration_onboarding(provider: str):
+    """Create or reset onboarding state for a provider."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+
+    payload = request.get_json(silent=True) or {}
+    current_stage = (payload.get("current_stage") or "provider_selection").strip()
+    state = IntegrationConnectionService.upsert_onboarding_state(
+        organization_id=org_id,
+        provider=provider,
+        current_stage=current_stage,
+        status="in_progress",
+        reset_completed=True,
+    )
+    return jsonify({"success": True, "onboarding": state})
+
+
+@organization_bp.route("/integrations/<string:provider>/onboarding/checkpoint", methods=["POST"])
+@login_required
+@require_permission("organization.view")
+def checkpoint_integration_onboarding(provider: str):
+    """Persist onboarding checkpoint payload and optional completed stages."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+
+    payload = request.get_json(silent=True) or {}
+    state = IntegrationConnectionService.update_onboarding_checkpoint(
+        organization_id=org_id,
+        provider=provider,
+        current_stage=payload.get("current_stage"),
+        stage_payload=payload.get("stage_payload"),
+        completed_stages=payload.get("completed_stages"),
+        status=payload.get("status"),
+        mark_completed=bool(payload.get("mark_completed")),
+    )
+    return jsonify({"success": True, "onboarding": state})
+
+
+@organization_bp.route("/integrations/<string:provider>/onboarding/status")
+@login_required
+@require_permission("organization.view")
+def integration_onboarding_status(provider: str):
+    """Return persisted onboarding status for provider."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+    state = IntegrationConnectionService.get_onboarding_state(
+        organization_id=org_id,
+        provider=provider,
+    )
+    if not state:
+        return jsonify({"success": True, "onboarding": None, "provider": provider})
+    return jsonify({"success": True, "onboarding": state, "provider": provider})
+
+
+@organization_bp.route("/integrations/<string:provider>/locations")
+@login_required
+@require_permission("organization.view")
+def integration_locations(provider: str):
+    """List persisted provider locations for org."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+    locations = IntegrationConnectionService.get_location_summary(
+        organization_id=org_id, provider=provider
+    )
+    return jsonify({"success": True, "locations": locations, "provider": provider})
+
+
+@organization_bp.route("/integrations/<string:provider>/locations", methods=["POST"])
+@login_required
+@require_permission("organization.manage_billing")
+def upsert_integration_location(provider: str):
+    """Create/update one integration location mapping for org provider."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+
+    payload = request.get_json(silent=True) or {}
+    external_location_id = (payload.get("external_location_id") or "").strip()
+    if not external_location_id:
+        return (
+            jsonify({"success": False, "error": "external_location_id is required"}),
+            400,
+        )
+    row = IntegrationConnectionService.upsert_location_map(
+        organization_id=org_id,
+        provider=provider,
+        external_location_id=external_location_id,
+        external_location_name=payload.get("external_location_name"),
+        bt_location_key=payload.get("bt_location_key"),
+        is_default=payload.get("is_default"),
+        is_active=payload.get("is_active"),
+    )
+    return jsonify({"success": True, "location": row})
+
+
+@organization_bp.route("/integrations/<string:provider>/sku-mappings")
+@login_required
+@require_permission("products.view")
+def integration_sku_mappings(provider: str):
+    """List SKU mappings for provider."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+    mappings = IntegrationConnectionService.list_sku_mappings(
+        organization_id=org_id, provider=provider
+    )
+    return jsonify({"success": True, "mappings": mappings, "provider": provider})
+
+
+@organization_bp.route("/integrations/<string:provider>/sku-mappings", methods=["POST"])
+@login_required
+@require_permission("products.edit")
+def upsert_integration_sku_mapping(provider: str):
+    """Create/update SKU mapping skeleton record."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+
+    payload = request.get_json(silent=True) or {}
+    inventory_item_id = payload.get("inventory_item_id")
+    if inventory_item_id is None:
+        return jsonify({"success": False, "error": "inventory_item_id is required"}), 400
+    try:
+        inventory_item_id = int(inventory_item_id)
+    except (TypeError, ValueError):
+        return (
+            jsonify({"success": False, "error": "inventory_item_id must be an integer"}),
+            400,
+        )
+
+    mapping = IntegrationConnectionService.upsert_sku_mapping(
+        organization_id=org_id,
+        provider=provider,
+        inventory_item_id=inventory_item_id,
+        external_sku_code=payload.get("external_sku_code"),
+        external_product_id=payload.get("external_product_id"),
+        external_variant_id=payload.get("external_variant_id"),
+        external_listing_id=payload.get("external_listing_id"),
+        integration_location_id=payload.get("integration_location_id"),
+        sync_enabled=payload.get("sync_enabled"),
+        sync_price=payload.get("sync_price"),
+        sync_quantity=payload.get("sync_quantity"),
+        baseline_seed_source=payload.get("baseline_seed_source"),
+    )
+    return jsonify({"success": True, "mapping": mapping})
+
+
 @organization_bp.route("/affiliate-dashboard")
 @login_required
 @any_permission_required("organization.manage_billing", "affiliates.view_org_dashboard")

@@ -137,6 +137,201 @@ class IntegrationConnectionService:
         return default
 
     @staticmethod
+    def get_or_create_onboarding_state(
+        *,
+        org_id: int,
+        provider: str,
+    ) -> IntegrationOnboardingState:
+        normalized_provider = (provider or "").strip().lower()
+        state = IntegrationOnboardingState.query.filter_by(
+            organization_id=org_id,
+            provider=normalized_provider,
+        ).first()
+        if state is None:
+            state = IntegrationOnboardingState(
+                organization_id=org_id,
+                provider=normalized_provider,
+                current_stage="provider_selection",
+                status="in_progress",
+                completed_stages_json=[],
+            )
+            db.session.add(state)
+            db.session.commit()
+        return state
+
+    @staticmethod
+    def update_onboarding_stage(
+        *,
+        org_id: int,
+        provider: str,
+        stage: str,
+        stage_payload: dict[str, Any] | None = None,
+        mark_completed: bool = False,
+    ) -> IntegrationOnboardingState:
+        from app.utils.timezone_utils import TimezoneUtils
+
+        state = IntegrationConnectionService.get_or_create_onboarding_state(
+            org_id=org_id,
+            provider=provider,
+        )
+        normalized_stage = (stage or "").strip() or state.current_stage or "provider_selection"
+        completed = state.completed_stages_json or []
+        if not isinstance(completed, list):
+            completed = []
+        if normalized_stage not in completed:
+            completed.append(normalized_stage)
+
+        state.current_stage = normalized_stage
+        state.completed_stages_json = completed
+        if stage_payload is not None:
+            state.stage_payload_json = stage_payload
+        state.last_checkpoint_at = TimezoneUtils.utc_now()
+        if mark_completed:
+            state.is_completed = True
+            state.status = "completed"
+            state.completed_at = TimezoneUtils.utc_now()
+        else:
+            state.status = "in_progress"
+        db.session.commit()
+        return state
+
+    @staticmethod
+    def set_connection_status(
+        *,
+        org_id: int,
+        provider: str,
+        status: str,
+        account_label: str | None = None,
+    ) -> IntegrationConnection:
+        connection = IntegrationConnectionService.upsert_connection(
+            organization_id=org_id,
+            provider=provider,
+            status=status,
+            account_label=account_label,
+        )
+        return connection
+
+    @staticmethod
+    def list_sku_maps(
+        *,
+        org_id: int,
+        provider: str | None = None,
+        inventory_item_id: int | None = None,
+    ) -> list[IntegrationSkuMap]:
+        query = IntegrationSkuMap.query.filter_by(organization_id=org_id)
+        if provider:
+            query = query.filter_by(provider=(provider or "").strip().lower())
+        if inventory_item_id is not None:
+            query = query.filter_by(inventory_item_id=inventory_item_id)
+        return query.order_by(IntegrationSkuMap.updated_at.desc()).all()
+
+    @staticmethod
+    def upsert_sku_map(
+        *,
+        org_id: int,
+        provider: str,
+        integration_connection_id: int,
+        product_sku_id: int,
+        inventory_item_id: int,
+        external_sku_code: str | None = None,
+        external_product_id: str | None = None,
+        external_variant_id: str | None = None,
+        external_listing_id: str | None = None,
+        integration_location_id: int | None = None,
+        sync_enabled: bool = True,
+        sync_price: bool = True,
+        sync_quantity: bool = True,
+    ) -> IntegrationSkuMap:
+        normalized_provider = (provider or "").strip().lower()
+        sku_map = IntegrationSkuMap.query.filter_by(
+            integration_connection_id=integration_connection_id,
+            product_sku_id=product_sku_id,
+        ).first()
+        if sku_map is None:
+            sku_map = IntegrationSkuMap(
+                organization_id=org_id,
+                provider=normalized_provider,
+                integration_connection_id=integration_connection_id,
+                product_sku_id=product_sku_id,
+                inventory_item_id=inventory_item_id,
+            )
+            db.session.add(sku_map)
+
+        sku_map.external_sku_code = external_sku_code
+        sku_map.external_product_id = external_product_id
+        sku_map.external_variant_id = external_variant_id
+        sku_map.external_listing_id = external_listing_id
+        sku_map.integration_location_id = integration_location_id
+        sku_map.sync_enabled = bool(sync_enabled)
+        sku_map.sync_price = bool(sync_price)
+        sku_map.sync_quantity = bool(sync_quantity)
+        db.session.commit()
+        return sku_map
+
+    @staticmethod
+    def delete_sku_map(
+        *,
+        org_id: int,
+        map_id: int,
+    ) -> bool:
+        sku_map = IntegrationSkuMap.query.filter_by(
+            id=map_id,
+            organization_id=org_id,
+        ).first()
+        if sku_map is None:
+            return False
+        db.session.delete(sku_map)
+        db.session.commit()
+        return True
+
+    @staticmethod
+    def upsert_location_map(
+        *,
+        org_id: int,
+        integration_connection_id: int,
+        provider: str,
+        external_location_id: str,
+        external_location_name: str | None = None,
+        is_active: bool = True,
+        is_default: bool = False,
+    ) -> IntegrationLocationMap:
+        normalized_provider = (provider or "").strip().lower()
+        location = IntegrationLocationMap.query.filter_by(
+            integration_connection_id=integration_connection_id,
+            external_location_id=external_location_id,
+        ).first()
+        if location is None:
+            location = IntegrationLocationMap(
+                organization_id=org_id,
+                integration_connection_id=integration_connection_id,
+                provider=normalized_provider,
+                external_location_id=external_location_id,
+            )
+            db.session.add(location)
+
+        location.external_location_name = external_location_name
+        location.is_active = bool(is_active)
+        location.is_default = bool(is_default)
+        db.session.commit()
+        return location
+
+    @staticmethod
+    def remove_location_map(
+        *,
+        org_id: int,
+        location_id: int,
+    ) -> bool:
+        location = IntegrationLocationMap.query.filter_by(
+            id=location_id,
+            organization_id=org_id,
+        ).first()
+        if location is None:
+            return False
+        db.session.delete(location)
+        db.session.commit()
+        return True
+
+    @staticmethod
     def build_pos_provider_cards(org_id: int) -> list[dict[str, Any]]:
         """Build provider cards for dashboard POS tab shell."""
         summary = IntegrationConnectionService.get_connection_summary(org_id=org_id)
