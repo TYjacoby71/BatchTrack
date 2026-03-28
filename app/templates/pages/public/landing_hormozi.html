@@ -8,7 +8,7 @@ Glossary:
 - Offer stack: Grouped value items included with the core product experience.
 #}
 {% extends "layout.html" %}
-{% set help_page_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
+{% set help_page_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') %}
 
 {% block head %}
 <style>

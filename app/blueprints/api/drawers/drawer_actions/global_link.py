@@ -13,8 +13,8 @@ import logging
 from flask import jsonify, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from app.models import GlobalItem, InventoryItem, UnifiedInventoryHistory, db
 from app.services.drawers.payloads import build_drawer_payload
+from app.services.global_link_drawer_service import GlobalLinkDrawerService
 from app.services.global_link_suggestions import GlobalLinkSuggestionService
 from app.utils.permissions import require_permission
 
@@ -103,14 +103,14 @@ def global_link_check():
 def global_link_modal():
     global_item_id = request.args.get("global_item_id", type=int)
     org_id = getattr(current_user, "organization_id", None)
-    global_item = db.session.get(GlobalItem, global_item_id) if global_item_id else None
+    global_item, items = GlobalLinkDrawerService.get_modal_candidates(
+        global_item_id=global_item_id,
+        organization_id=org_id,
+    )
 
     if not global_item or not org_id:
         return jsonify({"success": False, "error": "Invalid request"}), 400
 
-    items = GlobalLinkSuggestionService.find_candidates_for_global(
-        global_item.id, org_id
-    )
     html = render_template(
         "components/drawer/global_link_modal.html", global_item=global_item, items=items
     )
@@ -130,77 +130,25 @@ def global_link_confirm():
     item_ids = data.get("item_ids") or []
 
     global_item = (
-        db.session.get(GlobalItem, int(global_item_id)) if global_item_id else None
+        GlobalLinkDrawerService.get_global_item(int(global_item_id))
+        if global_item_id
+        else None
     )
     if not global_item:
         return jsonify({"success": False, "error": "Global item not found"}), 404
 
-    updated = 0
-    skipped = 0
-
-    for raw_id in item_ids:
-        try:
-            inventory_item = db.session.get(InventoryItem, int(raw_id))
-            if not inventory_item:
-                skipped += 1
-                continue
-
-            if (
-                getattr(current_user, "organization_id", None)
-                and inventory_item.organization_id != current_user.organization_id
-            ):
-                skipped += 1
-                continue
-
-            if getattr(inventory_item, "global_item_id", None):
-                skipped += 1
-                continue
-
-            if not global_item.default_unit:
-                skipped += 1
-                continue
-
-            if not GlobalLinkSuggestionService.is_pair_compatible(
-                global_item.default_unit, inventory_item.unit
-            ):
-                skipped += 1
-                continue
-
-            old_name = inventory_item.name
-            inventory_item.name = global_item.name
-            if global_item.density is not None:
-                inventory_item.density = global_item.density
-            inventory_item.global_item_id = global_item.id
-            inventory_item.ownership = "global"
-
-            history_event = UnifiedInventoryHistory(
-                inventory_item_id=inventory_item.id,
-                change_type="link_global",
-                quantity_change=0.0,
-                quantity_change_base=0,
-                unit=inventory_item.unit or "count",
-                notes=f"Linked to GlobalItem '{global_item.name}' (was '{old_name}')",
-                created_by=getattr(current_user, "id", None),
-                organization_id=inventory_item.organization_id,
-            )
-            db.session.add(history_event)
-            updated += 1
-        except Exception:
-            logger.warning(
-                "Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/global_link.py:183",
-                exc_info=True,
-            )
-            skipped += 1
-            continue
-
     try:
-        db.session.commit()
+        updated, skipped = GlobalLinkDrawerService.link_items_to_global(
+            global_item=global_item,
+            item_ids=item_ids,
+            actor_org_id=getattr(current_user, "organization_id", None),
+            actor_user_id=getattr(current_user, "id", None),
+        )
     except Exception as exc:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/global_link.py:189",
             exc_info=True,
         )
-        db.session.rollback()
         return jsonify({"success": False, "error": str(exc)}), 500
 
     return jsonify({"success": True, "updated": updated, "skipped": skipped})

@@ -42,6 +42,14 @@ from .ingredient_reference import (
     PhysicalForm,
     Variation,
 )
+from .integration import (
+    IntegrationConnection,
+    IntegrationLocationMap,
+    IntegrationOnboardingState,
+    IntegrationSkuMap,
+    IntegrationSyncEvent,
+    IntegrationWebhookInbox,
+)
 from .marketing_lead import MarketingContact, MarketingLeadEvent
 from .mixins import ScopedModelMixin
 

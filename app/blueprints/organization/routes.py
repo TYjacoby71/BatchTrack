@@ -3,7 +3,6 @@ import re
 
 from flask import (
     Blueprint,
-    abort,
     flash,
     jsonify,
     redirect,
@@ -13,9 +12,10 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
-from app.extensions import db
 from app.models import Role, User
 from app.services.affiliate_service import AffiliateService
+from app.services.integrations.connection_service import IntegrationConnectionService
+from app.services.organization_route_service import OrganizationRouteService
 from app.utils.permissions import (
     any_permission_required,
     has_permission,
@@ -29,13 +29,30 @@ logger = logging.getLogger(__name__)
 organization_bp = Blueprint("organization", __name__)
 
 
+def _is_owner_user(user) -> bool:
+    """Return True for current/legacy organization-owner representations."""
+    return bool(
+        getattr(user, "is_organization_owner", False)
+        or getattr(user, "_is_organization_owner", False)
+    )
+
+
+def _is_protected_org_user(user) -> bool:
+    """Identify users that org-admin routes should not mutate directly."""
+    return bool(getattr(user, "user_type", None) == "developer" or _is_owner_user(user))
+
+
+def _is_developer_user(user) -> bool:
+    return bool(has_permission(user, "dev.manage_roles"))
+
+
 @organization_bp.route("/dashboard")
 @login_required
 @require_permission("organization.view")
 def dashboard():
     """Organization management dashboard"""
     # Check subscription tier first (except for developers)
-    if current_user.user_type != "developer":
+    if not _is_developer_user(current_user):
         effective_tier = current_user.organization.effective_subscription_tier
         has_affiliate_access = has_permission(
             current_user, "affiliates.view_org_dashboard"
@@ -47,22 +64,12 @@ def dashboard():
             )
             return redirect(url_for("settings.index"))
 
-    # Check permissions - use require_permission decorator logic
-    if not has_permission(current_user, "organization.view"):
-        flash(
-            "You do not have permission to access the organization dashboard.", "error"
-        )
-        return redirect(url_for("settings.index"))
-
     from ...services.billing_service import BillingService
 
     pricing_data = BillingService.get_comprehensive_pricing_data()
 
-    # Load subscription tiers from DB for tier display (no JSON)
-    from ...models.subscription_tier import SubscriptionTier
-
     try:
-        db_tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
+        db_tiers = OrganizationRouteService.list_customer_facing_tiers()
         tiers_config = {
             str(t.id): {
                 "name": t.name,
@@ -82,7 +89,7 @@ def dashboard():
 
     organization = get_effective_organization()
     if not organization:
-        if current_user.user_type == "developer":
+        if _is_developer_user(current_user):
             flash("Please select an organization first", "error")
             return redirect(url_for("developer.organizations"))
         else:
@@ -102,14 +109,9 @@ def dashboard():
     top_recipes = dashboard_metrics.get("top_recipes", [])
 
     # Count pending invites (inactive users)
-    pending_invites = User.query.filter_by(
-        organization_id=org_id, is_active=False, user_type="team_member"
-    ).count()
+    pending_invites = OrganizationRouteService.count_pending_invites(org_id)
 
-    # Get permission categories for role creation modal (all permissions are now organization permissions)
-    from app.models.permission import Permission
-
-    permissions = Permission.query.filter_by(is_active=True).all()
+    permissions = OrganizationRouteService.list_active_permissions()
     permission_categories = {}
     for perm in permissions:
         category = perm.category or "general"
@@ -121,13 +123,9 @@ def dashboard():
     roles = Role.get_organization_roles(org_id)
 
     # Get users for the user management tab (exclude developers from organization view)
-    users = (
-        User.query.filter(User.organization_id == org_id, User.user_type != "developer")
-        .order_by(User.created_at.desc())
-        .all()
-    )
+    users = OrganizationRouteService.list_org_users(org_id)
 
-    is_developer_user = current_user.user_type == "developer"
+    is_developer_user = _is_developer_user(current_user)
     affiliate_feature_visible = bool(
         is_feature_enabled("FEATURE_AFFILIATE_PROGRAM_UI") or is_developer_user
     )
@@ -147,6 +145,19 @@ def dashboard():
         AffiliateService.get_or_create_payout_account(organization)
         if affiliate_tab_visible
         else None
+    )
+    pos_integrations_enabled = bool(
+        is_feature_enabled("FEATURE_ECOMMERCE_INTEGRATIONS")
+        and (
+            has_permission(current_user, "integrations.shopify")
+            or has_permission(current_user, "integrations.marketplace")
+            or has_permission(current_user, "integrations.api_access")
+        )
+    )
+    pos_providers = (
+        IntegrationConnectionService.build_pos_provider_cards(org_id=org_id)
+        if pos_integrations_enabled
+        else []
     )
 
     # Debug: Print to console to verify data
@@ -170,7 +181,248 @@ def dashboard():
         affiliate_context=affiliate_context,
         affiliate_tab_visible=affiliate_tab_visible,
         affiliate_payout_account=affiliate_payout_account,
+        pos_marketplaces_tab_visible=pos_integrations_enabled,
+        pos_providers=pos_providers,
     )
+
+
+@organization_bp.route("/integrations/status")
+@login_required
+@require_permission("organization.view")
+def integration_status():
+    """Return POS/marketplace integration status for the current organization."""
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+
+    if not is_feature_enabled("FEATURE_ECOMMERCE_INTEGRATIONS"):
+        return (
+            jsonify({"success": False, "error": "POS integrations feature is disabled"}),
+            403,
+        )
+
+    summary = IntegrationConnectionService.get_connection_summary(org_id=org_id)
+    onboarding = IntegrationConnectionService.get_onboarding_summary(org_id=org_id)
+    return jsonify({"success": True, "connections": summary, "onboarding": onboarding})
+
+
+def _integration_feature_enabled_for_provider(provider: str) -> bool:
+    provider_key = (provider or "").strip().lower()
+    if provider_key == "shopify":
+        return is_feature_enabled("FEATURE_SHOPIFY_INTEGRATION")
+    if provider_key == "etsy":
+        return is_feature_enabled("FEATURE_ETSY_INTEGRATION")
+    return False
+
+
+def _integration_provider_allowed(provider: str) -> tuple[bool, str | None]:
+    provider_key = (provider or "").strip().lower()
+    if provider_key not in {"shopify", "etsy"}:
+        return False, "Unsupported provider"
+    if not is_feature_enabled("FEATURE_ECOMMERCE_INTEGRATIONS"):
+        return False, "POS integrations feature is disabled"
+    if not _integration_feature_enabled_for_provider(provider_key):
+        return False, f"{provider_key.capitalize()} integration feature is disabled"
+    if provider_key == "shopify" and not has_permission(
+        current_user, "integrations.shopify"
+    ):
+        return False, "Missing permission integrations.shopify"
+    if provider_key == "etsy" and not has_permission(
+        current_user, "integrations.marketplace"
+    ):
+        return False, "Missing permission integrations.marketplace"
+    return True, None
+
+
+@organization_bp.route("/integrations/<string:provider>/onboarding/start", methods=["POST"])
+@login_required
+@require_permission("organization.view")
+def start_integration_onboarding(provider: str):
+    """Create or reset onboarding state for a provider."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+
+    payload = request.get_json(silent=True) or {}
+    current_stage = (payload.get("current_stage") or "provider_selection").strip()
+    state = IntegrationConnectionService.upsert_onboarding_state(
+        organization_id=org_id,
+        provider=provider,
+        current_stage=current_stage,
+        status="in_progress",
+        reset_completed=True,
+    )
+    return jsonify({"success": True, "onboarding": state})
+
+
+@organization_bp.route("/integrations/<string:provider>/onboarding/checkpoint", methods=["POST"])
+@login_required
+@require_permission("organization.view")
+def checkpoint_integration_onboarding(provider: str):
+    """Persist onboarding checkpoint payload and optional completed stages."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+
+    payload = request.get_json(silent=True) or {}
+    state = IntegrationConnectionService.update_onboarding_checkpoint(
+        organization_id=org_id,
+        provider=provider,
+        current_stage=payload.get("current_stage"),
+        stage_payload=payload.get("stage_payload"),
+        completed_stages=payload.get("completed_stages"),
+        status=payload.get("status"),
+        mark_completed=bool(payload.get("mark_completed")),
+    )
+    return jsonify({"success": True, "onboarding": state})
+
+
+@organization_bp.route("/integrations/<string:provider>/onboarding/status")
+@login_required
+@require_permission("organization.view")
+def integration_onboarding_status(provider: str):
+    """Return persisted onboarding status for provider."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+    state = IntegrationConnectionService.get_onboarding_state(
+        organization_id=org_id,
+        provider=provider,
+    )
+    if not state:
+        return jsonify({"success": True, "onboarding": None, "provider": provider})
+    return jsonify({"success": True, "onboarding": state, "provider": provider})
+
+
+@organization_bp.route("/integrations/<string:provider>/locations")
+@login_required
+@require_permission("organization.view")
+def integration_locations(provider: str):
+    """List persisted provider locations for org."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+    locations = IntegrationConnectionService.get_location_summary(
+        organization_id=org_id, provider=provider
+    )
+    return jsonify({"success": True, "locations": locations, "provider": provider})
+
+
+@organization_bp.route("/integrations/<string:provider>/locations", methods=["POST"])
+@login_required
+@require_permission("organization.manage_billing")
+def upsert_integration_location(provider: str):
+    """Create/update one integration location mapping for org provider."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+
+    payload = request.get_json(silent=True) or {}
+    external_location_id = (payload.get("external_location_id") or "").strip()
+    if not external_location_id:
+        return (
+            jsonify({"success": False, "error": "external_location_id is required"}),
+            400,
+        )
+    row = IntegrationConnectionService.upsert_location_map(
+        organization_id=org_id,
+        provider=provider,
+        external_location_id=external_location_id,
+        external_location_name=payload.get("external_location_name"),
+        bt_location_key=payload.get("bt_location_key"),
+        is_default=payload.get("is_default"),
+        is_active=payload.get("is_active"),
+    )
+    return jsonify({"success": True, "location": row})
+
+
+@organization_bp.route("/integrations/<string:provider>/sku-mappings")
+@login_required
+@require_permission("products.view")
+def integration_sku_mappings(provider: str):
+    """List SKU mappings for provider."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+    mappings = IntegrationConnectionService.list_sku_mappings(
+        organization_id=org_id, provider=provider
+    )
+    return jsonify({"success": True, "mappings": mappings, "provider": provider})
+
+
+@organization_bp.route("/integrations/<string:provider>/sku-mappings", methods=["POST"])
+@login_required
+@require_permission("products.edit")
+def upsert_integration_sku_mapping(provider: str):
+    """Create/update SKU mapping skeleton record."""
+    allowed, error = _integration_provider_allowed(provider)
+    if not allowed:
+        return jsonify({"success": False, "error": error}), 403
+    from app.utils.permissions import get_effective_organization_id
+
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return jsonify({"success": False, "error": "No organization selected"}), 400
+
+    payload = request.get_json(silent=True) or {}
+    inventory_item_id = payload.get("inventory_item_id")
+    if inventory_item_id is None:
+        return jsonify({"success": False, "error": "inventory_item_id is required"}), 400
+    try:
+        inventory_item_id = int(inventory_item_id)
+    except (TypeError, ValueError):
+        return (
+            jsonify({"success": False, "error": "inventory_item_id must be an integer"}),
+            400,
+        )
+
+    mapping = IntegrationConnectionService.upsert_sku_mapping(
+        organization_id=org_id,
+        provider=provider,
+        inventory_item_id=inventory_item_id,
+        external_sku_code=payload.get("external_sku_code"),
+        external_product_id=payload.get("external_product_id"),
+        external_variant_id=payload.get("external_variant_id"),
+        external_listing_id=payload.get("external_listing_id"),
+        integration_location_id=payload.get("integration_location_id"),
+        sync_enabled=payload.get("sync_enabled"),
+        sync_price=payload.get("sync_price"),
+        sync_quantity=payload.get("sync_quantity"),
+        baseline_seed_source=payload.get("baseline_seed_source"),
+    )
+    return jsonify({"success": True, "mapping": mapping})
 
 
 @organization_bp.route("/affiliate-dashboard")
@@ -182,7 +434,7 @@ def affiliate_dashboard():
 
     organization = get_effective_organization()
     if not organization:
-        if current_user.user_type == "developer":
+        if _is_developer_user(current_user):
             flash("Please select an organization first", "error")
             return redirect(url_for("developer.organizations"))
         flash("No organization found", "error")
@@ -213,14 +465,6 @@ def affiliate_dashboard():
 @require_permission("organization.manage_roles")
 def create_role():
     """Create a new organization role"""
-    # Check if user is organization owner or developer
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-        or current_user.user_type == "developer"
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
-
     try:
         data = request.get_json()
 
@@ -242,13 +486,11 @@ def create_role():
 
         # Add permissions
         permission_ids = data.get("permission_ids", [])
-        from app.models.permission import Permission
-
-        permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
+        permissions = OrganizationRouteService.list_permissions_by_ids(permission_ids)
         role.permissions = permissions
 
-        db.session.add(role)
-        db.session.commit()
+        OrganizationRouteService.add_entity(role)
+        OrganizationRouteService.commit_session()
 
         return jsonify({"success": True, "message": "Role created successfully"})
 
@@ -257,7 +499,7 @@ def create_role():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:178",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -265,11 +507,7 @@ def create_role():
 @login_required
 @require_permission("organization.edit")
 def update_organization_settings():
-    """Update organization settings (organization owners only)"""
-
-    # Check permissions - only organization owners can update
-    if not current_user.is_organization_owner:
-        return jsonify({"success": False, "error": "Insufficient permissions"})
+    """Update organization settings"""
 
     try:
         data = request.get_json()
@@ -294,22 +532,17 @@ def update_organization_settings():
         if "timezone" in data:
             organization.timezone = data["timezone"]
 
-        # Inventory cost method toggle (org owners only)
+        # Inventory cost method toggle
         method = data.get("inventory_cost_method")
         if method in ["fifo", "average"]:
-            # Only allow if current user is org owner
-            if (
-                current_user.is_organization_owner
-                or current_user.user_type == "developer"
-            ):
-                # Only update if changed
-                if getattr(organization, "inventory_cost_method", None) != method:
-                    organization.inventory_cost_method = method
-                    from app.utils.timezone_utils import TimezoneUtils as _TZ
+            # Only update if changed
+            if getattr(organization, "inventory_cost_method", None) != method:
+                organization.inventory_cost_method = method
+                from app.utils.timezone_utils import TimezoneUtils as _TZ
 
-                    organization.inventory_cost_method_changed_at = _TZ.utc_now()
+                organization.inventory_cost_method_changed_at = _TZ.utc_now()
 
-        db.session.commit()
+        OrganizationRouteService.commit_session()
 
         return jsonify(
             {"success": True, "message": "Organization settings updated successfully"}
@@ -320,7 +553,7 @@ def update_organization_settings():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:237",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -328,12 +561,14 @@ def update_organization_settings():
 @login_required
 @require_permission("organization.manage_billing")
 def update_subscription_tier():
-    """Update organization subscription tier (developers only)"""
+    """Update organization subscription tier (support/developer only)."""
 
-    # Only developers can update subscription tiers directly
-    if current_user.user_type != "developer":
+    if not _is_developer_user(current_user):
         return jsonify(
-            {"success": False, "error": "Only developers can update subscription tiers"}
+            {
+                "success": False,
+                "error": "Only support users can update subscription tiers",
+            }
         )
 
     try:
@@ -350,14 +585,11 @@ def update_subscription_tier():
         if not organization:
             return jsonify({"success": False, "error": "No organization selected"})
 
-        # Validate tier via DB only
-        from ...models.subscription_tier import SubscriptionTier
-
         try:
             _tier_id = int(tier_key)
         except (TypeError, ValueError):
             _tier_id = None
-        if not _tier_id or not db.session.get(SubscriptionTier, _tier_id):
+        if not _tier_id or not OrganizationRouteService.get_subscription_tier(_tier_id):
             return jsonify({"success": False, "error": "Invalid subscription tier"})
 
         # Update or create subscription
@@ -368,12 +600,12 @@ def update_subscription_tier():
             subscription = Subscription(
                 organization_id=organization.id, tier=tier_key, status="active"
             )
-            db.session.add(subscription)
+            OrganizationRouteService.add_entity(subscription)
         else:
             subscription.tier = tier_key
             subscription.status = "active"
 
-        db.session.commit()
+        OrganizationRouteService.commit_session()
 
         return jsonify(
             {"success": True, "message": f"Subscription tier updated to {tier_key}"}
@@ -384,7 +616,7 @@ def update_subscription_tier():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:297",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -392,16 +624,6 @@ def update_subscription_tier():
 @login_required
 @require_permission("organization.manage_users")
 def invite_user():
-    """Invite a new user to the organization"""
-    # Check if user is organization owner - developers can access for testing but normal team members cannot
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-        or current_user.user_type == "developer"
-    ):
-        return jsonify(
-            {"success": False, "error": "Insufficient permissions to invite users"}
-        )
     """Invite a new user to the organization"""
     try:
         data = request.get_json()
@@ -431,11 +653,11 @@ def invite_user():
             )
 
         # Validate role exists and is not developer role
-        role = Role.scoped().filter_by(id=role_id).first()
+        role = OrganizationRouteService.get_scoped_role(role_id)
         if not role:
             return jsonify({"success": False, "error": "Invalid role selected"})
 
-        if role.name in ["developer", "organization_owner"]:
+        if role.is_system_role:
             return jsonify(
                 {
                     "success": False,
@@ -493,7 +715,7 @@ def invite_user():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:413",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         print(f"Error inviting user: {str(e)}")  # For debugging
         return jsonify({"success": False, "error": f"Failed to invite user: {str(e)}"})
 
@@ -503,14 +725,6 @@ def invite_user():
 @require_permission("organization.edit")
 def update_organization():
     """Update organization settings"""
-
-    # Check permissions
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-        or current_user.user_type == "developer"
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
 
     try:
         data = request.get_json()
@@ -522,7 +736,7 @@ def update_organization():
 
         # Add other organization settings here as needed
 
-        db.session.commit()
+        OrganizationRouteService.commit_session()
 
         return jsonify({"success": True, "message": "Organization settings updated"})
 
@@ -531,7 +745,7 @@ def update_organization():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:447",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -541,21 +755,10 @@ def update_organization():
 def export_report(report_type):
     """Export various organization reports"""
 
-    # Check permissions - only org owners and developers can export
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-        or current_user.user_type == "developer"
-    ):
-        abort(403)
-
     try:
         if report_type == "users":
             # Export users CSV - exclude developers from org exports
-            User.query.filter(
-                User.organization_id == current_user.organization_id,
-                User.user_type != "developer",
-            ).all()
+            OrganizationRouteService.list_export_users(current_user.organization_id)
             flash("User export functionality coming soon", "info")
         elif report_type == "batches":
             flash("Batch export functionality coming soon", "info")
@@ -584,16 +787,7 @@ def export_report(report_type):
 @require_permission("organization.manage_users")
 def add_user():
     """Add a new user to the organization (org owners only) - legacy endpoint"""
-    # Check if user is organization owner - developers can access for testing but normal team members cannot
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-        or current_user.user_type == "developer"
-    ):
-        return jsonify(
-            {"success": False, "error": "Insufficient permissions to add users"}
-        )
-    """Add a new user to the organization (org owners only) - legacy endpoint"""
+    """Add a new user to the organization - legacy endpoint"""
     try:
         data = request.get_json()
 
@@ -629,12 +823,12 @@ def add_user():
             role_id=role_id,
             organization_id=current_user.organization_id,
             is_active=True,
-            user_type="team_member",
+            user_type="customer",
         )
         new_user.set_password(password)
 
-        db.session.add(new_user)
-        db.session.commit()
+        OrganizationRouteService.add_entity(new_user)
+        OrganizationRouteService.commit_session()
 
         return jsonify({"success": True, "message": "User added successfully"})
 
@@ -643,7 +837,7 @@ def add_user():
             "Suppressed exception fallback at app/blueprints/organization/routes.py:551",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -655,18 +849,15 @@ def add_user():
 @require_permission("organization.manage_users")
 def get_user(user_id):
     """Get user details for editing"""
-    user = User.query.filter_by(
-        id=user_id, organization_id=current_user.organization_id
-    ).first()
+    user = OrganizationRouteService.get_user_in_org(
+        user_id, current_user.organization_id
+    )
 
     if not user:
         return jsonify({"success": False, "error": "User not found"})
 
     # Don't allow editing of developers or other org owners (except self)
-    if (
-        user.user_type in ["developer", "organization_owner"]
-        and user.id != current_user.id
-    ):
+    if _is_protected_org_user(user) and user.id != current_user.id:
         return jsonify(
             {
                 "success": False,
@@ -712,31 +903,21 @@ def get_user(user_id):
 @login_required
 @require_permission("organization.manage_users")
 def update_user(user_id):
-    """Update user details (organization owners only)"""
-
-    # Check permissions - only organization owners can update
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
+    """Update user details"""
 
     try:
         data = request.get_json()
 
         # Get user from same organization
-        user = User.query.filter_by(
-            id=user_id, organization_id=current_user.organization_id
-        ).first()
+        user = OrganizationRouteService.get_user_in_org(
+            user_id, current_user.organization_id
+        )
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
 
         # Don't allow editing of developers or other org owners (except self)
-        if (
-            user.user_type in ["developer", "organization_owner"]
-            and user.id != current_user.id
-        ):
+        if _is_protected_org_user(user) and user.id != current_user.id:
             return jsonify(
                 {
                     "success": False,
@@ -755,8 +936,8 @@ def update_user(user_id):
             user.phone = data["phone"]
         if "role_id" in data:
             # Validate role exists and is not developer role
-            role = Role.scoped().filter_by(id=data["role_id"]).first()
-            if role and role.name not in ["developer", "organization_owner"]:
+            role = OrganizationRouteService.get_scoped_role(data["role_id"])
+            if role and not role.is_system_role:
                 user.role_id = data["role_id"]
 
         # Handle organization owner flag with single owner constraint and role transfer
@@ -766,19 +947,10 @@ def update_user(user_id):
             if new_owner_status and not user.is_organization_owner:
                 # User is being made an organization owner
                 # First, remove organization owner status and role from all other users in this org
-                other_owners = User.query.filter(
-                    User.organization_id == user.organization_id,
-                    User.id != user.id,
-                    User._is_organization_owner,
-                ).all()
-
-                from app.models.role import Role
-
-                org_owner_role = (
-                    Role.scoped()
-                    .filter_by(name="organization_owner", is_system_role=True)
-                    .first()
+                other_owners = OrganizationRouteService.list_other_org_owners(
+                    user.organization_id, user.id
                 )
+                org_owner_role = OrganizationRouteService.get_org_owner_role()
 
                 for other_owner in other_owners:
                     other_owner.is_organization_owner = False
@@ -798,13 +970,7 @@ def update_user(user_id):
                 user.is_organization_owner = False
 
                 # Remove the organization owner role
-                from app.models.role import Role
-
-                org_owner_role = (
-                    Role.scoped()
-                    .filter_by(name="organization_owner", is_system_role=True)
-                    .first()
-                )
+                org_owner_role = OrganizationRouteService.get_org_owner_role()
                 if org_owner_role:
                     user.remove_role(org_owner_role)
 
@@ -823,7 +989,7 @@ def update_user(user_id):
                     )
             user.is_active = new_status
 
-        db.session.commit()
+        OrganizationRouteService.commit_session()
 
         return jsonify(
             {"success": True, "message": f"User {user.full_name} updated successfully"}
@@ -834,7 +1000,7 @@ def update_user(user_id):
             "Suppressed exception fallback at app/blueprints/organization/routes.py:734",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -842,26 +1008,19 @@ def update_user(user_id):
 @login_required
 @require_permission("organization.manage_users")
 def toggle_user_status(user_id):
-    """Toggle user active/inactive status (organization owners only)"""
-
-    # Check permissions - only organization owners can toggle status
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
+    """Toggle user active/inactive status"""
 
     try:
         # Get user from same organization
-        user = User.query.filter_by(
-            id=user_id, organization_id=current_user.organization_id
-        ).first()
+        user = OrganizationRouteService.get_user_in_org(
+            user_id, current_user.organization_id
+        )
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
 
         # Don't allow toggling status of developers, org owners, or self
-        if user.user_type in ["developer", "organization_owner"]:
+        if _is_protected_org_user(user):
             return jsonify(
                 {
                     "success": False,
@@ -888,7 +1047,7 @@ def toggle_user_status(user_id):
                 )
 
         user.is_active = new_status
-        db.session.commit()
+        OrganizationRouteService.commit_session()
 
         status_text = "activated" if new_status else "deactivated"
         return jsonify(
@@ -903,7 +1062,7 @@ def toggle_user_status(user_id):
             "Suppressed exception fallback at app/blueprints/organization/routes.py:799",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -911,26 +1070,19 @@ def toggle_user_status(user_id):
 @login_required
 @require_permission("organization.manage_users")
 def delete_user(user_id):
-    """Delete user permanently (organization owners only)"""
-
-    # Check permissions - only organization owners can delete
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
+    """Delete user permanently"""
 
     try:
         # Get user from same organization
-        user = User.query.filter_by(
-            id=user_id, organization_id=current_user.organization_id
-        ).first()
+        user = OrganizationRouteService.get_user_in_org(
+            user_id, current_user.organization_id
+        )
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
 
         # Don't allow deleting developers, org owners, or self
-        if user.user_type in ["developer", "organization_owner"]:
+        if _is_protected_org_user(user):
             return jsonify(
                 {
                     "success": False,
@@ -959,7 +1111,7 @@ def delete_user(user_id):
             "Suppressed exception fallback at app/blueprints/organization/routes.py:851",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})
 
 
@@ -967,20 +1119,13 @@ def delete_user(user_id):
 @login_required
 @require_permission("organization.manage_users")
 def restore_user(user_id):
-    """Restore a soft-deleted user (organization owners only)"""
-
-    # Check permissions - only organization owners can restore
-    if not (
-        current_user.user_type == "organization_owner"
-        or current_user.is_organization_owner
-    ):
-        return jsonify({"success": False, "error": "Insufficient permissions"})
+    """Restore a soft-deleted user"""
 
     try:
         # Get user from same organization (including deleted users)
-        user = User.query.filter_by(
-            id=user_id, organization_id=current_user.organization_id
-        ).first()
+        user = OrganizationRouteService.get_user_in_org(
+            user_id, current_user.organization_id
+        )
 
         if not user:
             return jsonify({"success": False, "error": "User not found"})
@@ -1006,5 +1151,5 @@ def restore_user(user_id):
             "Suppressed exception fallback at app/blueprints/organization/routes.py:894",
             exc_info=True,
         )
-        db.session.rollback()
+        OrganizationRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)})

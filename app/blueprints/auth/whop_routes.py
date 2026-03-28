@@ -15,7 +15,7 @@ from __future__ import annotations
 from flask import flash, redirect, request, url_for
 from flask_login import login_user
 
-from ...extensions import db
+from ...services.oauth_user_service import OAuthUserService
 from ...services.session_service import SessionService
 from ...utils.timezone_utils import TimezoneUtils
 from . import auth_bp
@@ -40,8 +40,7 @@ def whop_login():
     if user:
         login_user(user)
         SessionService.rotate_user_session(user)
-        user.last_login = TimezoneUtils.utc_now()
-        db.session.commit()
+        OAuthUserService.update_last_login(user, login_at=TimezoneUtils.utc_now())
         flash("Successfully logged in with Whop license.", "success")
         return redirect(url_for("app_routes.dashboard"))
 

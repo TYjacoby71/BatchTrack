@@ -14,8 +14,8 @@ from flask import Blueprint, flash, jsonify, redirect, request, url_for
 from flask_login import current_user, login_required
 
 from app.services.inventory_adjustment import process_inventory_adjustment
+from app.services.product_inventory_route_service import ProductInventoryRouteService
 
-from ...models import ProductSKU, db
 from ...services.product_service import ProductService
 from ...utils.permissions import require_permission
 from ...utils.timezone_utils import TimezoneUtils
@@ -48,13 +48,9 @@ def adjust_sku_inventory(inventory_item_id):
     logger.info(f"Request is JSON: {request.is_json}")
 
     # The sku_id parameter IS the inventory_item_id (primary key of ProductSKU)
-    sku = (
-        ProductSKU.scoped()
-        .filter_by(
-            inventory_item_id=inventory_item_id,
-            organization_id=current_user.organization_id,
-        )
-        .first()
+    sku = ProductInventoryRouteService.find_sku_for_inventory_item(
+        inventory_item_id=inventory_item_id,
+        organization_id=current_user.organization_id,
     )
 
     logger.info(f"SKU lookup result: {sku}")
@@ -251,7 +247,7 @@ def adjust_sku_inventory(inventory_item_id):
             "Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:245",
             exc_info=True,
         )
-        db.session.rollback()
+        ProductInventoryRouteService.rollback_session()
         error_msg = f"Error adjusting inventory: {str(e)}"
         logger.error(f"Exception in SKU inventory adjustment: {error_msg}")
         logger.exception("Full traceback:")
@@ -275,12 +271,9 @@ def get_sku_fifo_status(sku_id):
     logger.info("=== FIFO STATUS REQUEST ===")
     logger.info(f"SKU ID: {sku_id}")
 
-    sku = (
-        ProductSKU.scoped()
-        .filter_by(
-            inventory_item_id=sku_id, organization_id=current_user.organization_id
-        )
-        .first()
+    sku = ProductInventoryRouteService.find_sku_for_inventory_item(
+        inventory_item_id=sku_id,
+        organization_id=current_user.organization_id,
     )
 
     if not sku:
@@ -291,37 +284,19 @@ def get_sku_fifo_status(sku_id):
         f"Found SKU: {sku.inventory_item_id}, Product: {sku.product.name if sku.product else 'Unknown'}"
     )
 
-    from ...models.inventory_lot import InventoryLot
-
     today = TimezoneUtils.utc_now().date()
     inventory_item_id = sku.inventory_item_id
 
-    fresh_lots = (
-        InventoryLot.scoped()
-        .filter(
-            InventoryLot.inventory_item_id == inventory_item_id,
-            InventoryLot.organization_id == current_user.organization_id,
-            InventoryLot.remaining_quantity_base > 0,
-            db.or_(
-                InventoryLot.expiration_date.is_(None),
-                InventoryLot.expiration_date >= today,
-            ),
-        )
-        .order_by(InventoryLot.received_date.asc())
-        .all()
+    fresh_lots = ProductInventoryRouteService.list_fresh_inventory_lots(
+        inventory_item_id=inventory_item_id,
+        organization_id=current_user.organization_id,
+        as_of_date=today,
     )
 
-    expired_lots = (
-        InventoryLot.scoped()
-        .filter(
-            InventoryLot.inventory_item_id == inventory_item_id,
-            InventoryLot.organization_id == current_user.organization_id,
-            InventoryLot.remaining_quantity_base > 0,
-            InventoryLot.expiration_date.isnot(None),
-            InventoryLot.expiration_date < today,
-        )
-        .order_by(InventoryLot.received_date.asc())
-        .all()
+    expired_lots = ProductInventoryRouteService.list_expired_inventory_lots(
+        inventory_item_id=inventory_item_id,
+        organization_id=current_user.organization_id,
+        as_of_date=today,
     )
 
     fresh_total = sum(float(lot.remaining_quantity or 0.0) for lot in fresh_lots)
@@ -375,12 +350,9 @@ def get_sku_fifo_status(sku_id):
 @require_permission("inventory.adjust")
 def dispose_expired_sku(sku_id):
     """Dispose of expired SKU inventory using unified inventory system"""
-    sku = (
-        ProductSKU.scoped()
-        .filter_by(
-            inventory_item_id=sku_id, organization_id=current_user.organization_id
-        )
-        .first()
+    sku = ProductInventoryRouteService.find_sku_for_inventory_item(
+        inventory_item_id=sku_id,
+        organization_id=current_user.organization_id,
     )
 
     if not sku:
@@ -393,18 +365,10 @@ def dispose_expired_sku(sku_id):
     today = TimezoneUtils.utc_now().date()
     inventory_item_id = sku.inventory_item_id
 
-    from ...models.inventory_lot import InventoryLot
-
-    expired_lots = (
-        InventoryLot.scoped()
-        .filter(
-            InventoryLot.inventory_item_id == inventory_item_id,
-            InventoryLot.organization_id == current_user.organization_id,
-            InventoryLot.remaining_quantity_base > 0,
-            InventoryLot.expiration_date.isnot(None),
-            InventoryLot.expiration_date < today,
-        )
-        .all()
+    expired_lots = ProductInventoryRouteService.list_expired_inventory_lots(
+        inventory_item_id=inventory_item_id,
+        organization_id=current_user.organization_id,
+        as_of_date=today,
     )
 
     if not expired_lots:
@@ -440,7 +404,7 @@ def dispose_expired_sku(sku_id):
             "Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:416",
             exc_info=True,
         )
-        db.session.rollback()
+        ProductInventoryRouteService.rollback_session()
         return jsonify({"error": str(e)}), 500
 
 
@@ -461,14 +425,9 @@ def process_sale_webhook():
         return jsonify({"error": "Missing required fields"}), 400
 
     # Find SKU by code with organization scoping
-    sku = (
-        ProductSKU.scoped()
-        .filter_by(
-            sku_code=data["sku_code"],
-            organization_id=current_user.organization_id,
-            is_active=True,
-        )
-        .first()
+    sku = ProductInventoryRouteService.find_active_sku_by_code(
+        sku_code=data["sku_code"],
+        organization_id=current_user.organization_id,
     )
 
     if not sku:
@@ -489,7 +448,7 @@ def process_sale_webhook():
         )
 
         if success:
-            db.session.commit()
+            ProductInventoryRouteService.commit_session()
             return jsonify(
                 {
                     "success": True,
@@ -505,7 +464,7 @@ def process_sale_webhook():
             "Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:472",
             exc_info=True,
         )
-        db.session.rollback()
+        ProductInventoryRouteService.rollback_session()
         return jsonify({"error": str(e)}), 500
 
 
@@ -526,14 +485,9 @@ def process_return_webhook():
         return jsonify({"error": "Missing required fields"}), 400
 
     # Find SKU by code with organization scoping
-    sku = (
-        ProductSKU.scoped()
-        .filter_by(
-            sku_code=data["sku_code"],
-            organization_id=current_user.organization_id,
-            is_active=True,
-        )
-        .first()
+    sku = ProductInventoryRouteService.find_active_sku_by_code(
+        sku_code=data["sku_code"],
+        organization_id=current_user.organization_id,
     )
 
     if not sku:
@@ -553,7 +507,7 @@ def process_return_webhook():
         )
 
         if success:
-            db.session.commit()
+            ProductInventoryRouteService.commit_session()
             return jsonify(
                 {
                     "success": True,
@@ -569,7 +523,7 @@ def process_return_webhook():
             "Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:527",
             exc_info=True,
         )
-        db.session.rollback()
+        ProductInventoryRouteService.rollback_session()
         return jsonify({"error": str(e)}), 500
 
 
@@ -641,7 +595,7 @@ def create_manual_reservation():
             "Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:595",
             exc_info=True,
         )
-        db.session.rollback()
+        ProductInventoryRouteService.rollback_session()
         error_msg = f"Error creating reservation: {str(e)}"
         logger.error(error_msg)
         if request.is_json:
@@ -672,10 +626,9 @@ def add_inventory_from_batch():
     try:
         # Get product name from ID if provided - with org scoping
         if product_id:
-            base_sku = (
-                ProductSKU.scoped()
-                .filter_by(id=product_id, organization_id=current_user.organization_id)
-                .first()
+            base_sku = ProductInventoryRouteService.find_sku_by_id_for_org(
+                sku_id=product_id,
+                organization_id=current_user.organization_id,
             )
             if not base_sku:
                 return jsonify({"error": "Product not found"}), 404
@@ -700,7 +653,7 @@ def add_inventory_from_batch():
         )
 
         if success:
-            db.session.commit()
+            ProductInventoryRouteService.commit_session()
             return jsonify(
                 {
                     "success": True,
@@ -716,5 +669,5 @@ def add_inventory_from_batch():
             "Suppressed exception fallback at app/blueprints/products/product_inventory_routes.py:664",
             exc_info=True,
         )
-        db.session.rollback()
+        ProductInventoryRouteService.rollback_session()
         return jsonify({"error": str(e)}), 500

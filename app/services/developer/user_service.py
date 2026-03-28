@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime, timezone
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple
 
 from flask_login import current_user
 
@@ -70,6 +70,14 @@ class UserService:
             .order_by(User.created_at.desc(), User.id.desc())
             .paginate(page=page, per_page=per_page, error_out=False)
         )
+
+    # --- Resolve user by ID ---
+    # Purpose: Fetch a user row or raise 404 for developer route handlers.
+    # Inputs: User ID from route/body payload.
+    # Outputs: User model instance.
+    @staticmethod
+    def get_user_or_404(user_id: int | None) -> User:
+        return db.get_or_404(User, user_id)
 
     # --- Update own profile ---
     # Purpose: Apply self-service profile edits for developer manage-users page.
@@ -188,6 +196,53 @@ class UserService:
             "created_at": (
                 user.created_at.strftime("%Y-%m-%d") if user.created_at else None
             ),
+        }
+
+    # --- Serialize developer user payload ---
+    # Purpose: Build developer-role edit payload including role assignment state.
+    # Inputs: Developer user row.
+    # Outputs: Dict with developer user fields and role list.
+    @staticmethod
+    def serialize_developer_user(user: User) -> Dict[str, Any]:
+        if user.user_type != "developer":
+            raise ValueError("User is not a developer")
+
+        from app.models.developer_role import DeveloperRole
+        from app.models.user_role_assignment import UserRoleAssignment
+
+        all_roles = DeveloperRole.query.filter_by(is_active=True).all()
+        assignments = (
+            UserRoleAssignment.query.filter_by(user_id=user.id, is_active=True)
+            .filter(UserRoleAssignment.developer_role_id.isnot(None))
+            .all()
+        )
+        assigned_role_ids = {assignment.developer_role_id for assignment in assignments}
+
+        roles_data = [
+            {
+                "id": role.id,
+                "name": role.name,
+                "description": role.description,
+                "assigned": role.id in assigned_role_ids,
+            }
+            for role in all_roles
+        ]
+
+        return {
+            "id": user.id,
+            "username": user.username,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone": user.phone,
+            "is_active": user.is_active,
+            "last_login": (
+                user.last_login.strftime("%Y-%m-%d %H:%M") if user.last_login else None
+            ),
+            "created_at": (
+                user.created_at.strftime("%Y-%m-%d") if user.created_at else None
+            ),
+            "roles": roles_data,
         }
 
     # --- Update customer user ---

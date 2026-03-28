@@ -1,17 +1,22 @@
 import logging
 
-from flask import flash, jsonify, redirect, render_template, request, session, url_for
+from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
 from flask_wtf.csrf import validate_csrf
 from wtforms.validators import ValidationError
 
+from app.services.conversion_route_service import ConversionRouteService
 from app.services.unit_conversion.unit_conversion import ConversionEngine
-from app.utils.permissions import require_permission
+from app.utils.permissions import get_effective_organization_id, require_permission
 
-from ...models import CustomUnitMapping, InventoryItem, Unit, db
 from . import conversion_bp
 
 logger = logging.getLogger(__name__)
+
+
+def _selected_org_id() -> int | None:
+    """Resolve effective organization scope for conversion route actions."""
+    return get_effective_organization_id()
 
 
 @conversion_bp.route("/convert/<float:amount>/<from_unit>/<to_unit>", methods=["GET"])
@@ -49,7 +54,7 @@ def convert(amount, from_unit, to_unit):
 @conversion_bp.route("/units/<int:unit_id>/delete", methods=["POST"])
 @require_permission("inventory.edit")
 def delete_unit(unit_id):
-    unit = db.session.get(Unit, int(unit_id))
+    unit = ConversionRouteService.get_unit_by_id(unit_id=unit_id)
     if not unit:
         flash("Unit not found", "error")
         return redirect(url_for("conversion_bp.manage_units"))
@@ -58,28 +63,13 @@ def delete_unit(unit_id):
         flash("Cannot delete system units", "error")
         return redirect(url_for("conversion_bp.manage_units"))
 
-    if current_user.user_type == "developer":
-        selected_org_id = session.get("dev_selected_org_id")
-        if selected_org_id and unit.organization_id != selected_org_id:
-            flash("Cannot delete units outside the selected organization", "error")
-            return redirect(url_for("conversion_bp.manage_units"))
-    elif unit.organization_id != current_user.organization_id:
+    effective_org_id = _selected_org_id()
+    if effective_org_id and unit.organization_id != effective_org_id:
         flash("Cannot delete units from another organization", "error")
         return redirect(url_for("conversion_bp.manage_units"))
 
     try:
-        mapping_query = CustomUnitMapping.scoped().filter(
-            (CustomUnitMapping.from_unit == unit.name)
-            | (CustomUnitMapping.to_unit == unit.name)
-        )
-        if unit.organization_id:
-            mapping_query = mapping_query.filter_by(
-                organization_id=unit.organization_id
-            )
-        mapping_query.delete()
-
-        db.session.delete(unit)
-        db.session.commit()
+        ConversionRouteService.delete_unit_and_mappings(unit=unit)
         logger.info(f"Successfully deleted unit: {unit.name}")
         flash("Unit deleted successfully", "success")
     except Exception as e:
@@ -87,7 +77,7 @@ def delete_unit(unit_id):
             "Suppressed exception fallback at app/blueprints/conversion/routes.py:67",
             exc_info=True,
         )
-        db.session.rollback()
+        ConversionRouteService.rollback_session()
         flash(f"Error deleting unit: {str(e)}", "error")
 
     return redirect(url_for("conversion_bp.manage_units"))
@@ -114,27 +104,12 @@ def manage_units():
                     return redirect(url_for("conversion_bp.manage_units"))
 
                 # Check for existing unit with same name in the same organization
-                if current_user.user_type == "developer":
-                    # For developers, check within selected organization or globally
-                    from flask import session
-
-                    selected_org_id = session.get("dev_selected_org_id")
-                    if selected_org_id:
-                        existing = Unit.query.filter_by(
-                            name=name, organization_id=selected_org_id
-                        ).first()
-                    else:
-                        existing = Unit.query.filter_by(name=name).first()
-                else:
-                    # For regular users, check within their organization only
-                    existing = Unit.query.filter(
-                        Unit.name == name,
-                        (
-                            (Unit.is_custom)
-                            & (Unit.organization_id == current_user.organization_id)
-                        )
-                        | (Unit.is_custom.is_(False)),
-                    ).first()
+                existing = ConversionRouteService.find_existing_unit_for_scope(
+                    name=name,
+                    user_type=getattr(current_user, "user_type", None),
+                    user_organization_id=getattr(current_user, "organization_id", None),
+                    selected_org_id=_selected_org_id(),
+                )
 
                 if existing:
                     if (
@@ -151,23 +126,10 @@ def manage_units():
                         flash("Unit name not available", "error")
                     return redirect(url_for("conversion_bp.manage_units"))
 
-                # Set base unit and multiplier based on type
-                base_units = {
-                    "weight": "gram",
-                    "volume": "ml",
-                    "count": "count",
-                    "length": "cm",
-                    "area": "sqcm",
-                }
-
-                new_unit = Unit(
+                ConversionRouteService.create_custom_unit(
                     name=name,
                     symbol=symbol,
                     unit_type=unit_type,
-                    base_unit=base_units.get(unit_type, "count"),
-                    conversion_factor=1.0,
-                    is_custom=True,
-                    is_mapped=False,  # Start as unmapped
                     created_by=(
                         current_user.id if current_user.is_authenticated else None
                     ),
@@ -177,8 +139,6 @@ def manage_units():
                         else None
                     ),
                 )
-                db.session.add(new_unit)
-                db.session.commit()
                 flash("Unit created successfully", "success")
                 return redirect(url_for("conversion_bp.manage_units"))
 
@@ -195,8 +155,10 @@ def manage_units():
                 flash("All fields are required.", "danger")
                 return redirect(url_for("conversion_bp.manage_units"))
 
-            custom_unit_obj = Unit.query.filter_by(name=custom_unit).first()
-            comparable_unit_obj = Unit.query.filter_by(name=comparable_unit).first()
+            custom_unit_obj = ConversionRouteService.find_unit_by_name(name=custom_unit)
+            comparable_unit_obj = ConversionRouteService.find_unit_by_name(
+                name=comparable_unit
+            )
 
             if not custom_unit_obj or not comparable_unit_obj:
                 flash("Units not found in database.", "danger")
@@ -229,8 +191,8 @@ def manage_units():
                     flash("This type of unit conversion is not supported.", "danger")
                     return redirect(url_for("conversion_bp.manage_units"))
 
-            existing = (
-                CustomUnitMapping.scoped().filter_by(from_unit=custom_unit).first()
+            existing = ConversionRouteService.find_mapping_by_from_unit(
+                from_unit=custom_unit
             )
             if existing:
                 flash("This custom unit already has a mapping.", "warning")
@@ -240,11 +202,10 @@ def manage_units():
             # Instead, store the direct relationship in the mapping
             if custom_unit_obj.unit_type != comparable_unit_obj.unit_type:
                 # Cross-type mapping - store direct relationship only
-                mapping = CustomUnitMapping(
-                    from_unit=custom_unit,
-                    to_unit=comparable_unit,
+                ConversionRouteService.create_cross_type_mapping(
+                    custom_unit=custom_unit_obj,
+                    comparable_unit=comparable_unit_obj,
                     conversion_factor=conversion_factor,
-                    notes=f"1 {custom_unit} = {conversion_factor} {comparable_unit} (cross-type)",
                     created_by=(
                         current_user.id if current_user.is_authenticated else None
                     ),
@@ -254,22 +215,11 @@ def manage_units():
                         else None
                     ),
                 )
-                db.session.add(mapping)
-
-                # Mark as mapped but don't set conversion_factor for cross-type
-                custom_unit_obj.is_mapped = True
-                # Leave conversion_factor as None for cross-type mappings
             else:
-                # Same-type mapping - calculate base conversion factor
-                base_conversion_factor = (
-                    conversion_factor * comparable_unit_obj.conversion_factor
-                )
-
-                mapping = CustomUnitMapping(
-                    from_unit=custom_unit,
-                    to_unit=comparable_unit,
+                ConversionRouteService.create_same_type_mapping(
+                    custom_unit=custom_unit_obj,
+                    comparable_unit=comparable_unit_obj,
                     conversion_factor=conversion_factor,
-                    notes=f"1 {custom_unit} = {conversion_factor} {comparable_unit}",
                     created_by=(
                         current_user.id if current_user.is_authenticated else None
                     ),
@@ -279,12 +229,6 @@ def manage_units():
                         else None
                     ),
                 )
-                db.session.add(mapping)
-
-                # Mark as mapped and set conversion factor for same-type
-                custom_unit_obj.is_mapped = True
-                custom_unit_obj.conversion_factor = base_conversion_factor
-            db.session.commit()
             flash("Custom mapping added successfully.", "success")
             return redirect(url_for("conversion_bp.manage_units"))
         except ValidationError:
@@ -295,26 +239,12 @@ def manage_units():
 
     # Get mappings scoped by organization
     if current_user and current_user.is_authenticated:
-        if current_user.user_type == "developer":
-            # Developers can see all mappings or filtered by selected org
-            from flask import session
-
-            selected_org_id = session.get("dev_selected_org_id")
-            if selected_org_id:
-                mappings = (
-                    CustomUnitMapping.scoped()
-                    .filter_by(organization_id=selected_org_id)
-                    .all()
-                )
-            else:
-                mappings = CustomUnitMapping.scoped().all()
-        else:
-            # Regular users see only their organization's mappings
-            mappings = (
-                CustomUnitMapping.scoped()
-                .filter_by(organization_id=current_user.organization_id)
-                .all()
-            )
+        mappings = ConversionRouteService.list_mappings_for_manage(
+            is_authenticated=True,
+            user_type=getattr(current_user, "user_type", None),
+            user_organization_id=getattr(current_user, "organization_id", None),
+            selected_org_id=_selected_org_id(),
+        )
     else:
         mappings = []
 
@@ -335,35 +265,21 @@ def manage_units():
 @conversion_bp.route("/mappings/<int:mapping_id>/delete", methods=["POST"])
 @require_permission("inventory.edit")
 def delete_mapping(mapping_id):
-    # Get mapping with organization scoping
-    if current_user.user_type == "developer":
-        from flask import session
-
-        selected_org_id = session.get("dev_selected_org_id")
-        if selected_org_id:
-            mapping = (
-                CustomUnitMapping.scoped()
-                .filter_by(id=mapping_id, organization_id=selected_org_id)
-                .first_or_404()
-            )
-        else:
-            mapping = CustomUnitMapping.scoped().filter_by(id=mapping_id).first_or_404()
-    else:
-        mapping = (
-            CustomUnitMapping.scoped()
-            .filter_by(id=mapping_id, organization_id=current_user.organization_id)
-            .first_or_404()
-        )
+    mapping = ConversionRouteService.get_mapping_for_delete(
+        mapping_id=mapping_id,
+        user_type=getattr(current_user, "user_type", None),
+        user_organization_id=getattr(current_user, "organization_id", None),
+        selected_org_id=_selected_org_id(),
+    )
     try:
-        db.session.delete(mapping)
-        db.session.commit()
+        ConversionRouteService.delete_mapping(mapping=mapping)
         flash("Mapping deleted successfully.", "success")
     except Exception as e:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/conversion/routes.py:329",
             exc_info=True,
         )
-        db.session.rollback()
+        ConversionRouteService.rollback_session()
         flash(f"Error deleting mapping: {str(e)}", "error")
     return redirect(url_for("conversion_bp.manage_units"))
 
@@ -372,8 +288,11 @@ def delete_mapping(mapping_id):
 @require_permission("inventory.edit")
 def validate_mapping():
     data = request.get_json()
-    from_unit = Unit.query.filter_by(name=data["from_unit"]).first()
-    to_unit = Unit.query.filter_by(name=data["to_unit"]).first()
+    from_unit = ConversionRouteService.find_unit_by_name(name=data["from_unit"])
+    to_unit = ConversionRouteService.find_unit_by_name(name=data["to_unit"])
+
+    if not from_unit or not to_unit:
+        return jsonify({"valid": False, "error": "Units not found"})
 
     if from_unit.unit_type == to_unit.unit_type:
         return jsonify({"valid": True})
@@ -381,7 +300,11 @@ def validate_mapping():
     # Handle volume ↔ weight conversions
     if {"volume", "weight"} <= {from_unit.unit_type, to_unit.unit_type}:
         if data.get("ingredient_id"):
-            ingredient = db.session.get(InventoryItem, data["ingredient_id"])
+            ingredient = ConversionRouteService.get_inventory_item_by_id(
+                item_id=data["ingredient_id"]
+            )
+            if not ingredient:
+                return jsonify({"valid": False, "error": "Ingredient not found"})
             if not ingredient.density and not ingredient.category:
                 return jsonify(
                     {
@@ -406,8 +329,8 @@ def add_mapping():
     data = request.get_json()
 
     # Validate units exist
-    from_unit = Unit.query.filter_by(name=data["from_unit"]).first()
-    to_unit = Unit.query.filter_by(name=data["to_unit"]).first()
+    from_unit = ConversionRouteService.find_unit_by_name(name=data["from_unit"])
+    to_unit = ConversionRouteService.find_unit_by_name(name=data["to_unit"])
 
     if not from_unit or not to_unit:
         return jsonify({"error": "Invalid units"}), 400
@@ -423,16 +346,13 @@ def add_mapping():
                     400,
                 )
 
-    mapping = CustomUnitMapping(
+    ConversionRouteService.create_api_mapping(
         from_unit=data["from_unit"],
         to_unit=data["to_unit"],
-        conversion_factor=float(data["multiplier"]),
+        multiplier=float(data["multiplier"]),
         organization_id=(
             current_user.organization_id if current_user.is_authenticated else None
         ),
     )
-
-    db.session.add(mapping)
-    db.session.commit()
 
     return jsonify({"message": "Mapping added successfully"})

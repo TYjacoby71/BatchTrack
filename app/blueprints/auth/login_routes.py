@@ -26,15 +26,14 @@ from flask import (
 )
 from flask_login import current_user, login_user, logout_user
 from flask_wtf import FlaskForm
-from sqlalchemy import func, or_
 from sqlalchemy.exc import SQLAlchemyError
 from wtforms import PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired
 
-from ...extensions import db, limiter
-from ...models import GlobalItem, Organization, Role, User
-from ...models.subscription_tier import SubscriptionTier
+from ...extensions import limiter
+from ...models import User
 from ...services.analytics_tracking_service import AnalyticsTrackingService
+from ...services.auth_login_route_service import AuthLoginRouteService
 from ...services.billing.orchestrators.auth_billing_orchestrator import (
     AuthBillingOrchestrator,
 )
@@ -109,11 +108,7 @@ def _send_verification_if_needed(user: User, *, force: bool = False) -> bool:
         if not force and recently_sent and user.email_verification_token:
             return False
 
-        user.email_verification_token = EmailService.generate_verification_token(
-            user.email
-        )
-        user.email_verification_sent_at = TimezoneUtils.utc_now()
-        db.session.commit()
+        AuthLoginRouteService.issue_email_verification_token(user)
 
         sent = EmailService.send_verification_email(
             user.email,
@@ -125,13 +120,13 @@ def _send_verification_if_needed(user: User, *, force: bool = False) -> bool:
             user.email_verification_token = None
             user.email_verification_sent_at = None
             try:
-                db.session.commit()
+                AuthLoginRouteService.commit_session()
             except Exception as clear_exc:
                 logger.warning(
                     "Suppressed exception fallback at app/blueprints/auth/login_routes.py:128",
                     exc_info=True,
                 )
-                db.session.rollback()
+                AuthLoginRouteService.rollback_session()
                 logger.warning(
                     "Failed to clear verification token after send failure for user %s: %s",
                     user.id,
@@ -143,7 +138,7 @@ def _send_verification_if_needed(user: User, *, force: bool = False) -> bool:
             "Suppressed exception fallback at app/blueprints/auth/login_routes.py:136",
             exc_info=True,
         )
-        db.session.rollback()
+        AuthLoginRouteService.rollback_session()
         logger.warning(
             "Unable to queue verification email for user %s: %s", user.id, exc
         )
@@ -247,18 +242,11 @@ def login():
 
         try:
             normalized_identifier = login_identifier.lower()
-            user = (
-                User.query.filter(
-                    or_(
-                        func.lower(User.username) == normalized_identifier,
-                        func.lower(User.email) == normalized_identifier,
-                    )
-                )
-                .order_by(User.id.asc())
-                .first()
+            user = AuthLoginRouteService.find_user_by_login_identifier(
+                normalized_identifier=normalized_identifier
             )
         except SQLAlchemyError as exc:
-            db.session.rollback()
+            AuthLoginRouteService.rollback_session()
             logger.exception("Login query failed for %s: %s", login_identifier, exc)
             _log_loadtest_login_context(
                 "db_query_error", {"identifier": login_identifier}
@@ -407,9 +395,9 @@ def login():
             )
             user.last_login = TimezoneUtils.utc_now()
             try:
-                db.session.commit()
+                AuthLoginRouteService.commit_session()
             except SQLAlchemyError as exc:
-                db.session.rollback()
+                AuthLoginRouteService.rollback_session()
                 logger.exception(
                     "Login commit failed for %s: %s", login_identifier, exc
                 )
@@ -544,22 +532,7 @@ def quick_signup():
     }
 
     def _resolve_free_tools_tier():
-        free_tools_tier = (
-            SubscriptionTier.query.filter(
-                func.lower(SubscriptionTier.name) == "free tools"
-            )
-            .order_by(SubscriptionTier.id.asc())
-            .first()
-        )
-        if free_tools_tier:
-            return free_tools_tier
-        free_tools_tier = SubscriptionTier.find_by_identifier("free tools")
-        if free_tools_tier:
-            return free_tools_tier
-        free_tools_tier = SubscriptionTier.find_by_identifier("free")
-        if free_tools_tier:
-            return free_tools_tier
-        return SubscriptionTier.find_by_identifier("exempt")
+        return AuthLoginRouteService.resolve_free_tools_tier()
 
     def _render_quick_signup_form(
         *,
@@ -701,52 +674,15 @@ def quick_signup():
         try:
             tier = _resolve_free_tools_tier()
             verification_enabled = EmailService.should_issue_verification_tokens()
-
-            org_name = f"{first_name or 'New'}'s Workspace"
-            org = Organization(
-                name=org_name,
-                contact_email=email,
-                is_active=True,
-                signup_source=signup_source,
-                subscription_status="active",
-                billing_status="active",
-            )
-            if tier:
-                org.subscription_tier_id = tier.id
-            db.session.add(org)
-            db.session.flush()
-
-            username = _generate_username_from_email(email)
-            user = User(
-                username=username,
-                email=email,
+            user, org = AuthLoginRouteService.create_quick_signup_user_and_org(
                 first_name=first_name,
                 last_name=last_name,
-                organization_id=org.id,
-                user_type="customer",
-                is_organization_owner=True,
-                is_active=True,
-                email_verified=not verification_enabled,
-                email_verification_token=(
-                    EmailService.generate_verification_token(email)
-                    if verification_enabled
-                    else None
-                ),
-                email_verification_sent_at=(
-                    TimezoneUtils.utc_now() if verification_enabled else None
-                ),
+                email=email,
+                password=password,
+                signup_source=signup_source,
+                tier=tier,
+                verification_enabled=verification_enabled,
             )
-            user.set_password(password)
-            db.session.add(user)
-            db.session.flush()
-
-            org_owner_role = Role.query.filter_by(
-                name="organization_owner", is_system_role=True
-            ).first()
-            if org_owner_role:
-                user.assign_role(org_owner_role)
-
-            db.session.commit()
 
             quick_signup_completion_properties = {
                 "signup_source": signup_source,
@@ -776,7 +712,7 @@ def quick_signup():
                 "Suppressed exception fallback at app/blueprints/auth/login_routes.py:701",
                 exc_info=True,
             )
-            db.session.rollback()
+            AuthLoginRouteService.rollback_session()
             logger.error("Quick signup failed: %s", exc, exc_info=True)
             flash("Unable to create your account right now. Please try again.", "error")
             return _render_quick_signup_form(
@@ -796,7 +732,9 @@ def quick_signup():
     global_item_name = ""
     try:
         if global_item_id and global_item_id.isdigit():
-            gi = db.session.get(GlobalItem, int(global_item_id))
+            gi = AuthLoginRouteService.get_global_item_by_id(
+                global_item_id=int(global_item_id)
+            )
             global_item_name = getattr(gi, "name", "") if gi else ""
     except Exception:
         logger.warning(
@@ -842,13 +780,13 @@ def logout():
     if current_user.is_authenticated:
         current_user.active_session_token = None
         try:
-            db.session.commit()
+            AuthLoginRouteService.commit_session()
         except Exception:
             logger.warning(
                 "Suppressed exception fallback at app/blueprints/auth/login_routes.py:759",
                 exc_info=True,
             )
-            db.session.rollback()
+            AuthLoginRouteService.rollback_session()
 
     SessionService.clear_session_state()
     logout_user()

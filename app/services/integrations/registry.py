@@ -15,6 +15,8 @@ from typing import Dict, Iterable, List, Optional
 
 from flask import current_app
 
+from app.utils.settings import is_feature_enabled
+
 
 # --- IntegrationSpec ---
 # Purpose: Describe required metadata for one integration.
@@ -31,6 +33,7 @@ class IntegrationSpec:
     toggleable: bool = False
     toggle_endpoint: Optional[str] = None
     notes: Optional[str] = None
+    feature_flag: Optional[str] = None
 
 
 # --- Resolve config value ---
@@ -50,6 +53,7 @@ def _specs() -> Iterable[IntegrationSpec]:
             category="Commerce & Marketplace",
             status="stub",
             permission="integrations.shopify",
+            feature_flag="FEATURE_SHOPIFY_INTEGRATION",
         ),
         IntegrationSpec(
             key="etsy",
@@ -58,6 +62,7 @@ def _specs() -> Iterable[IntegrationSpec]:
             category="Commerce & Marketplace",
             status="stub",
             permission="integrations.marketplace",
+            feature_flag="FEATURE_ETSY_INTEGRATION",
         ),
         IntegrationSpec(
             key="api_access",
@@ -66,6 +71,7 @@ def _specs() -> Iterable[IntegrationSpec]:
             category="Commerce & Marketplace",
             status="stub",
             permission="integrations.api_access",
+            feature_flag="FEATURE_ECOMMERCE_INTEGRATIONS",
         ),
         IntegrationSpec(
             key="oauth",
@@ -112,6 +118,10 @@ def build_integration_categories(
             "toggle_endpoint": spec.toggle_endpoint,
             "enabled": auto_backup_enabled if spec.key == "auto_backup" else None,
             "notes": spec.notes,
+            "feature_flag": spec.feature_flag,
+            "flag_enabled": (
+                is_feature_enabled(spec.feature_flag) if spec.feature_flag else True
+            ),
         }
         grouped.setdefault(spec.category, []).append(item)
 

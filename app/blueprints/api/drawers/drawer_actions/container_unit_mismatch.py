@@ -16,7 +16,7 @@ from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
 from flask_wtf.csrf import validate_csrf
 
-from app.models import InventoryItem, Recipe, db
+from app.services.container_unit_mismatch_service import ContainerUnitMismatchService
 from app.utils.permissions import require_permission
 from app.utils.unit_utils import get_global_unit_list
 
@@ -52,13 +52,9 @@ def container_unit_mismatch_modal():
     if not recipe_id:
         return jsonify({"success": False, "error": "Recipe ID required"}), 400
 
-    recipe = (
-        Recipe.scoped()
-        .filter_by(
-            id=recipe_id,
-            organization_id=current_user.organization_id,
-        )
-        .first()
+    recipe = ContainerUnitMismatchService.get_recipe_for_org(
+        recipe_id=recipe_id,
+        organization_id=current_user.organization_id,
     )
 
     if not recipe:
@@ -69,13 +65,9 @@ def container_unit_mismatch_modal():
     container_items = []
     allowed_ids = getattr(recipe, "allowed_containers", []) or []
     if allowed_ids:
-        containers = (
-            InventoryItem.scoped()
-            .filter(
-                InventoryItem.id.in_(allowed_ids),
-                InventoryItem.organization_id == current_user.organization_id,
-            )
-            .all()
+        containers = ContainerUnitMismatchService.list_allowed_containers_for_org(
+            allowed_ids=allowed_ids,
+            organization_id=current_user.organization_id,
         )
         for container in containers:
             container_items.append(
@@ -109,13 +101,9 @@ def container_unit_mismatch_modal():
 @require_permission("recipes.plan_production")
 def container_unit_mismatch_update_yield(recipe_id):
     """Quickly update a recipe's predicted yield and unit from the drawer."""
-    recipe = (
-        Recipe.scoped()
-        .filter_by(
-            id=recipe_id,
-            organization_id=current_user.organization_id,
-        )
-        .first()
+    recipe = ContainerUnitMismatchService.get_recipe_for_org(
+        recipe_id=recipe_id,
+        organization_id=current_user.organization_id,
     )
 
     if not recipe:
@@ -140,17 +128,17 @@ def container_unit_mismatch_update_yield(recipe_id):
     if not new_unit:
         return jsonify({"success": False, "error": "Yield unit is required"}), 400
 
-    recipe.predicted_yield = new_yield
-    recipe.predicted_yield_unit = new_unit
-
     try:
-        db.session.commit()
+        ContainerUnitMismatchService.update_recipe_yield(
+            recipe=recipe,
+            predicted_yield=new_yield,
+            predicted_yield_unit=new_unit,
+        )
     except Exception as exc:  # pragma: no cover - rollback guard
         logger.warning(
             "Suppressed exception fallback at app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py:127",
             exc_info=True,
         )
-        db.session.rollback()
         return (
             jsonify({"success": False, "error": f"Failed to update recipe: {exc}"}),
             500,

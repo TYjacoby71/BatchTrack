@@ -16,9 +16,9 @@ from flask_login import current_user, login_required
 
 from app.utils.permissions import require_permission
 
-from ...extensions import db
 from ...models import User
 from ...services.analytics_tracking_service import AnalyticsTrackingService
+from ...services.auth_account_service import AuthAccountService
 from ...utils.analytics_timing import seconds_since_first_landing
 from ...utils.timezone_utils import TimezoneUtils
 
@@ -47,12 +47,10 @@ def _invite_setup_token_expired(user: User) -> bool:
 @onboarding_bp.route("/invite-setup/<token>", methods=["GET", "POST"])
 def invite_setup(token: str):
     """Complete invited-user profile + password setup after email verification."""
-    user = User.query.filter_by(password_reset_token=token).first()
+    user = AuthAccountService.find_user_by_password_reset_token(token)
     if not user or _invite_setup_token_expired(user):
         if user and user.password_reset_token == token:
-            user.password_reset_token = None
-            user.password_reset_sent_at = None
-            db.session.commit()
+            AuthAccountService.clear_password_reset_token(user)
         flash("This invite setup link is invalid or has expired.", "error")
         return redirect(url_for("auth.login"))
 
@@ -83,7 +81,9 @@ def invite_setup(token: str):
             errors.append(
                 "Username can only contain letters, numbers, and underscores."
             )
-        elif User.username_exists(desired_username, exclude_user_id=user.id):
+        elif AuthAccountService.username_exists(
+            username=desired_username, exclude_user_id=user.id
+        ):
             errors.append("That username is already taken.")
 
         if not new_password or not confirm_password:
@@ -94,14 +94,14 @@ def invite_setup(token: str):
             errors.append("Password must be at least 8 characters long.")
 
         if not errors:
-            user.first_name = first_name
-            user.last_name = last_name
-            user.phone = phone or None
-            user.username = desired_username
-            user.set_password(new_password)
-            user.password_reset_token = None
-            user.password_reset_sent_at = None
-            db.session.commit()
+            AuthAccountService.complete_invite_setup(
+                user,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                username=desired_username,
+                password=new_password,
+            )
             flash("Profile setup complete. Please log in to continue.", "success")
             return redirect(url_for("auth.login"))
 
@@ -177,10 +177,7 @@ def welcome():
                 password_errors.append("Password must be at least 8 characters long.")
 
             if not password_errors:
-                user.set_password(new_password)
-                user.password_reset_token = None
-                user.password_reset_sent_at = None
-                db.session.commit()
+                AuthAccountService.set_onboarding_password(user, password=new_password)
                 requires_password_setup = False
                 flash("Your password has been updated.", "success")
                 return redirect(url_for("onboarding.welcome"))
@@ -202,25 +199,17 @@ def welcome():
                 request.form.get("username") or user.username or ""
             ).strip()
 
-            organization.name = org_name or organization.name
-            organization.contact_email = (
-                org_contact_email or organization.contact_email or user.email
-            )
-            user.first_name = user_first
-            user.last_name = user_last
-            user.phone = user_phone or None
-
             username_errors = []
             profile_errors = []
+            username_to_save = None
             if not user_first:
                 profile_errors.append("Please add your first name before continuing.")
             if not user_last:
                 profile_errors.append("Please add your last name before continuing.")
             if desired_username and desired_username != user.username:
-                existing = User.query.filter(
-                    User.username == desired_username, User.id != user.id
-                ).first()
-                if existing:
+                if AuthAccountService.username_exists(
+                    username=desired_username, exclude_user_id=user.id
+                ):
                     username_errors.append("That username is already taken.")
                 elif len(desired_username) < 3:
                     username_errors.append("Username must be at least 3 characters.")
@@ -229,29 +218,37 @@ def welcome():
                         "Username can only contain letters, numbers, and underscores."
                     )
                 else:
-                    user.username = desired_username
+                    username_to_save = desired_username
 
             completion_errors = []
             if request.form.get("complete_checklist") == "true":
-                if not (organization.contact_email or "").strip():
+                effective_contact_email = (
+                    org_contact_email or organization.contact_email or user.email or ""
+                ).strip()
+                if not effective_contact_email:
                     completion_errors.append(
                         "Please add your billing/contact email before continuing."
                     )
-                if not (
-                    (user.first_name or "").strip() and (user.last_name or "").strip()
-                ):
+                if not (user_first and user_last):
                     completion_errors.append(
                         "Please add your first and last name before continuing."
                     )
-
-            user.last_login = user.last_login or TimezoneUtils.utc_now()
 
             validation_errors = username_errors + profile_errors + completion_errors
             if validation_errors:
                 for err in validation_errors:
                     flash(err, "error")
             else:
-                db.session.commit()
+                AuthAccountService.save_onboarding_profile(
+                    user,
+                    organization,
+                    org_name=org_name,
+                    org_contact_email=org_contact_email,
+                    first_name=user_first,
+                    last_name=user_last,
+                    phone=user_phone,
+                    desired_username=username_to_save,
+                )
                 flash("Setup details saved.", "success")
 
                 if request.form.get("complete_checklist") == "true":

@@ -12,8 +12,7 @@ from __future__ import annotations
 
 from flask import flash, redirect, render_template, request, url_for
 
-from app.extensions import db
-from app.models import Product, ProductCategory, Recipe
+from app.services.developer.product_category_service import ProductCategoryService
 
 from ..decorators import require_developer_permission
 from ..routes import developer_bp
@@ -26,7 +25,7 @@ from ..routes import developer_bp
 @developer_bp.route("/product-categories")
 @require_developer_permission("dev.system_admin")
 def product_categories():
-    categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
+    categories = ProductCategoryService.list_categories()
     return render_template("developer/categories/list.html", categories=categories)
 
 
@@ -38,25 +37,28 @@ def product_categories():
 @require_developer_permission("dev.system_admin")
 def create_product_category():
     if request.method == "POST":
-        name = (request.form.get("name") or "").strip()
-        is_typically_portioned = request.form.get("is_typically_portioned") == "on"
-        sku_name_template = (
-            request.form.get("sku_name_template") or ""
-        ).strip() or None
-        if not name:
-            flash("Name is required", "error")
+        name, is_typically_portioned, sku_name_template = (
+            ProductCategoryService.normalize_form_inputs(
+                name=request.form.get("name"),
+                is_typically_portioned_raw=request.form.get("is_typically_portioned"),
+                sku_name_template=request.form.get("sku_name_template"),
+            )
+        )
+        name_ok, name_error = ProductCategoryService.validate_name_required(name)
+        if not name_ok:
+            flash(name_error, "error")
             return redirect(url_for("developer.create_product_category"))
-        exists = ProductCategory.query.filter(ProductCategory.name.ilike(name)).first()
+
+        exists = ProductCategoryService.find_conflict(name=name)
         if exists:
             flash("Category name already exists", "error")
             return redirect(url_for("developer.create_product_category"))
-        cat = ProductCategory(
+
+        ProductCategoryService.create_category(
             name=name,
             is_typically_portioned=is_typically_portioned,
             sku_name_template=sku_name_template,
         )
-        db.session.add(cat)
-        db.session.commit()
         flash("Product category created", "success")
         return redirect(url_for("developer.product_categories"))
     return render_template("developer/categories/new.html")
@@ -69,28 +71,34 @@ def create_product_category():
 @developer_bp.route("/product-categories/<int:cat_id>/edit", methods=["GET", "POST"])
 @require_developer_permission("dev.system_admin")
 def edit_product_category(cat_id):
-    cat = db.get_or_404(ProductCategory, cat_id)
+    cat = ProductCategoryService.get_category_or_404(cat_id)
     if request.method == "POST":
-        name = (request.form.get("name") or "").strip()
-        is_typically_portioned = request.form.get("is_typically_portioned") == "on"
-        sku_name_template = (
-            request.form.get("sku_name_template") or ""
-        ).strip() or None
-        if not name:
-            flash("Name is required", "error")
+        name, is_typically_portioned, sku_name_template = (
+            ProductCategoryService.normalize_form_inputs(
+                name=request.form.get("name"),
+                is_typically_portioned_raw=request.form.get("is_typically_portioned"),
+                sku_name_template=request.form.get("sku_name_template"),
+            )
+        )
+        name_ok, name_error = ProductCategoryService.validate_name_required(name)
+        if not name_ok:
+            flash(name_error, "error")
             return redirect(url_for("developer.edit_product_category", cat_id=cat_id))
-        conflict = (
-            ProductCategory.query.filter(ProductCategory.id != cat_id)
-            .filter(ProductCategory.name.ilike(name))
-            .first()
+
+        conflict = ProductCategoryService.find_conflict(
+            name=name,
+            exclude_category_id=cat_id,
         )
         if conflict:
             flash("Another category with that name exists", "error")
             return redirect(url_for("developer.edit_product_category", cat_id=cat_id))
-        cat.name = name
-        cat.is_typically_portioned = is_typically_portioned
-        cat.sku_name_template = sku_name_template
-        db.session.commit()
+
+        ProductCategoryService.update_category(
+            cat,
+            name=name,
+            is_typically_portioned=is_typically_portioned,
+            sku_name_template=sku_name_template,
+        )
         flash("Product category updated", "success")
         return redirect(url_for("developer.product_categories"))
     return render_template("developer/categories/edit.html", category=cat)
@@ -103,15 +111,11 @@ def edit_product_category(cat_id):
 @developer_bp.route("/product-categories/<int:cat_id>/delete", methods=["POST"])
 @require_developer_permission("dev.system_admin")
 def delete_product_category(cat_id):
-    cat = db.get_or_404(ProductCategory, cat_id)
-    in_use = (
-        db.session.query(Product).filter_by(category_id=cat.id).first()
-        or db.session.query(Recipe).filter_by(category_id=cat.id).first()
-    )
+    cat = ProductCategoryService.get_category_or_404(cat_id)
+    in_use = ProductCategoryService.is_category_in_use(cat)
     if in_use:
         flash("Cannot delete category that is used by products or recipes", "error")
         return redirect(url_for("developer.product_categories"))
-    db.session.delete(cat)
-    db.session.commit()
+    ProductCategoryService.delete_category(cat)
     flash("Product category deleted", "success")
     return redirect(url_for("developer.product_categories"))

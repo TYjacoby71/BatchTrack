@@ -25,16 +25,18 @@ from flask import (
     url_for,
 )
 from flask_login import current_user
-from sqlalchemy import func, nullslast, or_
-from sqlalchemy.orm import joinedload
 
-from app.extensions import cache, db, limiter
-from app.models import Organization, ProductCategory, Recipe
-from app.models.statistics import BatchStats
+from app.extensions import cache, limiter
+from app.models import Organization, Recipe
 from app.services.cache_invalidation import recipe_library_cache_key
+from app.services.recipe_library_view_service import RecipeLibraryViewService
 from app.services.statistics import AnalyticsDataService
 from app.utils.cache_utils import should_bypass_cache, stable_cache_key
-from app.utils.permissions import _org_tier_includes_permission
+from app.utils.permissions import (
+    _org_tier_includes_permission,
+    get_effective_organization_id,
+    has_permission,
+)
 from app.utils.seo import slugify_value
 from app.utils.settings import is_feature_enabled
 
@@ -177,68 +179,15 @@ def recipe_library():
         if cached_page is not None:
             return cached_page
 
-    query = (
-        Recipe.query.options(
-            joinedload(Recipe.product_category),
-            joinedload(Recipe.stats),
-            joinedload(Recipe.organization),
-        )
-        .outerjoin(Organization, Recipe.organization_id == Organization.id)
-        .filter(
-            Recipe.is_public.is_(True),
-            Recipe.status == "published",
-            Recipe.marketplace_status == "listed",
-            Recipe.test_sequence.is_(None),
-            Recipe.is_archived.is_(False),
-            Recipe.is_current.is_(True),
-            (Organization.recipe_library_blocked.is_(False))
-            | (Organization.recipe_library_blocked.is_(None)),
-        )
+    recipes = RecipeLibraryViewService.list_public_library_recipes(
+        search_query=search_query,
+        category_filter=category_filter,
+        sale_filter=sale_filter,
+        org_filter=org_filter,
+        origin_filter=origin_filter,
+        sort_mode=sort_mode,
+        limit=30,
     )
-
-    if category_filter:
-        query = query.filter(Recipe.category_id == category_filter)
-    if sale_filter == "sale":
-        query = query.filter(Recipe.is_for_sale.is_(True))
-    elif sale_filter == "free":
-        query = query.filter(Recipe.is_for_sale.is_(False))
-    if org_filter:
-        query = query.filter(Recipe.organization_id == org_filter)
-    if origin_filter == "batchtrack":
-        query = query.filter(Recipe.org_origin_type == "batchtrack_native")
-    elif origin_filter == "purchased":
-        query = query.filter(Recipe.org_origin_purchased.is_(True))
-    elif origin_filter == "authored":
-        query = query.filter(
-            (Recipe.org_origin_type.in_(["authored", "published"]))
-            | (Recipe.org_origin_type.is_(None))
-        )
-
-    if search_query:
-        tokens = [token.strip() for token in search_query.split() if token.strip()]
-        for token in tokens:
-            like_expr = f"%{token}%"
-            query = query.filter(
-                or_(
-                    Recipe.name.ilike(like_expr),
-                    Recipe.public_description.ilike(like_expr),
-                )
-            )
-
-    if sort_mode == "oldest":
-        query = query.order_by(Recipe.updated_at.asc())
-    elif sort_mode == "downloads":
-        query = query.order_by(
-            Recipe.download_count.desc(), Recipe.updated_at.desc(), Recipe.name.asc()
-        )
-    elif sort_mode == "price_high":
-        query = query.order_by(
-            nullslast(Recipe.sale_price.desc()), Recipe.updated_at.desc()
-        )
-    else:
-        query = query.order_by(Recipe.updated_at.desc(), Recipe.name.asc())
-
-    recipes = query.limit(30).all()
     cost_map = _fetch_cost_rollups([r.id for r in recipes])
 
     recipe_cards = [
@@ -246,25 +195,8 @@ def recipe_library():
         for recipe in recipes
     ]
 
-    categories = ProductCategory.query.order_by(ProductCategory.name.asc()).all()
-    organizations = (
-        db.session.query(Organization.id, Organization.name)
-        .join(Recipe, Recipe.organization_id == Organization.id)
-        .filter(
-            Recipe.is_public.is_(True),
-            Recipe.status == "published",
-            Recipe.marketplace_status == "listed",
-            Recipe.test_sequence.is_(None),
-            Recipe.is_archived.is_(False),
-            Recipe.is_current.is_(True),
-            (Organization.recipe_library_blocked.is_(False))
-            | (Organization.recipe_library_blocked.is_(None)),
-        )
-        .distinct()
-        .order_by(Organization.name.asc())
-        .all()
-    )
-    org_options = [{"id": org.id, "name": org.name} for org in organizations]
+    categories = RecipeLibraryViewService.list_public_categories()
+    org_options = RecipeLibraryViewService.list_public_origin_organizations()
 
     stats = AnalyticsDataService.get_recipe_library_metrics(force_refresh=False)
     # Ensure all required stats have default values
@@ -326,25 +258,7 @@ def recipe_library_detail(recipe_id: int, slug: str):
                 )
             )
 
-    recipe = (
-        Recipe.query.options(
-            joinedload(Recipe.product_category),
-            joinedload(Recipe.stats),
-        )
-        .outerjoin(Organization, Recipe.organization_id == Organization.id)
-        .filter(
-            Recipe.id == recipe_id,
-            Recipe.is_public.is_(True),
-            Recipe.status == "published",
-            Recipe.marketplace_status == "listed",
-            Recipe.test_sequence.is_(None),
-            Recipe.is_archived.is_(False),
-            Recipe.is_current.is_(True),
-            (Organization.recipe_library_blocked.is_(False))
-            | (Organization.recipe_library_blocked.is_(None)),
-        )
-        .first_or_404()
-    )
+    recipe = RecipeLibraryViewService.get_public_recipe_or_404(recipe_id)
 
     canonical_slug = slugify_value(recipe.name)
     if slug != canonical_slug:
@@ -366,10 +280,11 @@ def recipe_library_detail(recipe_id: int, slug: str):
     org_marketplace_enabled = marketplace_display_enabled and _org_allows_permission(
         recipe.organization, RECIPE_MARKETPLACE_PERMISSION
     )
-    reveal_details = False
-    if getattr(current_user, "is_authenticated", False):
-        if current_user.user_type == "developer" or session.get("dev_selected_org_id"):
-            reveal_details = True
+    reveal_details = bool(
+        getattr(current_user, "is_authenticated", False)
+        and has_permission(current_user, "dev.all_organizations")
+        and get_effective_organization_id()
+    )
 
     return render_template(
         "library/recipe_detail.html",
@@ -389,7 +304,7 @@ def recipe_library_detail(recipe_id: int, slug: str):
 def organization_marketplace(organization_id: int):
     if not _marketplace_display_enabled():
         abort(404)
-    org = db.get_or_404(Organization, organization_id)
+    org = RecipeLibraryViewService.get_organization_or_404(organization_id)
     if not _org_allows_permission(org, RECIPE_MARKETPLACE_PERMISSION):
         abort(404)
     if org.recipe_library_blocked:
@@ -399,49 +314,12 @@ def organization_marketplace(organization_id: int):
     sale_filter = (request.args.get("sale") or "any").lower()
     sort_mode = (request.args.get("sort") or "newest").lower()
 
-    query = Recipe.query.options(
-        joinedload(Recipe.product_category),
-        joinedload(Recipe.stats),
-    ).filter(
-        Recipe.organization_id == org.id,
-        Recipe.is_public.is_(True),
-        Recipe.status == "published",
-        Recipe.marketplace_status == "listed",
-        Recipe.test_sequence.is_(None),
-        Recipe.is_archived.is_(False),
-        Recipe.is_current.is_(True),
+    recipes = RecipeLibraryViewService.list_org_marketplace_recipes(
+        organization_id=org.id,
+        search_query=search_query,
+        sale_filter=sale_filter,
+        sort_mode=sort_mode,
     )
-
-    if sale_filter == "sale":
-        query = query.filter(Recipe.is_for_sale.is_(True))
-    elif sale_filter == "free":
-        query = query.filter(Recipe.is_for_sale.is_(False))
-
-    if search_query:
-        tokens = [token.strip() for token in search_query.split() if token.strip()]
-        for token in tokens:
-            like_expr = f"%{token}%"
-            query = query.filter(
-                or_(
-                    Recipe.name.ilike(like_expr),
-                    Recipe.public_description.ilike(like_expr),
-                )
-            )
-
-    if sort_mode == "downloads":
-        query = query.order_by(
-            Recipe.download_count.desc(), Recipe.updated_at.desc(), Recipe.name.asc()
-        )
-    elif sort_mode == "price_high":
-        query = query.order_by(
-            nullslast(Recipe.sale_price.desc()), Recipe.updated_at.desc()
-        )
-    elif sort_mode == "oldest":
-        query = query.order_by(Recipe.updated_at.asc())
-    else:
-        query = query.order_by(Recipe.updated_at.desc(), Recipe.name.asc())
-
-    recipes = query.all()
     cost_map = _fetch_cost_rollups([r.id for r in recipes])
     recipe_cards = [
         _serialize_recipe_for_public(recipe, cost_map.get(recipe.id))
@@ -555,22 +433,4 @@ def _safe_int(value):
 
 
 def _fetch_cost_rollups(recipe_ids):
-    if not recipe_ids:
-        return {}
-    rows = (
-        db.session.query(
-            BatchStats.recipe_id,
-            func.avg(BatchStats.actual_ingredient_cost).label("ingredient_cost"),
-            func.avg(BatchStats.total_actual_cost).label("total_cost"),
-        )
-        .filter(BatchStats.recipe_id.in_(recipe_ids))
-        .group_by(BatchStats.recipe_id)
-        .all()
-    )
-    return {
-        row.recipe_id: {
-            "ingredient_cost": float(row.ingredient_cost or 0),
-            "total_cost": float(row.total_cost or 0),
-        }
-        for row in rows
-    }
+    return RecipeLibraryViewService.fetch_cost_rollups(recipe_ids)

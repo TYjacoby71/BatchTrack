@@ -15,14 +15,11 @@ from datetime import datetime, timedelta, timezone
 
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import func
-from sqlalchemy.orm import joinedload
 from wtforms.validators import ValidationError
 
-from app.extensions import db
-from app.models import InventoryItem, Recipe
-from app.models.product_category import ProductCategory
+from app.models import Recipe
 from app.services.lineage_service import format_label_prefix, generate_variation_prefix
+from app.services.recipe_create_view_service import RecipeCreateViewService
 from app.services.recipe_proportionality_service import RecipeProportionalityService
 from app.services.recipe_service import (
     build_test_template,
@@ -150,15 +147,8 @@ def _enforce_anti_plagiarism(ingredients, *, skip_check: bool):
     if not org_id:
         return
 
-    purchased_recipes = (
-        Recipe.scoped()
-        .options(joinedload(Recipe.recipe_ingredients))
-        .filter(
-            Recipe.organization_id == org_id,
-            Recipe.org_origin_purchased.is_(True),
-            Recipe.test_sequence.is_(None),
-        )
-        .all()
+    purchased_recipes = RecipeCreateViewService.list_purchased_recipes_for_org(
+        organization_id=org_id
     )
 
     for purchased in purchased_recipes:
@@ -235,15 +225,11 @@ def new_recipe():
 
             if success:
                 try:
-                    created_names = []
-                    for ing in submitted_ingredients:
-                        item = db.session.get(InventoryItem, ing["item_id"])
-                        if (
-                            item
-                            and not getattr(item, "global_item_id", None)
-                            and float(getattr(item, "quantity", 0) or 0) == 0.0
-                        ):
-                            created_names.append(item.name)
+                    created_names = (
+                        RecipeCreateViewService.list_new_inventory_item_names_from_ids(
+                            item_ids=[ing["item_id"] for ing in submitted_ingredients]
+                        )
+                    )
                     if created_names:
                         flash(
                             "Added {} new inventory item(s) from this recipe: {}".format(
@@ -301,7 +287,7 @@ def new_recipe():
                 "Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:285",
                 exc_info=True,
             )
-            db.session.rollback()
+            RecipeCreateViewService.rollback_session()
             logger.exception("Error creating recipe: %s", exc)
             flash("An unexpected error occurred", "error")
             ingredient_prefill, consumable_prefill = build_prefill_from_form(
@@ -347,9 +333,7 @@ def new_recipe():
             )
             cat_name = (draft.get("category_name") or "").strip()
             if cat_name:
-                cat = ProductCategory.query.filter(
-                    func.lower(ProductCategory.name) == func.lower(db.literal(cat_name))
-                ).first()
+                cat = RecipeCreateViewService.find_product_category_by_name(cat_name)
                 if cat:
                     prefill.category_id = cat.id
         except Exception:
@@ -759,7 +743,7 @@ def clone_recipe(recipe_id):
             "Suppressed exception fallback at app/blueprints/recipes/views/create_routes.py:723",
             exc_info=True,
         )
-        db.session.rollback()
+        RecipeCreateViewService.rollback_session()
         flash(f"Error handling clone request: {exc}", "error")
         logger.exception("Error cloning recipe: %s", exc)
 
@@ -773,7 +757,7 @@ def clone_recipe(recipe_id):
 @require_permission("recipes.view")
 def import_recipe(recipe_id: int):
     effective_org_id = get_effective_organization_id()
-    recipe = db.session.get(Recipe, recipe_id)
+    recipe = RecipeCreateViewService.get_recipe_by_id(recipe_id)
     if not recipe:
         flash("Recipe not found.", "error")
         return redirect(url_for("recipe_library_bp.recipe_library"))

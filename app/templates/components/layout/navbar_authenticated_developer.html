@@ -2,7 +2,7 @@
 Synopsis:
 Authenticated developer navigation and developer/customer switcher menus.
 #}
-{% set help_nav_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
+{% set help_nav_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') %}
 <!-- Developer Navigation -->
 <div class="navbar-nav me-auto">
     <span class="navbar-text text-danger">

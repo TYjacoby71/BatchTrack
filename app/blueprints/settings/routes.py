@@ -4,14 +4,14 @@ from datetime import datetime, timezone
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from werkzeug.security import generate_password_hash
 
-from ...extensions import db
-from ...models import InventoryItem, User, UserPreferences
+from ...models import User
 from ...services.affiliate_service import AffiliateService
 from ...services.billing.orchestrators.settings_billing_orchestrator import (
     SettingsBillingOrchestrator,
 )
+from ...services.settings_route_service import SettingsRouteService
+from ...services.user_preferences_service import UserPreferencesService
 from ...utils.permissions import has_permission, require_permission
 from ...utils.settings import (
     get_settings,
@@ -33,7 +33,9 @@ logger = logging.getLogger(__name__)
 def index():
     """Settings dashboard with organized sections"""
     # Get or create user preferences
-    user_prefs_obj = UserPreferences.get_for_user(current_user.id)
+    user_prefs_obj = SettingsRouteService.get_user_preferences_for_user(
+        user_id=current_user.id
+    )
 
     # Convert to dictionary for JSON serialization - handle None for developers
     if user_prefs_obj:
@@ -85,14 +87,16 @@ def index():
         current_user.organization
     )
     pricing_data = billing_context.pricing_data
-    is_developer_user = current_user.user_type == "developer"
+    can_view_affiliate_tab = bool(
+        has_permission(current_user, "affiliates.view")
+        or has_permission(current_user, "affiliates.generate_links")
+        or has_permission(current_user, "organization.manage_billing")
+        or has_permission(current_user, "affiliates.view_org_dashboard")
+    )
     affiliate_tab_visible = bool(
-        is_developer_user
-        or (
-            is_feature_enabled("FEATURE_AFFILIATE_PROGRAM_UI")
-            and current_user.user_type == "customer"
-            and current_user.organization
-        )
+        is_feature_enabled("FEATURE_AFFILIATE_PROGRAM_UI")
+        and current_user.organization
+        and can_view_affiliate_tab
     )
     affiliate_context = {}
     if affiliate_tab_visible:
@@ -161,7 +165,9 @@ def regenerate_affiliate_link():
 def get_user_preferences():
     """Get user preferences for current user"""
     try:
-        user_prefs = UserPreferences.get_for_user(current_user.id)
+        user_prefs = SettingsRouteService.get_user_preferences_for_user(
+            user_id=current_user.id
+        )
 
         if user_prefs:
             return jsonify(
@@ -211,7 +217,9 @@ def update_user_preferences():
     """Update user preferences"""
     try:
         data = request.get_json()
-        user_prefs = UserPreferences.get_for_user(current_user.id)
+        user_prefs = SettingsRouteService.get_user_preferences_for_user(
+            user_id=current_user.id
+        )
 
         # If no preferences exist (like for developers), don't try to update
         if not user_prefs:
@@ -228,7 +236,7 @@ def update_user_preferences():
                 setattr(user_prefs, key, value)
 
         user_prefs.updated_at = datetime.now(timezone.utc)
-        db.session.commit()
+        SettingsRouteService.commit_session()
 
         flash("All preferences saved successfully", "success")
         return jsonify({"success": True, "message": "Preferences updated successfully"})
@@ -243,18 +251,14 @@ def update_user_preferences():
 
 @settings_bp.route("/api/list-preferences/<string:scope>", methods=["GET"])
 @login_required
+@require_permission("settings.view")
 def get_list_preferences(scope):
     """Get persisted list preferences for the current user and scope."""
     try:
-        if not re.fullmatch(r"[A-Za-z0-9:_-]{1,80}", scope or ""):
-            return jsonify({"success": False, "error": "Invalid preference scope"}), 400
-
-        user_prefs = UserPreferences.get_for_user(current_user.id)
-        if not user_prefs:
-            return jsonify({"success": True, "scope": scope, "values": {}})
-
-        values = user_prefs.get_list_preferences(scope)
-        return jsonify({"success": True, "scope": scope, "values": values})
+        payload, status_code = UserPreferencesService.get_list_preferences(
+            current_user.id, scope
+        )
+        return jsonify(payload), status_code
     except Exception as e:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/settings/routes.py:185",
@@ -265,47 +269,22 @@ def get_list_preferences(scope):
 
 @settings_bp.route("/api/list-preferences/<string:scope>", methods=["POST"])
 @login_required
+@require_permission("settings.edit")
 def update_list_preferences(scope):
     """Persist list/table preferences for the current user and scope."""
     try:
-        if not re.fullmatch(r"[A-Za-z0-9:_-]{1,80}", scope or ""):
-            return jsonify({"success": False, "error": "Invalid preference scope"}), 400
-
-        payload = request.get_json(silent=True) or {}
-        values = payload.get("values")
-        mode = str(payload.get("mode", "merge") or "merge").lower()
-        merge = mode != "replace"
-
-        if values is None:
-            # Backward-compatible payload shape: treat the root object as values.
-            values = payload
-            mode = "merge"
-            merge = True
-
-        if not isinstance(values, dict):
-            return (
-                jsonify(
-                    {"success": False, "error": "Preference values must be an object"}
-                ),
-                400,
-            )
-
-        user_prefs = UserPreferences.get_for_user(current_user.id)
-        if not user_prefs:
-            return jsonify({"success": False, "error": "Preferences unavailable"}), 400
-
-        next_scope_values = user_prefs.set_list_preferences(scope, values, merge=merge)
-        user_prefs.updated_at = datetime.now(timezone.utc)
-        db.session.commit()
-        return jsonify(
-            {"success": True, "scope": scope, "values": next_scope_values, "mode": mode}
+        payload, status_code = UserPreferencesService.update_list_preferences(
+            current_user.id,
+            scope,
+            request.get_json(silent=True) or {},
         )
+        return jsonify(payload), status_code
     except Exception as e:
         logger.warning(
             "Suppressed exception fallback at app/blueprints/settings/routes.py:224",
             exc_info=True,
         )
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -417,18 +396,14 @@ def save_profile():
 
         # Commit changes
         print("Attempting to save to database...")
-        db.session.commit()
+        SettingsRouteService.commit_session()
         print("Database save successful")
 
         if expects_json:
             return jsonify({"success": True, "message": "Profile updated successfully"})
         else:
             flash("Profile updated successfully!", "success")
-            # Determine redirect target
-            redirect_url = request.referrer or url_for("settings.index")
-            if current_user.user_type == "developer":
-                redirect_url = url_for("developer.dashboard")
-            return redirect(redirect_url)
+            return redirect(request.referrer or url_for("settings.index"))
 
     except Exception as e:
         logger.warning(
@@ -440,18 +415,14 @@ def save_profile():
 
         traceback.print_exc()
 
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         error_msg = f"Error updating profile: {str(e)}"
 
         if expects_json:
             return jsonify({"success": False, "error": error_msg}), 500
         else:
             flash(error_msg, "error")
-            # Safe fallback redirect
-            if current_user.user_type == "developer":
-                return redirect(url_for("developer.dashboard"))
-            else:
-                return redirect(url_for("settings.index"))
+            return redirect(url_for("settings.index"))
 
 
 @settings_bp.route("/password/change", methods=["POST"])
@@ -477,8 +448,10 @@ def change_password():
         if len(new_password) < 8:
             return jsonify({"error": "Password must be at least 8 characters"}), 400
 
-        current_user.password_hash = generate_password_hash(new_password)
-        db.session.commit()
+        SettingsRouteService.set_user_password_hash(
+            user=current_user,
+            new_password=new_password,
+        )
 
         return jsonify({"success": True, "message": "Password changed successfully"})
     except Exception as e:
@@ -517,7 +490,7 @@ def set_backup_password():
 
         # Set the password
         current_user.set_password(password)
-        db.session.commit()
+        SettingsRouteService.commit_session()
 
         return jsonify({"success": True, "message": "Backup password set successfully"})
 
@@ -526,7 +499,7 @@ def set_backup_password():
             "Suppressed exception fallback at app/blueprints/settings/routes.py:426",
             exc_info=True,
         )
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         return jsonify({"error": str(e)}), 500
 
 
@@ -539,16 +512,9 @@ def bulk_update_ingredients():
         data = request.get_json()
         ingredients = data.get("ingredients", [])
 
-        updated_count = 0
-        for ingredient_data in ingredients:
-            ingredient = db.session.get(InventoryItem, ingredient_data["id"])
-            if ingredient:
-                ingredient.name = ingredient_data["name"]
-                ingredient.unit = ingredient_data["unit"]
-                ingredient.cost_per_unit = ingredient_data["cost_per_unit"]
-                updated_count += 1
-
-        db.session.commit()
+        updated_count = SettingsRouteService.bulk_update_ingredients(
+            ingredients=ingredients
+        )
         return jsonify({"success": True, "updated_count": updated_count})
 
     except Exception as e:
@@ -556,7 +522,7 @@ def bulk_update_ingredients():
             "Suppressed exception fallback at app/blueprints/settings/routes.py:452",
             exc_info=True,
         )
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         return jsonify({"error": str(e)}), 400
 
 
@@ -569,20 +535,9 @@ def bulk_update_containers():
         data = request.get_json()
         containers = data.get("containers", [])
 
-        updated_count = 0
-        for container_data in containers:
-            container = db.session.get(InventoryItem, container_data["id"])
-            if container and container.type == "container":
-                container.name = container_data["name"]
-                # Canonical keys only
-                if "capacity" in container_data:
-                    container.capacity = container_data.get("capacity")
-                if "capacity_unit" in container_data:
-                    container.capacity_unit = container_data.get("capacity_unit")
-                container.cost_per_unit = container_data["cost_per_unit"]
-                updated_count += 1
-
-        db.session.commit()
+        updated_count = SettingsRouteService.bulk_update_containers(
+            containers=containers
+        )
         return jsonify({"success": True, "updated_count": updated_count})
 
     except Exception as e:
@@ -590,7 +545,7 @@ def bulk_update_containers():
             "Suppressed exception fallback at app/blueprints/settings/routes.py:482",
             exc_info=True,
         )
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         return jsonify({"error": str(e)}), 400
 
 
@@ -602,7 +557,7 @@ def update_timezone():
 
     if timezone and TimezoneUtils.validate_timezone(timezone):
         current_user.timezone = timezone
-        db.session.commit()
+        SettingsRouteService.commit_session()
         flash("Timezone updated successfully", "success")
     else:
         flash(
@@ -627,12 +582,14 @@ def update_user_preference():
             return jsonify({"error": "Preference key is required"}), 400
 
         # Get or create user preferences
-        user_prefs = UserPreferences.get_for_user(current_user.id)
+        user_prefs = SettingsRouteService.get_user_preferences_for_user(
+            user_id=current_user.id
+        )
 
         # Update the preference
         if hasattr(user_prefs, key):
             setattr(user_prefs, key, value)
-            db.session.commit()
+            SettingsRouteService.commit_session()
             flash("Preference saved successfully", "success")
             return jsonify({"success": True})
         else:
@@ -644,7 +601,7 @@ def update_user_preference():
             "Suppressed exception fallback at app/blueprints/settings/routes.py:532",
             exc_info=True,
         )
-        db.session.rollback()
+        SettingsRouteService.rollback_session()
         flash("Error saving preference", "error")
         return jsonify({"error": str(e)}), 500
 
@@ -683,8 +640,7 @@ def update_system_setting():
 def user_management():
     """User management page for profile and account settings"""
     # Get all users separated by type
-    customer_users = User.query.filter(User.user_type != "developer").all()
-    developer_users = User.query.filter(User.user_type == "developer").all()
+    customer_users, developer_users = SettingsRouteService.list_user_management_groups()
 
     return render_template(
         "settings/user_management.html",

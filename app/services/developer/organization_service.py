@@ -16,6 +16,8 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 from flask_login import current_user
+from sqlalchemy import or_
+from werkzeug.exceptions import NotFound
 
 from app.extensions import db
 from app.models import Organization, User
@@ -45,6 +47,54 @@ class OrganizationService:
     @staticmethod
     def get_selected_organization(org_id: Optional[int]) -> Optional[Organization]:
         return db.session.get(Organization, org_id) if org_id else None
+
+    # --- Get organization or 404 ---
+    # Purpose: Resolve organization details with route-consistent 404 behavior.
+    # Inputs: Organization id.
+    # Outputs: Organization row or NotFound.
+    @staticmethod
+    def get_organization_or_404(org_id: int) -> Organization:
+        org = db.session.get(Organization, org_id)
+        if org is None:
+            raise NotFound()
+        return org
+
+    # --- Paginate organization users ---
+    # Purpose: Build paginated org user listing with optional search filtering.
+    # Inputs: Organization id, page/per_page values, and optional search term.
+    # Outputs: Pagination, total-user count, and active-user count.
+    @staticmethod
+    def paginate_organization_users(
+        *,
+        org_id: int,
+        page: int,
+        per_page: int,
+        search: str = "",
+    ) -> tuple[object, int, int]:
+        base_query = User.query.filter_by(organization_id=org_id)
+        users_query = base_query
+
+        if search:
+            term = f"%{search}%"
+            users_query = users_query.filter(
+                or_(
+                    User.username.ilike(term),
+                    User.email.ilike(term),
+                    User.first_name.ilike(term),
+                    User.last_name.ilike(term),
+                )
+            )
+
+        users_query = users_query.order_by(User.created_at.desc())
+        users_pagination = users_query.paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False,
+        )
+
+        total_users = base_query.count()
+        active_users_count = base_query.filter_by(is_active=True).count()
+        return users_pagination, total_users, active_users_count
 
     # --- Build available tiers ---
     # Purpose: Build minimal tier display data for create-organization forms.

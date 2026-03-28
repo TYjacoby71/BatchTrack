@@ -107,6 +107,183 @@ function showMessage(message, type = 'success') {
     notify(message, type, { autoHideMs: 5000 });
 }
 
+// -----------------------------------------------------------
+// POS / Marketplaces onboarding + mapping helpers
+// -----------------------------------------------------------
+async function apiJson(url, options = {}) {
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+            ...(options.headers || {})
+        }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.success === false) {
+        const message = payload.error || payload.message || `Request failed (${response.status})`;
+        throw new Error(message);
+    }
+    return payload;
+}
+
+function setOnboardingBusy(provider, busy) {
+    const allButtons = document.querySelectorAll(`[data-provider="${provider}"]`);
+    allButtons.forEach((button) => {
+        button.disabled = !!busy;
+    });
+}
+
+async function configureIntegration(provider) {
+    const normalizedProvider = (provider || '').toLowerCase();
+    if (!normalizedProvider) return;
+    try {
+        setOnboardingBusy(normalizedProvider, true);
+        await apiJson(`/organization/integrations/onboarding/${normalizedProvider}/start`, {
+            method: 'POST',
+            body: JSON.stringify({})
+        });
+        notify(`${normalizedProvider} onboarding started`, 'success', {
+            toast: true,
+            autoHideMs: 2200
+        });
+        window.location.reload();
+    } catch (error) {
+        notify(error.message || 'Failed to start onboarding', 'error', {
+            toast: true,
+            autoHideMs: 4000
+        });
+    } finally {
+        setOnboardingBusy(normalizedProvider, false);
+    }
+}
+
+async function resumeIntegration(provider) {
+    const normalizedProvider = (provider || '').toLowerCase();
+    if (!normalizedProvider) return;
+    try {
+        setOnboardingBusy(normalizedProvider, true);
+        const payload = await apiJson(`/organization/integrations/onboarding/${normalizedProvider}/resume`, {
+            method: 'POST',
+            body: JSON.stringify({})
+        });
+        const stage = payload.current_stage || 'provider_selection';
+        notify(
+            `Resumed ${normalizedProvider} onboarding at stage: ${stage}`,
+            'success',
+            { toast: true, autoHideMs: 2600 }
+        );
+        window.location.reload();
+    } catch (error) {
+        notify(error.message || 'Failed to resume onboarding', 'error', {
+            toast: true,
+            autoHideMs: 4000
+        });
+    } finally {
+        setOnboardingBusy(normalizedProvider, false);
+    }
+}
+
+async function saveIntegrationLocation(provider) {
+    const normalizedProvider = (provider || '').toLowerCase();
+    if (!normalizedProvider) return;
+    const locationIdInput = document.querySelector(`[data-location-id-input="${normalizedProvider}"]`);
+    const locationNameInput = document.querySelector(`[data-location-name-input="${normalizedProvider}"]`);
+    const locationCodeInput = document.querySelector(`[data-location-code-input="${normalizedProvider}"]`);
+    const btLocationInput = document.querySelector(`[data-bt-location-input="${normalizedProvider}"]`);
+    if (!locationIdInput || !locationNameInput) {
+        notify('Location form is unavailable', 'error', { toast: true });
+        return;
+    }
+    const providerLocationId = (locationIdInput.value || '').trim();
+    const providerLocationName = (locationNameInput.value || '').trim();
+    if (!providerLocationId || !providerLocationName) {
+        notify('Provider location ID and name are required', 'warning', {
+            toast: true,
+            autoHideMs: 3000
+        });
+        return;
+    }
+    try {
+        await apiJson(`/organization/integrations/locations/${normalizedProvider}`, {
+            method: 'POST',
+            body: JSON.stringify({
+                provider_location_id: providerLocationId,
+                provider_location_name: providerLocationName,
+                provider_location_code: (locationCodeInput?.value || '').trim() || null,
+                bt_location_key: (btLocationInput?.value || '').trim() || null
+            })
+        });
+        notify('Location saved', 'success', { toast: true, autoHideMs: 2200 });
+        window.location.reload();
+    } catch (error) {
+        notify(error.message || 'Failed to save location', 'error', {
+            toast: true,
+            autoHideMs: 4000
+        });
+    }
+}
+
+async function saveSkuMapping(provider) {
+    const normalizedProvider = (provider || '').toLowerCase();
+    if (!normalizedProvider) return;
+    const skuIdInput = document.querySelector(`[data-sku-id-input="${normalizedProvider}"]`);
+    const inventoryItemIdInput = document.querySelector(`[data-inventory-item-id-input="${normalizedProvider}"]`);
+    const externalSkuInput = document.querySelector(`[data-external-sku-input="${normalizedProvider}"]`);
+    const externalProductInput = document.querySelector(`[data-external-product-id-input="${normalizedProvider}"]`);
+    const externalVariantInput = document.querySelector(`[data-external-variant-id-input="${normalizedProvider}"]`);
+    const externalListingInput = document.querySelector(`[data-external-listing-id-input="${normalizedProvider}"]`);
+    const providerLocationInput = document.querySelector(`[data-provider-location-id-input="${normalizedProvider}"]`);
+    const syncEnabledInput = document.querySelector(`[data-sync-enabled-input="${normalizedProvider}"]`);
+    const syncPriceInput = document.querySelector(`[data-sync-price-input="${normalizedProvider}"]`);
+    const syncQuantityInput = document.querySelector(`[data-sync-quantity-input="${normalizedProvider}"]`);
+
+    if (!skuIdInput || !inventoryItemIdInput || !externalSkuInput) {
+        notify('SKU mapping form is unavailable', 'error', { toast: true });
+        return;
+    }
+    const productSkuId = Number((skuIdInput.value || '').trim());
+    const inventoryItemId = Number((inventoryItemIdInput.value || '').trim());
+    const externalSkuCode = (externalSkuInput.value || '').trim();
+    if (!productSkuId || !inventoryItemId || !externalSkuCode) {
+        notify('SKU ID, inventory item ID, and external SKU are required', 'warning', {
+            toast: true,
+            autoHideMs: 3200
+        });
+        return;
+    }
+
+    try {
+        await apiJson(`/organization/integrations/sku-maps/${normalizedProvider}`, {
+            method: 'POST',
+            body: JSON.stringify({
+                product_sku_id: productSkuId,
+                inventory_item_id: inventoryItemId,
+                external_sku_code: externalSkuCode,
+                external_product_id: (externalProductInput?.value || '').trim() || null,
+                external_variant_id: (externalVariantInput?.value || '').trim() || null,
+                external_listing_id: (externalListingInput?.value || '').trim() || null,
+                provider_location_id: (providerLocationInput?.value || '').trim() || null,
+                sync_enabled: !!syncEnabledInput?.checked,
+                sync_price: !!syncPriceInput?.checked,
+                sync_quantity: !!syncQuantityInput?.checked
+            })
+        });
+        notify('SKU mapping saved', 'success', { toast: true, autoHideMs: 2200 });
+        window.location.reload();
+    } catch (error) {
+        notify(error.message || 'Failed to save SKU mapping', 'error', {
+            toast: true,
+            autoHideMs: 4200
+        });
+    }
+}
+
+window.configureIntegration = configureIntegration;
+window.resumeIntegration = resumeIntegration;
+window.saveIntegrationLocation = saveIntegrationLocation;
+window.saveSkuMapping = saveSkuMapping;
+
 // User management functions
 function openInviteModal() {
     // Check if organization can add more users

@@ -13,8 +13,7 @@ import logging
 from flask import Blueprint, current_app, flash, jsonify, request
 from flask_login import current_user, login_required
 
-from app.extensions import db
-from app.models import Recipe
+from app.services.batch_start_service import BatchStartService
 from app.services.production_planning.service import PlanProductionService
 from app.utils.permissions import (
     has_permission,
@@ -114,7 +113,7 @@ def start_batch():
         else:
             batch_data = data.get("batch_data")
 
-        recipe = db.session.get(Recipe, recipe_id)
+        recipe = BatchStartService.get_startable_recipe(recipe_id)
         if not recipe:
             flash("Recipe not found.", "error")
             return jsonify({"error": "Recipe not found"}), 404

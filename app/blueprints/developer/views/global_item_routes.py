@@ -5,19 +5,15 @@ import logging
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
-from sqlalchemy import or_
 
-from app.extensions import db
-from app.models import GlobalItem
-from app.models.category import IngredientCategory
 from app.models.ingredient_reference import (
     ApplicationTag,
     FunctionTag,
     IngredientCategoryTag,
     IngredientDefinition,
-    PhysicalForm,
     Variation,
 )
+from app.services.developer.global_item_route_service import GlobalItemRouteService
 from app.services.global_item_listing_service import (
     DEFAULT_PER_PAGE_OPTIONS as GLOBAL_LIBRARY_PER_PAGE_OPTIONS,
 )
@@ -40,13 +36,7 @@ class FormValidationError(Exception):
 
 
 def _generate_unique_slug(model, seed: str) -> str:
-    base_slug = slugify_value(seed or "item")
-    candidate = base_slug
-    counter = 2
-    while model.query.filter_by(slug=candidate).first():
-        candidate = f"{base_slug}-{counter}"
-        counter += 1
-    return candidate
+    return GlobalItemRouteService.generate_unique_slug(model=model, seed=seed)
 
 
 def _parse_csv_field(raw_value: str | None) -> list[str]:
@@ -70,15 +60,18 @@ def _get_or_create_tags(model, names: list[str]):
     tags = []
     for name in names:
         slug_candidate = slugify_value(name, default="tag")
-        existing = model.query.filter(
-            or_(model.slug == slug_candidate, model.name.ilike(name))
-        ).first()
+        existing = GlobalItemRouteService.find_tag_by_slug_or_name(
+            model=model,
+            slug_candidate=slug_candidate,
+            name=name,
+        )
         if existing:
             tags.append(existing)
             continue
         unique_slug = _generate_unique_slug(model, slug_candidate)
-        tag = model(name=name, slug=unique_slug)
-        db.session.add(tag)
+        tag = GlobalItemRouteService.create_tag(
+            model=model, name=name, slug=unique_slug
+        )
         tags.append(tag)
     return tags
 
@@ -111,7 +104,9 @@ def _determine_ingredient_layer(
         except (TypeError, ValueError):
             raise FormValidationError("Invalid ingredient definition selected.")
 
-        ingredient = db.session.get(IngredientDefinition, ingredient_id)
+        ingredient = GlobalItemRouteService.get_ingredient_definition(
+            ingredient_id=ingredient_id
+        )
         if not ingredient:
             raise FormValidationError("Ingredient definition not found.")
 
@@ -159,7 +154,7 @@ def _determine_variation_layer(form_data, *, current_variation=None):
         except (TypeError, ValueError):
             raise FormValidationError("Invalid variation selected.")
 
-        variation = db.session.get(Variation, variation_id)
+        variation = GlobalItemRouteService.get_variation(variation_id=variation_id)
         if not variation:
             raise FormValidationError("Variation not found.")
 
@@ -175,7 +170,9 @@ def _determine_variation_layer(form_data, *, current_variation=None):
     physical_form = None
     if physical_form_id:
         try:
-            physical_form = db.session.get(PhysicalForm, int(physical_form_id))
+            physical_form = GlobalItemRouteService.get_physical_form(
+                physical_form_id=int(physical_form_id)
+            )
         except (TypeError, ValueError):
             raise FormValidationError(
                 "Invalid physical form selected for the variation."
@@ -367,28 +364,17 @@ def global_items_admin():
 @developer_bp.route("/global-items/<int:item_id>")
 @require_developer_permission("dev.system_admin")
 def global_item_detail(item_id):
-    item = db.get_or_404(GlobalItem, item_id)
+    item = GlobalItemRouteService.get_global_item_or_404(item_id=item_id)
     global_ingredient_categories = (
-        IngredientCategory.query.filter_by(
-            organization_id=None,
-            is_active=True,
-            is_global_category=True,
-        )
-        .order_by(IngredientCategory.name)
-        .all()
+        GlobalItemRouteService.list_global_ingredient_categories()
     )
-    physical_forms = PhysicalForm.query.order_by(PhysicalForm.name).all()
+    physical_forms = GlobalItemRouteService.list_physical_forms()
     selected_ingredient = item.ingredient
     selected_physical_form = item.physical_form
     existing_items = []
     if selected_ingredient:
-        existing_items = (
-            GlobalItem.query.filter(
-                GlobalItem.ingredient_id == selected_ingredient.id,
-                not GlobalItem.is_archived,
-            )
-            .order_by(GlobalItem.name.asc())
-            .all()
+        existing_items = GlobalItemRouteService.list_existing_items_for_ingredient(
+            ingredient_id=selected_ingredient.id
         )
 
     return render_template(
@@ -420,7 +406,7 @@ def global_item_edit(item_id):
         flash(f"CSRF validation failed: {exc}", "error")
         return redirect(url_for("developer.global_item_detail", item_id=item_id))
 
-    item = db.get_or_404(GlobalItem, item_id)
+    item = GlobalItemRouteService.get_global_item_or_404(item_id=item_id)
     form_data = request.form
     before = {
         "name": item.name,
@@ -534,13 +520,11 @@ def global_item_edit(item_id):
     ingredient_category_id = form_data.get("ingredient_category_id", "").strip()
     if ingredient_category_id:
         if ingredient_category_id.isdigit():
-            category = IngredientCategory.query.filter_by(
-                id=int(ingredient_category_id),
-                organization_id=None,
-                is_global_category=True,
-            ).first()
+            category = GlobalItemRouteService.get_global_category(
+                category_id=int(ingredient_category_id)
+            )
             if not category:
-                db.session.rollback()
+                GlobalItemRouteService.rollback_session()
                 flash(
                     f'Ingredient category ID "{ingredient_category_id}" not found or invalid.',
                     "error",
@@ -550,7 +534,7 @@ def global_item_edit(item_id):
                 )
             ingredient_category_id_value = category.id
         else:
-            db.session.rollback()
+            GlobalItemRouteService.rollback_session()
             flash(
                 f"Invalid Ingredient Category ID format: '{ingredient_category_id}'",
                 "error",
@@ -592,7 +576,7 @@ def global_item_edit(item_id):
             if name_candidate:
                 item.name = name_candidate
         except FormValidationError as exc:
-            db.session.rollback()
+            GlobalItemRouteService.rollback_session()
             flash(str(exc), "error")
             return redirect(url_for("developer.global_item_detail", item_id=item.id))
     else:
@@ -618,7 +602,7 @@ def global_item_edit(item_id):
         except Exception as sync_exc:
             logging.warning("GLOBAL_ITEM_EDIT: sync skipped due to error: %s", sync_exc)
 
-        db.session.commit()
+        GlobalItemRouteService.commit_session()
         logging.info(
             "GLOBAL_ITEM_EDIT: user=%s item_id=%s before=%s",
             current_user.id,
@@ -631,7 +615,7 @@ def global_item_edit(item_id):
             "Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:613",
             exc_info=True,
         )
-        db.session.rollback()
+        GlobalItemRouteService.rollback_session()
         flash(f"Error updating global item: {exc}", "error")
 
     return redirect(url_for("developer.global_item_detail", item_id=item.id))
@@ -642,7 +626,7 @@ def global_item_edit(item_id):
 def global_item_stats_view(item_id):
     from app.services.statistics.global_item_stats import GlobalItemStatsService
 
-    item = db.get_or_404(GlobalItem, item_id)
+    item = GlobalItemRouteService.get_global_item_or_404(item_id=item_id)
     stats = GlobalItemStatsService.get_rollup(item_id)
     return render_template("developer/global_item_stats.html", item=item, stats=stats)
 
@@ -656,15 +640,9 @@ def create_global_item():
         form_data=None, selected_ingredient=None, selected_physical_form=None
     ):
         global_ingredient_categories = (
-            IngredientCategory.query.filter_by(
-                organization_id=None,
-                is_active=True,
-                is_global_category=True,
-            )
-            .order_by(IngredientCategory.name)
-            .all()
+            GlobalItemRouteService.list_global_ingredient_categories()
         )
-        physical_forms = PhysicalForm.query.order_by(PhysicalForm.name).all()
+        physical_forms = GlobalItemRouteService.list_physical_forms()
 
         ingredient_id = (
             selected_ingredient.id
@@ -679,27 +657,22 @@ def create_global_item():
 
         if not selected_ingredient and ingredient_id:
             try:
-                selected_ingredient = db.session.get(
-                    IngredientDefinition, int(ingredient_id)
+                selected_ingredient = GlobalItemRouteService.get_ingredient_definition(
+                    ingredient_id=int(ingredient_id)
                 )
             except (ValueError, TypeError):
                 selected_ingredient = None
 
         existing_items = []
         if selected_ingredient:
-            existing_items = (
-                GlobalItem.query.filter(
-                    GlobalItem.ingredient_id == selected_ingredient.id,
-                    not GlobalItem.is_archived,
-                )
-                .order_by(GlobalItem.name.asc())
-                .all()
+            existing_items = GlobalItemRouteService.list_existing_items_for_ingredient(
+                ingredient_id=selected_ingredient.id
             )
 
         if not selected_physical_form and physical_form_id:
             try:
-                selected_physical_form = db.session.get(
-                    PhysicalForm, int(physical_form_id)
+                selected_physical_form = GlobalItemRouteService.get_physical_form(
+                    physical_form_id=int(physical_form_id)
                 )
             except (ValueError, TypeError):
                 selected_physical_form = None
@@ -721,7 +694,7 @@ def create_global_item():
         selected_physical_form_for_render = None
 
         def _error_response(message: str):
-            db.session.rollback()
+            GlobalItemRouteService.rollback_session()
             flash(message, "error")
             return render_form(
                 form_data,
@@ -745,11 +718,9 @@ def create_global_item():
             ingredient_category_id = None
             if ingredient_category_id_str:
                 if ingredient_category_id_str.isdigit():
-                    category = IngredientCategory.query.filter_by(
-                        id=int(ingredient_category_id_str),
-                        organization_id=None,
-                        is_global_category=True,
-                    ).first()
+                    category = GlobalItemRouteService.get_global_category(
+                        category_id=int(ingredient_category_id_str)
+                    )
                     if category:
                         ingredient_category_id = category.id
                     else:
@@ -761,9 +732,12 @@ def create_global_item():
                         f"Invalid Ingredient Category ID format: '{ingredient_category_id_str}'"
                     )
 
-            existing = GlobalItem.query.filter_by(
-                name=name, item_type=item_type
-            ).first()
+            existing = (
+                GlobalItemRouteService.find_existing_global_item_by_name_and_type(
+                    name=name,
+                    item_type=item_type,
+                )
+            )
             if existing and not existing.is_archived:
                 return _error_response(
                     f'Global item "{name}" of type "{item_type}" already exists'
@@ -794,7 +768,7 @@ def create_global_item():
             if not name:
                 return _error_response("Name is required")
 
-            new_item = GlobalItem(
+            new_item = GlobalItemRouteService.create_new_global_item(
                 name=name,
                 item_type=item_type,
                 default_unit=default_unit,
@@ -933,15 +907,14 @@ def create_global_item():
                 new_item.ingredient = None
                 new_item.physical_form = None
 
-            db.session.add(new_item)
-            db.session.commit()
+            GlobalItemRouteService.commit_session()
 
             from app.services.analytics_tracking_service import AnalyticsTrackingService
 
             category_name = None
             if new_item.ingredient_category_id:
-                cat_obj = db.session.get(
-                    IngredientCategory, new_item.ingredient_category_id
+                cat_obj = GlobalItemRouteService.get_global_category(
+                    category_id=new_item.ingredient_category_id
                 )
                 category_name = cat_obj.name if cat_obj else None
             AnalyticsTrackingService.track_global_item_event(
@@ -960,7 +933,7 @@ def create_global_item():
                 url_for("developer.global_item_detail", item_id=new_item.id)
             )
         except FormValidationError as exc:
-            db.session.rollback()
+            GlobalItemRouteService.rollback_session()
             flash(str(exc), "error")
             return render_form(
                 form_data,
@@ -972,7 +945,7 @@ def create_global_item():
                 "Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:935",
                 exc_info=True,
             )
-            db.session.rollback()
+            GlobalItemRouteService.rollback_session()
             flash(f"Error creating global item: {exc}", "error")
             return render_form(
                 form_data,
@@ -992,7 +965,7 @@ def delete_global_item(item_id):
         confirm_name = data.get("confirm_name", "").strip()
         force_delete = data.get("force_delete", False)
 
-        item = db.get_or_404(GlobalItem, item_id)
+        item = GlobalItemRouteService.get_global_item_or_404(item_id=item_id)
         if confirm_name != item.name:
             return jsonify(
                 {
@@ -1001,9 +974,11 @@ def delete_global_item(item_id):
                 }
             )
 
-        from app.models.inventory import InventoryItem
-
-        connected_items = InventoryItem.query.filter_by(global_item_id=item.id).all()
+        connected_items = (
+            GlobalItemRouteService.list_inventory_items_connected_to_global_item(
+                global_item_id=item.id
+            )
+        )
         if connected_items and not force_delete:
             org_names = {
                 inv_item.organization.name
@@ -1028,16 +1003,16 @@ def delete_global_item(item_id):
         connected_count = len(connected_items)
 
         if connected_items:
-            for inv_item in connected_items:
-                inv_item.global_item_id = None
-                inv_item.is_org_custom_item = True
+            GlobalItemRouteService.detach_inventory_items_from_global_item(
+                inventory_items=connected_items
+            )
 
         if force_delete:
-            db.session.delete(item)
+            GlobalItemRouteService.delete_global_item(item=item)
         else:
             item.is_archived = True
 
-        db.session.commit()
+        GlobalItemRouteService.commit_session()
 
         from app.services.analytics_tracking_service import AnalyticsTrackingService
 
@@ -1070,7 +1045,7 @@ def delete_global_item(item_id):
             "Suppressed exception fallback at app/blueprints/developer/views/global_item_routes.py:1029",
             exc_info=True,
         )
-        db.session.rollback()
+        GlobalItemRouteService.rollback_session()
         logging.error(
             "GLOBAL_ITEM_DELETE_FAILED: Error deleting global item %s: %s",
             item_id,

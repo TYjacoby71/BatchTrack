@@ -13,38 +13,14 @@ from __future__ import annotations
 import logging
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
-from sqlalchemy import func
 
-from app.extensions import db
-from app.models import GlobalItem
-from app.models.ingredient_reference import (
-    ApplicationTag,
-    FunctionTag,
-    IngredientCategoryTag,
-    PhysicalForm,
-    Variation,
-)
 from app.services.developer.reference_data_service import ReferenceDataService
-from app.utils.seo import slugify_value
+from app.services.developer.reference_route_service import ReferenceRouteService
 
 from ..decorators import require_developer_permission
 from ..routes import developer_bp
 
 logger = logging.getLogger(__name__)
-
-
-# --- Generate Unique Slug ---
-# Purpose: Define the top-level behavior of `_generate_unique_slug` in this module.
-# Inputs: Function/class parameters and request/runtime context used by this unit.
-# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
-def _generate_unique_slug(model, seed: str) -> str:
-    base_slug = slugify_value(seed or "item")
-    candidate = base_slug
-    counter = 2
-    while model.query.filter_by(slug=candidate).first():
-        candidate = f"{base_slug}-{counter}"
-        counter += 1
-    return candidate
 
 
 # --- Reference Categories ---
@@ -55,35 +31,12 @@ def _generate_unique_slug(model, seed: str) -> str:
 @require_developer_permission("dev.system_admin")
 def reference_categories():
     """Manage global ingredient categories."""
-    from app.models.category import IngredientCategory
-
-    existing_categories = (
-        IngredientCategory.query.filter_by(
-            organization_id=None,
-            is_active=True,
-            is_global_category=True,
-        )
-        .order_by(IngredientCategory.name)
-        .all()
-    )
-
-    categories = [cat.name for cat in existing_categories]
-    global_items_by_category = {}
-    category_densities = {}
-
-    for category_obj in existing_categories:
-        items = GlobalItem.query.filter_by(
-            ingredient_category_id=category_obj.id, is_archived=False
-        ).all()
-        global_items_by_category[category_obj.name] = items
-        if category_obj.default_density:
-            category_densities[category_obj.name] = category_obj.default_density
-
+    context = ReferenceRouteService.get_reference_categories_context()
     return render_template(
         "developer/reference_categories.html",
-        categories=categories,
-        global_items_by_category=global_items_by_category,
-        category_densities=category_densities,
+        categories=context["categories"],
+        global_items_by_category=context["global_items_by_category"],
+        category_densities=context["category_densities"],
     )
 
 
@@ -95,51 +48,9 @@ def reference_categories():
 @require_developer_permission("dev.system_admin")
 def add_reference_category():
     """Add a new global ingredient category."""
-    try:
-        data = request.get_json() or {}
-        category_name = data.get("name", "").strip()
-        default_density = data.get("default_density")
-
-        if not category_name:
-            return jsonify({"success": False, "error": "Category name is required"})
-
-        from app.models.category import IngredientCategory
-
-        existing = IngredientCategory.query.filter_by(
-            name=category_name,
-            organization_id=None,
-        ).first()
-
-        if existing:
-            return jsonify({"success": False, "error": "Category already exists"})
-
-        new_category = IngredientCategory(
-            name=category_name,
-            is_global_category=True,
-            organization_id=None,
-            is_active=True,
-            default_density=(
-                default_density if isinstance(default_density, (int, float)) else None
-            ),
-        )
-
-        db.session.add(new_category)
-        db.session.commit()
-
-        return jsonify(
-            {
-                "success": True,
-                "message": f'Category "{category_name}" added successfully',
-            }
-        )
-
-    except Exception as exc:
-        logger.warning(
-            "Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:132",
-            exc_info=True,
-        )
-        db.session.rollback()
-        return jsonify({"success": False, "error": str(exc)})
+    return jsonify(
+        ReferenceRouteService.add_reference_category(request.get_json() or {})
+    )
 
 
 # --- Delete Reference Category ---
@@ -150,51 +61,9 @@ def add_reference_category():
 @require_developer_permission("dev.system_admin")
 def delete_reference_category():
     """Delete a global ingredient category."""
-    try:
-        data = request.get_json() or {}
-        category_name = data.get("name", "").strip()
-
-        if not category_name:
-            return jsonify({"success": False, "error": "Category name is required"})
-
-        from app.models.category import IngredientCategory
-
-        category = IngredientCategory.query.filter_by(
-            name=category_name,
-            organization_id=None,
-        ).first()
-
-        if not category:
-            return jsonify({"success": False, "error": "Category not found"})
-
-        linked_items = GlobalItem.query.filter_by(
-            ingredient_category_id=category.id
-        ).count()
-        if linked_items:
-            return jsonify(
-                {
-                    "success": False,
-                    "error": f"Category is linked to {linked_items} global items. Reassign before deleting.",
-                }
-            )
-
-        db.session.delete(category)
-        db.session.commit()
-
-        return jsonify(
-            {
-                "success": True,
-                "message": f'Category "{category_name}" deleted successfully',
-            }
-        )
-
-    except Exception as exc:
-        logger.warning(
-            "Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:183",
-            exc_info=True,
-        )
-        db.session.rollback()
-        return jsonify({"success": False, "error": str(exc)})
+    return jsonify(
+        ReferenceRouteService.delete_reference_category(request.get_json() or {})
+    )
 
 
 # --- Update Reference Category Density ---
@@ -205,55 +74,11 @@ def delete_reference_category():
 @require_developer_permission("dev.system_admin")
 def update_reference_category_density():
     """Update default density for category and linked items."""
-    try:
-        data = request.get_json() or {}
-        category_name = data.get("name", "").strip()
-        density = data.get("default_density")
-
-        if not category_name:
-            return jsonify({"success": False, "error": "Category name is required"})
-
-        if density in (None, ""):
-            return jsonify({"success": False, "error": "Density value is required"})
-
-        try:
-            density_value = float(density)
-        except ValueError:
-            return jsonify(
-                {"success": False, "error": "Density must be a numeric value"}
-            )
-
-        from app.models.category import IngredientCategory
-
-        category = IngredientCategory.query.filter_by(
-            name=category_name,
-            organization_id=None,
-        ).first()
-
-        if not category:
-            return jsonify({"success": False, "error": "Category not found"})
-
-        category.default_density = density_value
-        GlobalItem.query.filter_by(ingredient_category_id=category.id).update(
-            {GlobalItem.density: density_value}
+    return jsonify(
+        ReferenceRouteService.update_reference_category_density(
+            request.get_json() or {}
         )
-
-        db.session.commit()
-
-        return jsonify(
-            {
-                "success": True,
-                "message": f'Category "{category_name}" density set to {density_value}',
-            }
-        )
-
-    except Exception as exc:
-        logger.warning(
-            "Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:238",
-            exc_info=True,
-        )
-        db.session.rollback()
-        return jsonify({"success": False, "error": str(exc)})
+    )
 
 
 # --- Calculate Category Density ---
@@ -264,53 +89,9 @@ def update_reference_category_density():
 @require_developer_permission("dev.system_admin")
 def calculate_category_density():
     """Calculate average density for category."""
-    try:
-        data = request.get_json() or {}
-        category_name = data.get("name", "").strip()
-
-        if not category_name:
-            return jsonify({"success": False, "error": "Category name is required"})
-
-        from app.models.category import IngredientCategory
-
-        category = IngredientCategory.query.filter_by(
-            name=category_name,
-            organization_id=None,
-        ).first()
-
-        if not category:
-            return jsonify({"success": False, "error": "Category not found"})
-
-        densities = [
-            item.density
-            for item in GlobalItem.query.filter_by(ingredient_category_id=category.id)
-            .filter(GlobalItem.density.isnot(None))
-            .all()
-            if item.density
-        ]
-
-        if not densities:
-            return jsonify(
-                {"success": False, "error": "No items with valid density values found"}
-            )
-
-        calculated_density = sum(densities) / len(densities)
-
-        return jsonify(
-            {
-                "success": True,
-                "calculated_density": calculated_density,
-                "items_count": len(densities),
-                "message": f"Calculated density: {calculated_density:.3f} g/ml from {len(densities)} items",
-            }
-        )
-
-    except Exception as exc:
-        logger.warning(
-            "Suppressed exception fallback at app/blueprints/developer/views/reference_routes.py:292",
-            exc_info=True,
-        )
-        return jsonify({"success": False, "error": str(exc)})
+    return jsonify(
+        ReferenceRouteService.calculate_category_density(request.get_json() or {})
+    )
 
 
 # --- Container Management ---
@@ -387,33 +168,15 @@ def api_container_options():
 @require_developer_permission("dev.system_admin")
 def manage_ingredient_attributes():
     """Curate ingredient lookup tables: tags, physical forms, variations."""
-    forms = PhysicalForm.query.order_by(PhysicalForm.name.asc()).all()
-    variations = Variation.query.order_by(Variation.name.asc()).all()
-    variation_usage_rows = (
-        db.session.query(Variation.id, func.count(GlobalItem.id))
-        .join(GlobalItem, GlobalItem.variation_id == Variation.id)
-        .filter(not GlobalItem.is_archived)
-        .group_by(Variation.id)
-        .all()
-    )
-    variation_usage = {
-        variation_id: count for variation_id, count in variation_usage_rows
-    }
-
-    function_tags = FunctionTag.query.order_by(FunctionTag.name.asc()).all()
-    application_tags = ApplicationTag.query.order_by(ApplicationTag.name.asc()).all()
-    category_tags = IngredientCategoryTag.query.order_by(
-        IngredientCategoryTag.name.asc()
-    ).all()
-
+    context = ReferenceRouteService.get_ingredient_attributes_context()
     return render_template(
         "developer/ingredient_attributes.html",
-        physical_forms=forms,
-        variations=variations,
-        variation_usage=variation_usage,
-        function_tags=function_tags,
-        application_tags=application_tags,
-        category_tags=category_tags,
+        physical_forms=context["physical_forms"],
+        variations=context["variations"],
+        variation_usage=context["variation_usage"],
+        function_tags=context["function_tags"],
+        application_tags=context["application_tags"],
+        category_tags=context["category_tags"],
         breadcrumb_items=[
             {"label": "Developer Dashboard", "url": url_for("developer.dashboard")},
             {"label": "Ingredient Attributes"},
@@ -445,23 +208,8 @@ def create_physical_form():
     if not name:
         flash("Physical form name is required.", "error")
         return redirect(url_for("developer.manage_ingredient_attributes"))
-
-    existing = (
-        PhysicalForm.query.filter(func.lower(PhysicalForm.name) == func.lower(name))
-        .order_by(PhysicalForm.id.asc())
-        .first()
-    )
-    if existing:
-        flash(f'Physical form "{name}" already exists.', "error")
-        return redirect(url_for("developer.manage_ingredient_attributes"))
-
-    slug = _generate_unique_slug(PhysicalForm, name)
-    new_form = PhysicalForm(
-        name=name, slug=slug, description=description, is_active=True
-    )
-    db.session.add(new_form)
-    db.session.commit()
-    flash(f'Physical form "{name}" created.', "success")
+    success, message = ReferenceRouteService.create_physical_form(name, description)
+    flash(message, "success" if success else "error")
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
@@ -475,9 +223,7 @@ def create_physical_form():
 @require_developer_permission("dev.system_admin")
 def toggle_physical_form(form_id: int):
     """Toggle a physical form's active state."""
-    physical_form = db.get_or_404(PhysicalForm, form_id)
-    physical_form.is_active = not physical_form.is_active
-    db.session.commit()
+    physical_form = ReferenceRouteService.toggle_physical_form(form_id)
     state = "activated" if physical_form.is_active else "archived"
     flash(f'Physical form "{physical_form.name}" {state}.', "success")
     return redirect(url_for("developer.manage_ingredient_attributes"))
@@ -501,34 +247,14 @@ def create_variation():
         flash("Variation name is required.", "error")
         return redirect(url_for("developer.manage_ingredient_attributes"))
 
-    existing = (
-        Variation.query.filter(func.lower(Variation.name) == func.lower(name))
-        .order_by(Variation.id.asc())
-        .first()
-    )
-    if existing:
-        flash(f'Variation "{name}" already exists.', "error")
-        return redirect(url_for("developer.manage_ingredient_attributes"))
-
-    physical_form = None
-    if physical_form_id:
-        try:
-            physical_form = db.session.get(PhysicalForm, int(physical_form_id))
-        except (TypeError, ValueError):
-            physical_form = None
-    slug = _generate_unique_slug(Variation, name)
-    variation = Variation(
+    success, message = ReferenceRouteService.create_variation(
         name=name,
-        slug=slug,
-        physical_form=physical_form,
+        physical_form_id=physical_form_id,
         description=description,
         default_unit=default_unit,
         form_bypass=form_bypass,
-        is_active=True,
     )
-    db.session.add(variation)
-    db.session.commit()
-    flash(f'Variation "{name}" created.', "success")
+    flash(message, "success" if success else "error")
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
 
@@ -541,26 +267,10 @@ def create_variation():
 )
 @require_developer_permission("dev.system_admin")
 def toggle_variation(variation_id: int):
-    variation = db.get_or_404(Variation, variation_id)
-    variation.is_active = not variation.is_active
-    db.session.commit()
+    variation = ReferenceRouteService.toggle_variation(variation_id)
     state = "activated" if variation.is_active else "archived"
     flash(f'Variation "{variation.name}" {state}.', "success")
     return redirect(url_for("developer.manage_ingredient_attributes"))
-
-
-# --- Create Tag Entry ---
-# Purpose: Define the top-level behavior of `_create_tag_entry` in this module.
-# Inputs: Function/class parameters and request/runtime context used by this unit.
-# Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
-def _create_tag_entry(model, name: str, description: str | None):
-    existing = model.query.filter(func.lower(model.name) == func.lower(name)).first()
-    if existing:
-        return existing, False
-    slug = _generate_unique_slug(model, name)
-    tag = model(name=name, slug=slug, description=description or None, is_active=True)
-    db.session.add(tag)
-    return tag, True
 
 
 # --- Create Function Tag ---
@@ -575,8 +285,7 @@ def create_function_tag():
     if not name:
         flash("Function tag name is required.", "error")
         return redirect(url_for("developer.manage_ingredient_attributes"))
-    _create_tag_entry(FunctionTag, name, description)
-    db.session.commit()
+    ReferenceRouteService.save_function_tag(name, description)
     flash(f'Function tag "{name}" saved.', "success")
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
@@ -593,8 +302,7 @@ def create_application_tag():
     if not name:
         flash("Application tag name is required.", "error")
         return redirect(url_for("developer.manage_ingredient_attributes"))
-    _create_tag_entry(ApplicationTag, name, description)
-    db.session.commit()
+    ReferenceRouteService.save_application_tag(name, description)
     flash(f'Application tag "{name}" saved.', "success")
     return redirect(url_for("developer.manage_ingredient_attributes"))
 
@@ -611,7 +319,6 @@ def create_category_tag():
     if not name:
         flash("Category tag name is required.", "error")
         return redirect(url_for("developer.manage_ingredient_attributes"))
-    _create_tag_entry(IngredientCategoryTag, name, description)
-    db.session.commit()
+    ReferenceRouteService.save_category_tag(name, description)
     flash(f'Use case tag "{name}" saved.', "success")
     return redirect(url_for("developer.manage_ingredient_attributes"))

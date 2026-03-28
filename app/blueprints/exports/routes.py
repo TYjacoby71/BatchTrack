@@ -10,11 +10,10 @@ Glossary:
 
 from __future__ import annotations
 
-from flask import Blueprint, Response, abort, render_template, session
+from flask import Blueprint, Response, render_template, session
 from flask_login import current_user, login_required
 
-from app.extensions import db
-from app.models import Recipe
+from app.services.export_recipe_service import ExportRecipeService
 from app.services.exports import ExportService
 from app.utils.permissions import require_permission
 
@@ -25,27 +24,18 @@ exports_bp = Blueprint("exports", __name__, url_prefix="/exports")
 # Purpose: Define the top-level behavior of `_recipe_or_404` in this module.
 # Inputs: Function/class parameters and request/runtime context used by this unit.
 # Outputs: Response payloads, control-flow effects, or reusable definitions for callers.
-def _recipe_or_404(recipe_id: int) -> Recipe:
-    recipe = db.session.get(Recipe, recipe_id)
-    if recipe is None:
-        abort(404)
+def _recipe_or_404(recipe_id: int):
+    recipe = ExportRecipeService.get_recipe_or_abort(
+        recipe_id=recipe_id,
+        user_organization_id=getattr(current_user, "organization_id", None),
+    )
     user_org = getattr(current_user, "organization_id", None)
-    if user_org and recipe.organization_id != user_org:
-        abort(403)
     if (
         user_org
         and recipe.organization_id == user_org
         and not recipe.org_origin_purchased
     ):
-        updated = False
-        if recipe.org_origin_recipe_id != recipe.id:
-            recipe.org_origin_recipe_id = recipe.id
-            updated = True
-        if recipe.org_origin_type in (None, "authored"):
-            recipe.org_origin_type = "published"
-            updated = True
-        if updated:
-            db.session.commit()
+        ExportRecipeService.ensure_org_origin_published(recipe)
     return recipe
 
 

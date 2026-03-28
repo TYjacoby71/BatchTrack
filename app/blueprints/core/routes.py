@@ -44,6 +44,7 @@ from app.services.public_tools_service import (
     get_public_tool_flags,
 )
 from app.utils.cache_utils import should_bypass_cache
+from app.utils.permissions import has_permission
 
 logger = logging.getLogger(__name__)
 
@@ -344,13 +345,9 @@ def signup_alias():
 def index():
     """Main landing page with proper routing logic."""
     if current_user.is_authenticated:
-        if current_user.user_type == "developer":
-            return redirect(
-                url_for("developer.dashboard")
-            )  # Developers go to developer dashboard
-        return redirect(
-            url_for("app_routes.dashboard")
-        )  # Regular users go to user dashboard
+        if has_permission(current_user, "dev.dashboard"):
+            return redirect(url_for("developer.dashboard"))
+        return redirect(url_for("app_routes.dashboard"))
     return (
         _render_public_homepage_response()
     )  # Serve cached public homepage for unauthenticated users

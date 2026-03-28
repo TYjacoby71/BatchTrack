@@ -1,0 +1,187 @@
+# Parallel Flags Tracker (Boundary Program)
+
+Purpose: track non-blocking risks discovered while extracting blueprint boundary violations so adjacent hardening work can run in parallel.
+
+## Open flags
+
+1. **Auth token flow duplication across modules**
+   - **Surface:** `app/services/signup_service.py`, `app/services/user_invite_service.py`, `app/services/auth_account_service.py`
+   - **Flag:** verification/reset token field writes now exist in multiple services; this can drift unless a single token-lifecycle authority is adopted.
+   - **Parallel action:** centralize token issuance/clear semantics in one service and migrate invite/signup writers to use it.
+   - **Status:** open
+
+2. **Developer support submissions shaping remains route-local**
+   - **Surface:** `app/blueprints/developer/views/organization_routes.py`
+   - **Flag:** support submissions route still owns substantial grouping/selection shaping and should move behind a service boundary over time.
+   - **Parallel action:** extract support-submissions grouping/selection pipeline into a dedicated developer support service.
+   - **Status:** open
+
+3. **Known integration posture still incomplete**
+   - **Surface:** `app/services/whop_service.py`, `app/services/billing_service.py`, `app/services/pos_integration.py`, soap push UI flow
+   - **Flag:** Whop and Soap push remain partial/stubbed, and POS production module still embeds mock/test classes.
+   - **Parallel action:** execute Workstream C items from boundary report + consolidated backlog.
+   - **Status:** open
+
+4. **Boundary checklist/report drift after extractions**
+   - **Surface:** `docs/todo/LAUNCH_HARDENING_CHECKLIST.md`, `docs/refactor/2026-03-20-boundary-deep-dive-report.md`
+   - **Flag:** extraction status can drift from tracker counts when batches are committed before docs are updated in the same loop.
+   - **Parallel action:** after each extraction commit, immediately update checklist and report counts in the same commit.
+   - **Status:** open
+
+5. **Permission-gate policy drift inventory now tracked and remediated**
+   - **Surface:** `docs/refactor/2026-03-26-permission-gate-offenders-checklist.md`, `app/blueprints/organization/routes.py`, `app/blueprints/auth/permissions.py`, `app/services/organization_route_service.py`, template auth surfaces.
+   - **Flag:** route/template policy drift items were tracked and then remediated through checklist sections A/B/C, with section D legacy wrappers retired after callsite audit.
+   - **Parallel action:** keep checklist + parent checkbox synchronization in the same commit for any new offenders discovered later.
+   - **Status:** closed
+
+6. **Permission checklist parent-checkbox drift from sub-item completion**
+   - **Surface:** `docs/refactor/2026-03-26-permission-gate-offenders-checklist.md`
+   - **Flag:** multiple section A/B file entries had completed sub-bullets but remained unchecked at file level, obscuring true remaining scope.
+   - **Parallel action:** in every remediation loop, update both sub-bullets and parent file checkbox state; keep unresolved files unchecked only when at least one offender bullet remains open.
+   - **Status:** open
+
+7. **Settings affiliate UI feature gate may be too strict after persona removal**
+   - **Surface:** `app/blueprints/settings/routes.py`, `app/templates/settings/index.html`
+   - **Flag:** affiliate tab visibility now requires both feature flag + org context + permissions; developer support views without org context may lose expected visibility.
+   - **Parallel action:** decide policy explicitly (support-only visibility without org context vs strict org-context requirement), then codify in checklist and template context rules.
+   - **Status:** open
+
+8. **Template permission/context variables lack a single canonical naming contract**
+   - **Surface:** `app/templates/components/layout/*.html`, `app/templates/settings/*.html`, `app/templates/pages/public/*.html`
+   - **Flag:** template authorization now uses permission/context checks, but variable names (`dev_dashboard_access`, `org_dashboard_visible`, `help_nav_visible`) are route/template-local and can drift without shared context helpers.
+   - **Parallel action:** define and expose canonical template auth context keys in one place (for example `app/template_context.py`) and migrate templates to those keys incrementally.
+   - **Status:** open
+
+## Recently closed flags
+
+- **Route-level persona branch drift reduced across priority offender set**
+  - **Closed by:** replacing direct persona-string route branches with permission/context-based decisions across conversion, inventory, recipes form/detail, settings, dashboard, core landing, API scope resolver, products permission import path, and verification redirects.
+  - **Routes/services affected:** `app/blueprints/conversion/routes.py`, `app/blueprints/inventory/routes.py`, `app/blueprints/recipes/form_templates.py`, `app/blueprints/recipe_library/routes.py`, `app/blueprints/settings/routes.py`, `app/blueprints/dashboard/routes.py`, `app/blueprints/core/routes.py`, `app/blueprints/api/routes.py`, `app/blueprints/products/products.py`, `app/blueprints/auth/verification_routes.py`, `app/services/affiliate_service.py`, `app/blueprints/developer/decorators.py`, `app/blueprints/global_library/routes.py`
+
+- **Inventory routes retained direct ORM/session access across item-detail/global-link/list/view/archive/restore/debug/bulk-update flows**
+  - **Closed by:** moving inventory/global-item/category/unit/lot/history lookups and route-level commit/rollback ownership behind `app/services/inventory_route_service.py`.
+  - **Routes affected:** `app/blueprints/inventory/routes.py` (`_expired_quantity_map`, `api_get_inventory_item`, `api_toggle_global_link`, `api_quick_create_inventory`, `list_inventory`, `set_column_visibility`, `view_inventory`, `adjust_inventory`, `edit_inventory`, `archive_inventory`, `restore_inventory`, `debug_inventory`, `bulk_inventory_updates`)
+
+- **Developer system-roles routes retained direct ORM/session access across role/user CRUD and permission payload flows**
+  - **Closed by:** moving system-role/developer-role/developer-user query and transaction ownership behind `app/services/developer/system_role_service.py`.
+  - **Routes affected:** `app/blueprints/developer/system_roles.py` (`manage_system_roles`, `create_system_role`, `get_system_role`, `update_system_role`, `delete_system_role`, `create_developer_role`, `get_developer_role`, `update_developer_role`, `delete_developer_role`, `create_developer_user`, `update_developer_user_role`, `get_developer_user_role`, `delete_developer_user`, `get_permissions_api`, `get_developer_permissions_api`, `get_developer_roles_api`)
+
+- **Developer reference routes retained direct ORM/session access across category and ingredient-attribute curation flows**
+  - **Closed by:** moving category/form/variation/tag lookups and route-level commit/rollback ownership behind `app/services/developer/reference_route_service.py`.
+  - **Routes affected:** `app/blueprints/developer/views/reference_routes.py` (`reference_categories`, `add_reference_category`, `delete_reference_category`, `update_reference_category_density`, `calculate_category_density`, `manage_ingredient_attributes`, `create_physical_form`, `toggle_physical_form`, `create_variation`, `toggle_variation`, `create_function_tag`, `create_application_tag`, `create_category_tag`)
+
+- **Organization routes retained direct ORM/session access across dashboard/role/tier/user-management flows**
+  - **Closed by:** moving organization dashboard reads, permission/user/role lookup helpers, and route-level commit/rollback ownership behind `app/services/organization_route_service.py`.
+  - **Routes affected:** `app/blueprints/organization/routes.py` (`dashboard`, `create_role`, `update_organization_settings`, `update_subscription_tier`, `invite_user`, `update_organization`, `export_report`, `add_user`, `get_user`, `update_user`, `toggle_user_status`, `delete_user`, `restore_user`)
+
+- **Batch finish routes retained direct ORM/session access across completion/output-posting workflows**
+  - **Closed by:** moving batch/product/variant/sku/container/lot query boundaries and commit/rollback ownership behind `app/services/batch_finish_route_service.py`.
+  - **Routes affected:** `app/blueprints/batches/finish_batch.py` (`complete_batch`, `fail_batch`, `_complete_batch_internal`, `_create_intermediate_ingredient`, `_create_product_output`, `_process_container_allocations`, `_create_container_sku`, `_create_bulk_sku`)
+
+- **Developer global-item routes retained direct ORM/session access across detail/edit/create/delete flows**
+  - **Closed by:** moving global-item, category, physical-form, connected-inventory lookup and session transaction ownership behind `app/services/developer/global_item_route_service.py`.
+  - **Routes affected:** `app/blueprints/developer/views/global_item_routes.py` (`global_item_detail`, `global_item_edit`, `global_item_stats_view`, `create_global_item`, `delete_global_item`) plus helper-level slug/tag/category lookups.
+
+- **Developer subscription tiers routes retained direct ORM/session access across tier list/create/edit/delete/sync/api and signup-tier assignment flows**
+  - **Closed by:** moving tier/permission/add-on/org-count reads plus tier mutation transaction ownership behind `app/services/developer/subscription_tier_route_service.py`.
+  - **Routes affected:** `app/blueprints/developer/subscription_tiers.py` (`_addon_permission_map`, `_base_permissions`, `manage_tiers`, `apply_signup_info_ai_edit`, `generate_signup_info_ai_draft`, `save_signup_info_assignments`, `create_tier`, `edit_tier`, `delete_tier`, `sync_tier_with_stripe`, `sync_tier_with_whop`, `api_get_tiers`)
+
+- **Products routes retained direct ORM/session access across create/list/view/edit/delete flows**
+  - **Closed by:** moving product and SKU scoped lookups, category/container reads, product create/update/delete mutation ownership, and commit/rollback helpers into `app/services/product_route_service.py`.
+  - **Routes affected:** `app/blueprints/products/products.py` (`create_product_from_data`, `list_products`, `new_product`, `view_product`, `view_product_by_name`, `edit_product`, `delete_product`)
+
+- **Expiration service module retained direct ORM/session access across lot/history/product-lookup and expiration-status flows**
+  - **Closed by:** moving scoped lot/history queries, model fetches, and commit ownership behind `app/services/expiration_data_service.py` while keeping expiry rule calculations in `ExpirationService`.
+  - **Routes affected:** `app/blueprints/expiration/services.py` (`get_life_remaining_entry_or_404`, `get_debug_expiration_snapshot`, `get_effective_expiration_date`, `get_effective_sku_expiration_date`, `_query_fifo_entries`, `_query_sku_entries`, `_format_sku_entry`, `update_fifo_expiration_data`, `get_expiration_date_for_new_entry`, `get_inventory_item_expiration_status`, `get_weighted_average_freshness`, `mark_as_expired`, `get_expiring_within_days`, `get_expired_inventory`, `get_expiring_soon`)
+
+- **Conversion routes retained direct ORM/session access across unit delete/create/mapping and validation flows**
+  - **Closed by:** moving unit/mapping lookups, scoped mapping listings, and mapping/unit mutation transaction ownership behind `app/services/conversion_route_service.py`.
+  - **Routes affected:** `app/blueprints/conversion/routes.py` (`delete_unit`, `manage_units`, `delete_mapping`, `validate_mapping`, `add_mapping`)
+
+- **Auth permissions routes retained direct ORM/session access across permission-matrix and role CRUD flows**
+  - **Closed by:** moving subscription-tier permission resolution, permission registry reads, permission-matrix upsert/delete + role rebind writes, permission-status toggles, and role create/update transaction ownership behind `app/services/auth_permission_route_service.py`.
+  - **Routes affected:** `app/blueprints/auth/permissions.py` (`get_tier_permissions`, `manage_permissions`, `update_permission_matrix`, `toggle_permission_status`, `manage_roles`, `create_role`, `update_role`)
+
+- **Settings routes retained direct ORM/session access across user preferences/profile/password/bulk-update/user-management flows**
+  - **Closed by:** moving user preference retrieval/mutation, profile/password persistence, bulk inventory/container updates, timezone updates, and user-management user-list queries behind `app/services/settings_route_service.py`.
+  - **Routes affected:** `app/blueprints/settings/routes.py` (`get_user_preferences`, `update_user_preferences`, `save_profile`, `change_password`, `set_backup_password`, `bulk_update_ingredients`, `bulk_update_containers`, `update_timezone`, `update_user_preference`, `user_management`)
+
+- **Product variants routes retained direct ORM/session access across add/view/create-sku/edit/delete flows**
+  - **Closed by:** moving product/variant/SKU/container lookups, variant/SKU creation mutations, variant update/deactivation, base-variant fallback creation, and rollback handling into `app/services/product_variant_route_service.py`.
+  - **Routes affected:** `app/blueprints/products/product_variants.py` (`add_variant`, `view_variant`, `create_sku_for_variant`, `edit_variant`, `delete_variant`)
+
+- **Auth login/quick-signup routes retained direct ORM/session access**
+  - **Closed by:** moving login-user lookup, verification token persistence, login commit/rollback helpers, free-tier resolution, quick-signup org/user creation, global-item lookup, and logout token-clear session handling into `app/services/auth_login_route_service.py`.
+  - **Routes affected:** `app/blueprints/auth/login_routes.py` (`_send_verification_if_needed`, `login`, `quick_signup`, `logout`)
+
+- **Ingredient API route-local ORM/session access across category/search/create-link flows**
+  - **Closed by:** moving ingredient category lookups, ingredient/form/variation/global-item search pipelines, and create-or-link inventory mutation/session handling into `app/services/ingredient_route_service.py`.
+  - **Routes affected:** `app/blueprints/api/ingredient_routes.py` (`get_categories`, `get_ingredient_density`, `search_ingredients`, `search_ingredient_definitions`, `list_forms_for_ingredient_definition`, `search_physical_forms`, `search_variations`, `create_or_link_ingredient`, `search_global_items`)
+
+- **Recipe manage routes retained direct ORM/session access across list/view/note/lock/make-parent flows**
+  - **Closed by:** moving recipe list pagination/grouped variations, view-note/group-version lookups, note insertion, lock/unlock persistence, and legacy make-parent conversion/session handling into `app/services/recipe_manage_view_service.py`.
+  - **Routes affected:** `app/blueprints/recipes/views/manage_routes.py` (`list_recipes`, `view_recipe`, `add_recipe_note`, `make_parent_recipe`, `lock_recipe`, `unlock_recipe`)
+
+- **SKU route-local ORM/session access across view/edit/merge flows**
+  - **Closed by:** moving SKU lookup/history queries, lot/history/reservation updates, and route-level commit/rollback handling into `app/services/sku_route_service.py`.
+  - **Routes affected:** `app/blueprints/products/sku.py` (`view_sku`, `edit_sku`, `select_skus_to_merge`, `configure_merge`, `execute_merge`, `get_merge_preview`)
+
+- **Product inventory routes retained direct SKU/lot lookups and route-level session control**
+  - **Closed by:** moving SKU-by-inventory/code/id lookups, fresh/expired lot listing, quantity summation, and commit/rollback helpers into `app/services/product_inventory_route_service.py`.
+  - **Routes affected:** `app/blueprints/products/product_inventory_routes.py` (`adjust_sku_inventory`, `get_sku_fifo_status`, `dispose_expired_sku`, `process_sale_webhook`, `process_return_webhook`, `create_manual_reservation`, `add_inventory_from_batch`)
+
+- **Recipe form-parsing route-adjacent query/session access**
+  - **Closed by:** moving portion-unit lookup/create, global-item lookup, org inventory lookup-by-global/name, and ownership-link flush/rollback handling into `app/services/recipe_form_parsing_service.py`.
+  - **Routes affected:** `app/blueprints/recipes/form_parsing.py` (`ensure_portion_unit`, `extract_ingredients_from_form`)
+
+- **Recipe create-routes query/rollback access remained route-local**
+  - **Closed by:** moving purchased-recipe anti-plagiarism query, newly-created inventory item name lookup, category lookup-by-name, import recipe lookup, and rollback handling into `app/services/recipe_create_view_service.py`.
+  - **Routes affected:** `app/blueprints/recipes/views/create_routes.py` (`_enforce_anti_plagiarism`, `new_recipe`, `clone_recipe`, `import_recipe`)
+
+- **Recipe-library route-local ORM access (public list/detail/org marketplace)**
+  - **Closed by:** moving public recipe listing/detail/org-marketplace queries and rollup aggregation into `app/services/recipe_library_view_service.py`.
+  - **Routes affected:** `app/blueprints/recipe_library/routes.py` (`recipe_library`, `recipe_library_detail`, `organization_marketplace`, `_fetch_cost_rollups`)
+
+- **Global-library detail/save/stats route-local ORM access**
+  - **Closed by:** moving active-item/detail lookups, related-item retrieval, org inventory link lookup, and stats-item retrieval behind `app/services/global_library_view_service.py`.
+  - **Routes affected:** `app/blueprints/global_library/routes.py` (`global_item_detail`, `save_global_item_to_inventory`, `global_library_item_stats`)
+
+- **Public API global search + units route-adjacent query access**
+  - **Closed by:** extracting public units lookup and global-item search query/payload shaping into `app/services/public_catalog_service.py`.
+  - **Routes affected:** `app/blueprints/api/public.py` (`public_units`, `public_global_item_search`)
+
+- **Dashboard route direct org/batch query access**
+  - **Closed by:** moving selected-organization existence checks, active in-progress batch lookup, and rollback helpers into `app/services/app_dashboard_service.py`.
+  - **Routes affected:** `app/blueprints/dashboard/routes.py` (`dashboard`)
+
+- **Global-link and container-mismatch drawer direct route ORM access**
+  - **Closed by:** moving global-item lookup/linking mutations and recipe/container lookup + yield persistence into dedicated drawer services.
+  - **Routes affected:** `app/blueprints/api/drawers/drawer_actions/global_link.py`, `app/blueprints/api/drawers/drawer_actions/container_unit_mismatch.py`
+
+- **Production-planning debug container endpoint route-local ORM access**
+  - **Closed by:** moving recipe/container-category/container-list retrieval and shaping into `app/services/production_planning_debug_service.py`.
+  - **Routes affected:** `app/blueprints/production_planning/routes.py` (`debug_recipe_containers`)
+
+- **Expiration life/debug endpoint route-local ORM access**
+  - **Closed by:** moving scoped history lookup and debug expiration query/shaping into `ExpirationService`.
+  - **Routes affected:** `app/blueprints/expiration/routes.py` (`api_life_remaining`, `api_debug_expiration`)
+
+- **Auth/onboarding route persistence in controllers**
+  - **Closed by:** extracting verification/reset/onboarding token and profile persistence from routes to `app/services/auth_account_service.py`
+  - **Routes affected:** `app/blueprints/auth/verification_routes.py`, `app/blueprints/auth/password_routes.py`, `app/blueprints/onboarding/routes.py`
+
+- **Developer user/org route direct ORM access**
+  - **Closed by:** moving user/organization lookups and org-user pagination to service boundaries.
+  - **Routes affected:** `app/blueprints/developer/views/user_routes.py`, `app/blueprints/developer/views/organization_routes.py`
+
+- **Start-batch route direct recipe lookup**
+  - **Closed by:** moving recipe resolution to `app/services/batch_start_service.py`.
+  - **Routes affected:** `app/blueprints/batches/start_batch.py`
+
+- **Developer dashboard/masquerade direct ORM access**
+  - **Closed by:** moving feature-flag state map and masquerade organization resolution behind developer services.
+  - **Routes affected:** `app/blueprints/developer/views/dashboard_routes.py`, `app/blueprints/developer/views/masquerade_routes.py`
+
+- **Drawer retention/unit-mapping direct route ORM access**
+  - **Closed by:** moving org resolution and custom-unit mapping upsert to drawer service boundaries.
+  - **Routes affected:** `app/blueprints/api/drawers/drawer_actions/retention.py`, `app/blueprints/api/drawers/drawer_actions/conversion_unit_mapping.py`

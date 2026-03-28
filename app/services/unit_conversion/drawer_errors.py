@@ -148,7 +148,9 @@ def generate_drawer_payload_for_conversion_error(error_code, error_data, retry=N
             redirect_url="/conversion/units",
             error_type="conversion",
             error_code=error_code,
-            error_message=error_data.get("message", "Unknown unit requires manual setup"),
+            error_message=error_data.get(
+                "message", "Unknown unit requires manual setup"
+            ),
             correlation_id=correlation_id,
             retry=retry,
         )

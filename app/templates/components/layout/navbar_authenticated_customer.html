@@ -2,7 +2,7 @@
 Synopsis:
 Authenticated customer navigation and role-aware menu sections.
 #}
-{% set help_nav_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') or (current_user.is_authenticated and current_user.user_type == 'developer') %}
+{% set help_nav_visible = is_feature_enabled('FEATURE_HELP_PAGE_DISPLAY') %}
 <!-- Customer Navigation -->
 <div class="navbar-nav me-auto">
 </div>
@@ -116,7 +116,7 @@ Authenticated customer navigation and role-aware menu sections.
         {% if customer_can_view_batches %}
         <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timers</a></li>
         {% endif %}
-        {% if has_role('developer') or has_role('organization_owner') or has_permission(current_user, 'organization.manage') %}
+        {% if has_permission(current_user, 'inventory.reserve') %}
         <li><a class="dropdown-item" href="{{ url_for('reservation.list_reservations') }}">Reservations</a></li>
         {% endif %}
         {% if customer_can_view_products and bulk_stock_check_enabled %}
@@ -142,7 +142,7 @@ Authenticated customer navigation and role-aware menu sections.
         <!-- Admin -->
         <li><h6 class="dropdown-header">Admin</h6></li>
         {% if current_user.is_authenticated and has_permission(current_user, 'organization.view') %}
-        {% if current_user.user_type != 'developer' or session.get('dev_selected_org_id') %}
+        {% if get_effective_org_id() %}
         <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}">Organization Dashboard</a></li>
         {% endif %}
         {% endif %}

@@ -17,14 +17,11 @@ from typing import Any, Dict, Optional
 from flask import current_app, render_template, session
 from flask_login import current_user
 
-from app.models import InventoryItem
-from app.models.product_category import ProductCategory
-from app.models.unit import Unit
 from app.services.lineage_service import format_label_prefix
+from app.services.recipe_form_service import RecipeFormService
 from app.utils.cache_manager import app_cache
 from app.utils.permissions import has_permission
 from app.utils.settings import is_feature_enabled
-from app.utils.unit_utils import get_global_unit_list
 
 logger = logging.getLogger(__name__)
 
@@ -40,54 +37,6 @@ def _form_cache_ttl() -> int:
             exc_info=True,
         )
         return 60
-
-
-# --- Serialize product category ---
-# Purpose: Convert ProductCategory objects into JSON-safe payloads.
-def _serialize_product_category(cat: ProductCategory) -> Dict[str, Any]:
-    return {
-        "id": cat.id,
-        "name": cat.name,
-        "is_typically_portioned": cat.is_typically_portioned,
-        "skin_enabled": cat.skin_enabled,
-    }
-
-
-# --- Serialize inventory item ---
-# Purpose: Convert InventoryItem objects into JSON-safe payloads.
-def _serialize_inventory_item(
-    item: InventoryItem, *, include_container_meta: bool = False
-) -> Dict[str, Any]:
-    payload = {
-        "id": item.id,
-        "name": item.name,
-        "unit": getattr(item, "unit", None),
-        "type": getattr(item, "type", None),
-    }
-    if include_container_meta:
-        payload.update(
-            {
-                "capacity": getattr(item, "capacity", None),
-                "capacity_unit": getattr(item, "capacity_unit", None),
-                "container_display_name": getattr(
-                    item, "container_display_name", item.name
-                ),
-            }
-        )
-    return payload
-
-
-# --- Serialize unit ---
-# Purpose: Convert Unit objects into JSON-safe payloads.
-def _serialize_unit(unit: Unit) -> Dict[str, Any]:
-    return {
-        "id": unit.id,
-        "name": unit.name,
-        "unit_type": unit.unit_type,
-        "base_unit": unit.base_unit,
-        "conversion_factor": unit.conversion_factor,
-        "symbol": unit.symbol,
-    }
 
 
 # --- Recipe form cache key ---
@@ -125,82 +74,7 @@ def _effective_org_id() -> Optional[int]:
 # --- Build recipe form payload ---
 # Purpose: Assemble recipe form metadata for create/edit pages.
 def _build_recipe_form_payload(org_id: Optional[int]) -> Dict[str, Any]:
-    # Safety: avoid cross-organization leakage if org_id cannot be resolved
-    if not org_id:
-        units = [
-            _serialize_unit(unit)
-            for unit in Unit.query.filter_by(is_active=True)
-            .order_by(Unit.unit_type, Unit.name)
-            .all()
-        ]
-        inventory_units = get_global_unit_list()
-        categories = [
-            _serialize_product_category(cat)
-            for cat in ProductCategory.query.order_by(ProductCategory.name.asc()).all()
-        ]
-        return {
-            "all_ingredients": [],
-            "all_consumables": [],
-            "all_containers": [],
-            "units": units,
-            "inventory_units": inventory_units,
-            "product_categories": categories,
-            "product_groups": [],
-        }
-
-    ingredients_query = InventoryItem.scoped().filter(
-        InventoryItem.type == "ingredient"
-    )
-    if org_id:
-        ingredients_query = ingredients_query.filter_by(organization_id=org_id)
-    all_ingredients = [
-        _serialize_inventory_item(item)
-        for item in ingredients_query.order_by(InventoryItem.name).all()
-    ]
-
-    consumables_query = InventoryItem.scoped().filter(
-        InventoryItem.type == "consumable"
-    )
-    if org_id:
-        consumables_query = consumables_query.filter_by(organization_id=org_id)
-    all_consumables = [
-        _serialize_inventory_item(item)
-        for item in consumables_query.order_by(InventoryItem.name).all()
-    ]
-
-    containers_query = InventoryItem.scoped().filter(InventoryItem.type == "container")
-    if org_id:
-        containers_query = containers_query.filter_by(organization_id=org_id)
-    all_containers = [
-        _serialize_inventory_item(item, include_container_meta=True)
-        for item in containers_query.order_by(InventoryItem.name).all()
-    ]
-
-    units = [
-        _serialize_unit(unit)
-        for unit in Unit.query.filter_by(is_active=True)
-        .order_by(Unit.unit_type, Unit.name)
-        .all()
-    ]
-    inventory_units = get_global_unit_list()
-
-    categories = [
-        _serialize_product_category(cat)
-        for cat in ProductCategory.query.order_by(ProductCategory.name.asc()).all()
-    ]
-
-    # product_groups have been removed from the system
-    product_groups = []
-
-    return {
-        "all_ingredients": all_ingredients,
-        "all_consumables": all_consumables,
-        "all_containers": all_containers,
-        "units": units,
-        "inventory_units": inventory_units,
-        "product_categories": categories,
-        "product_groups": product_groups,
-    }
+    return RecipeFormService.build_form_payload(org_id=org_id)
 
 
 # --- Get recipe form data ---
@@ -229,11 +103,6 @@ def get_recipe_form_data():
 def is_recipe_sharing_enabled():
     if not is_feature_enabled("FEATURE_RECIPE_MARKETPLACE_LISTINGS"):
         return False
-    if (
-        current_user.is_authenticated
-        and getattr(current_user, "user_type", "") == "developer"
-    ):
-        return True
     return has_permission(current_user, "recipes.sharing_controls")
 
 
@@ -242,11 +111,6 @@ def is_recipe_sharing_enabled():
 def is_recipe_purchase_enabled():
     if not is_feature_enabled("FEATURE_RECIPE_MARKETPLACE_LISTINGS"):
         return False
-    if (
-        current_user.is_authenticated
-        and getattr(current_user, "user_type", "") == "developer"
-    ):
-        return True
     return has_permission(current_user, "recipes.purchase_options")
 
 

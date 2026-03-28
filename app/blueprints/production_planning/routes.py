@@ -13,12 +13,14 @@ import logging
 from flask import flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from app.extensions import db
 from app.models import Recipe
 from app.services.analytics_tracking_service import AnalyticsTrackingService
 from app.services.production_planning import plan_production_comprehensive
 from app.services.production_planning._container_management import (
     analyze_container_options,
+)
+from app.services.production_planning_debug_service import (
+    ProductionPlanningDebugService,
 )
 from app.services.recipe_service import get_recipe_details
 from app.utils.permissions import has_tier_permission, require_permission
@@ -206,47 +208,24 @@ def auto_fill_containers(recipe_id):
 def debug_recipe_containers(recipe_id):
     """Debug endpoint to check available containers for recipe"""
     try:
-        from app.models import IngredientCategory, InventoryItem, Recipe
-
-        recipe = db.session.get(Recipe, recipe_id)
+        recipe = ProductionPlanningDebugService.get_recipe(recipe_id)
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
 
-        # Check for allowed containers
-        allowed = []
-        if hasattr(recipe, "allowed_containers"):
-            allowed = (
-                [str(c) for c in recipe.allowed_containers]
-                if recipe.allowed_containers
-                else []
-            )
-
-        # Get all available containers in org
+        allowed = ProductionPlanningDebugService.serialize_allowed_containers(recipe)
         container_category = (
-            IngredientCategory.scoped()
-            .filter_by(name="Container", organization_id=current_user.organization_id)
-            .first()
-        )
-
-        all_containers = []
-        if container_category:
-            containers = (
-                InventoryItem.scoped()
-                .filter_by(
-                    organization_id=current_user.organization_id,
-                    category_id=container_category.id,
-                )
-                .all()
+            ProductionPlanningDebugService.get_container_category_for_org(
+                getattr(current_user, "organization_id", None)
             )
-            all_containers = [
-                {
-                    "id": c.id,
-                    "name": c.container_display_name,
-                    "capacity": getattr(c, "capacity", 0),
-                }
-                for c in containers
-            ]
-
+        )
+        all_containers = (
+            ProductionPlanningDebugService.list_org_container_options(
+                organization_id=getattr(current_user, "organization_id", None),
+                container_category_id=getattr(container_category, "id", None),
+            )
+            if container_category
+            else []
+        )
         display_name = format_recipe_lineage_name(recipe)
         return jsonify(
             {

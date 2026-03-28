@@ -16,15 +16,14 @@ from flask import Blueprint, current_app, jsonify, request, session, url_for
 from flask_login import current_user, login_required
 from sqlalchemy.orm import load_only
 
-from app import db  # Assuming db is imported from app
 from app.extensions import cache
-from app.models import InventoryItem  # Added for get_ingredients endpoint
 from app.models import (
     Product,
     Recipe,
 )
 from app.models.product import ProductSKU
 from app.services.ai import GoogleAIClientError
+from app.services.api_bootstrap_service import ApiBootstrapService
 from app.services.batchbot_credit_service import BatchBotCreditService
 from app.services.batchbot_service import BatchBotService, BatchBotServiceError
 from app.services.batchbot_usage_service import (
@@ -40,13 +39,15 @@ from app.services.cache_invalidation import (
 from app.services.fifo_api_service import get_fifo_details_payload
 from app.services.unit_catalog_service import (
     create_or_get_custom_unit,
-    list_units as list_catalog_units,
+)
+from app.services.unit_catalog_service import list_units as list_catalog_units
+from app.services.unit_catalog_service import (
     normalize_unit_type,
     serialize_unit,
 )
 from app.utils.cache_utils import should_bypass_cache
 from app.utils.code_generator import generate_recipe_prefix
-from app.utils.permissions import require_permission
+from app.utils.permissions import get_effective_organization_id, require_permission
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -70,12 +71,7 @@ def _resolve_org_id():
     """
     Determine the organization scope for the current request, respecting developer masquerade.
     """
-    org_id = getattr(current_user, "organization_id", None)
-    if getattr(current_user, "user_type", None) == "developer":
-        dev_selected = session.get("dev_selected_org_id")
-        if dev_selected:
-            org_id = dev_selected
-    return org_id
+    return get_effective_organization_id()
 
 
 # =========================================================
@@ -105,6 +101,7 @@ def health_check():
 def server_time():
     """Get current server time in user's timezone"""
     from app.services.timer_service import TimerService
+
     from ...utils.timezone_utils import TimezoneUtils
 
     # Keep timer auto-complete behavior on the canonical server-time endpoint.
@@ -237,7 +234,6 @@ def get_dashboard_alerts():
 
 # Import sub-blueprints to register their routes
 
-from app.models.product_category import ProductCategory
 from .container_routes import container_api_bp
 from .ingredient_routes import ingredient_api_bp
 
@@ -259,12 +255,9 @@ api_bp.register_blueprint(container_api_bp)
 @require_permission("inventory.view")
 def get_inventory_item(item_id):
     """Get inventory item details for editing"""
-    from ...models import InventoryItem
-
-    item = (
-        InventoryItem.scoped()
-        .filter_by(id=item_id, organization_id=current_user.organization_id)
-        .first_or_404()
+    item = ApiBootstrapService.get_inventory_item_or_404(
+        item_id=item_id,
+        organization_id=current_user.organization_id,
     )
 
     return jsonify(
@@ -314,7 +307,7 @@ def get_fifo_details(inventory_id):
 @login_required
 @require_permission("products.view")
 def get_category(cat_id):
-    c = db.get_or_404(ProductCategory, cat_id)
+    c = ApiBootstrapService.get_category_or_404(cat_id)
     return jsonify(
         {
             "id": c.id,
@@ -387,8 +380,6 @@ def create_unit():
             created_by=current_user.id,
             symbol=data.get("symbol"),
         )
-        if created:
-            db.session.commit()
         return jsonify(
             {
                 "success": True,
@@ -401,7 +392,6 @@ def create_unit():
             "Suppressed exception fallback at app/blueprints/api/routes.py:388",
             exc_info=True,
         )
-        db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -515,21 +505,9 @@ def get_ingredients():
             if cached is not None:
                 return jsonify(cached)
 
-        query = InventoryItem.scoped().filter_by(type="ingredient")
-        if current_user.organization_id:
-            query = query.filter_by(organization_id=current_user.organization_id)
-
-        ingredients = query.order_by(InventoryItem.name).all()
-        payload = [
-            {
-                "id": ing.id,
-                "name": ing.name,
-                "density": ing.density,
-                "type": ing.type,
-                "unit": ing.unit,
-            }
-            for ing in ingredients
-        ]
+        payload = ApiBootstrapService.list_ingredients_for_org(
+            current_user.organization_id
+        )
 
         cache.set(
             cache_key,
@@ -740,9 +718,9 @@ def unit_converter():
             return jsonify({"success": False, "error": "Missing required parameters"})
 
         # Get ingredient for density if needed
-        ingredient = None
-        if ingredient_id:
-            ingredient = db.session.get(InventoryItem, ingredient_id)
+        ingredient_density = ApiBootstrapService.get_inventory_item_density(
+            ingredient_id=ingredient_id
+        )
 
         # Perform conversion using unit conversion engine
         from app.services.unit_conversion import ConversionEngine
@@ -752,7 +730,7 @@ def unit_converter():
             from_unit,
             to_unit,
             ingredient_id=ingredient_id,
-            density=ingredient.density if ingredient else None,
+            density=ingredient_density,
         )
 
         if result.get("success"):

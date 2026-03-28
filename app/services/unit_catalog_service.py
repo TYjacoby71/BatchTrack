@@ -45,7 +45,9 @@ def serialize_unit(unit: Unit) -> dict:
     }
 
 
-def list_units(*, unit_type: str | None = None, query: str | None = None, limit: int = 50) -> list[dict]:
+def list_units(
+    *, unit_type: str | None = None, query: str | None = None, limit: int = 50
+) -> list[dict]:
     units = get_global_unit_list() or []
     normalized_type = normalize_unit_type(unit_type) if unit_type else None
     q = (query or "").strip().lower()
@@ -53,11 +55,7 @@ def list_units(*, unit_type: str | None = None, query: str | None = None, limit:
     if normalized_type:
         units = [u for u in units if getattr(u, "unit_type", None) == normalized_type]
     if q:
-        units = [
-            u
-            for u in units
-            if q in (getattr(u, "name", "") or "").lower()
-        ]
+        units = [u for u in units if q in (getattr(u, "name", "") or "").lower()]
 
     units.sort(
         key=lambda u: (
@@ -84,6 +82,7 @@ def create_or_get_custom_unit(
     organization_id: int,
     created_by: int | None,
     symbol: str | None = None,
+    commit: bool = True,
 ) -> tuple[Unit, bool]:
     clean_name = (name or "").strip()
     if not clean_name:
@@ -99,17 +98,24 @@ def create_or_get_custom_unit(
     if existing:
         return existing, False
 
-    unit = Unit(
-        name=clean_name,
-        symbol=(symbol or clean_name).strip()[:16],
-        unit_type=normalized_type,
-        conversion_factor=1.0,
-        base_unit=BASE_UNIT_BY_TYPE.get(normalized_type, "count"),
-        is_active=True,
-        is_custom=True,
-        is_mapped=False,
-        organization_id=organization_id,
-        created_by=created_by,
-    )
-    db.session.add(unit)
-    return unit, True
+    try:
+        unit = Unit(
+            name=clean_name,
+            symbol=(symbol or clean_name).strip()[:16],
+            unit_type=normalized_type,
+            conversion_factor=1.0,
+            base_unit=BASE_UNIT_BY_TYPE.get(normalized_type, "count"),
+            is_active=True,
+            is_custom=True,
+            is_mapped=False,
+            organization_id=organization_id,
+            created_by=created_by,
+        )
+        db.session.add(unit)
+        if commit:
+            db.session.commit()
+        return unit, True
+    except Exception:
+        if commit:
+            db.session.rollback()
+        raise

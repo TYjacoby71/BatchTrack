@@ -17,9 +17,11 @@ from urllib.parse import urlparse
 from flask import current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 
-from ...extensions import db, limiter
+from ...extensions import limiter
 from ...models import User
+from ...services.auth_account_service import AuthAccountService
 from ...services.email_service import EmailService
+from ...utils.permissions import has_permission
 from ...utils.timezone_utils import TimezoneUtils
 from . import auth_bp
 
@@ -46,11 +48,7 @@ def _verification_expiry_hours() -> int:
 # Outputs: Newly generated token string.
 def _issue_verification_token(user: User) -> str:
     """Generate, persist, and return a fresh verification token."""
-    token = EmailService.generate_verification_token(user.email or "")
-    user.email_verification_token = token
-    user.email_verification_sent_at = TimezoneUtils.utc_now()
-    db.session.commit()
-    return token
+    return AuthAccountService.issue_email_verification_token(user)
 
 
 # --- Safe local path helper ---
@@ -117,7 +115,7 @@ def _resolve_verify_redirect_target() -> str:
     if next_candidate:
         return next_candidate
     if current_user.is_authenticated:
-        if getattr(current_user, "user_type", None) == "developer":
+        if has_permission(current_user, "dev.dashboard"):
             return url_for("developer.dashboard")
         return url_for("app_routes.dashboard")
     return url_for("auth.login")
@@ -137,7 +135,7 @@ def verify_email(token):
         if request.method == "HEAD":
             return "", 204
 
-        user = User.query.filter_by(email_verification_token=token).first()
+        user = AuthAccountService.find_user_by_verification_token(token)
         if not user:
             if current_user.is_authenticated and bool(
                 getattr(current_user, "email_verified", False)
@@ -159,10 +157,7 @@ def verify_email(token):
                 )
                 return redirect(url_for("auth.resend_verification"))
 
-        user.email_verified = True
-        user.email_verification_token = None
-        user.email_verification_sent_at = None
-        db.session.commit()
+        AuthAccountService.mark_email_verified(user)
 
         if current_user.is_authenticated:
             flash("Email verified successfully.", "success")
@@ -217,7 +212,7 @@ def resend_verification():
 
         if email and "@" in email:
             try:
-                user = User.find_by_email(email)
+                user = AuthAccountService.find_user_by_email(email)
                 if user and not user.email_verified:
                     token = _issue_verification_token(user)
                     sent = EmailService.send_verification_email(
@@ -227,15 +222,12 @@ def resend_verification():
                     )
                     if not sent:
                         # Failed sends should not leave token timestamps in cooldown state.
-                        user.email_verification_token = None
-                        user.email_verification_sent_at = None
-                        db.session.commit()
+                        AuthAccountService.clear_email_verification_token(user)
             except Exception as exc:
                 logger.warning(
                     "Suppressed exception fallback at app/blueprints/auth/verification_routes.py:220",
                     exc_info=True,
                 )
-                db.session.rollback()
                 logger.warning("Resend verification failed for %s: %s", email, exc)
 
         if current_user.is_authenticated:

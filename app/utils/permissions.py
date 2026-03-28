@@ -16,7 +16,6 @@ from typing import Iterable
 from urllib.parse import urlparse
 
 from flask import (
-    abort,
     current_app,
     flash,
     g,
@@ -29,7 +28,6 @@ from flask import (
 )
 from flask_login import current_user
 from markupsafe import Markup, escape
-from werkzeug.exceptions import Forbidden
 
 logger = logging.getLogger(__name__)
 
@@ -384,89 +382,6 @@ def any_permission_required(*permission_names):
             return f(*args, **named_args)
 
         return _record_required_permissions(decorated_function, permission_names)
-
-    return decorator
-
-
-def tier_required(min_tier: str):
-    """
-    Decorator requiring minimum subscription tier
-    Note: This is now deprecated in favor of permission-based access control.
-    Use require_permission() instead for specific feature gating.
-    """
-
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **named_args):
-            # Check if this should return JSON (API endpoints)
-            wants_json_response = wants_json()
-
-            # Check authentication first, with JSON-aware response
-            if not current_user.is_authenticated:
-                if wants_json_response:
-                    return jsonify(error="Authentication required"), 401
-                # For web requests, let Flask-Login handle the redirect
-                return current_app.login_manager.unauthorized()
-
-            org = getattr(current_user, "organization", None)
-            if not org:
-                if wants_json_response:
-                    return jsonify(error="no_organization"), 403
-                raise Forbidden("No organization found.")
-
-            # Simple tier check - just verify they have a valid tier
-            # For more sophisticated access control, use permission-based decorators
-            if not org.tier:
-                if wants_json_response:
-                    return jsonify(error="no_tier"), 403
-                raise Forbidden("No subscription tier assigned.")
-
-            # Exempt organizations have access to everything
-            if org.tier.name == "Exempt Plan":
-                return f(*args, **named_args)
-
-            # For specific tier requirements, check the tier name directly
-            if min_tier and org.tier.name != min_tier:
-                if wants_json_response:
-                    return (
-                        jsonify(
-                            error="tier_forbidden",
-                            required=min_tier,
-                            current=org.tier.name,
-                        ),
-                        403,
-                    )
-                raise Forbidden(f"Requires {min_tier} tier.")
-
-            return f(*args, **named_args)
-
-        return decorated_function
-
-    return decorator
-
-
-def role_required(*roles):
-    """
-    Decorator to require specific roles
-    Allows everything during testing
-    """
-
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **named_args):
-            # Allow everything during tests
-            if current_app.config.get("TESTING", False):
-                return f(*args, **named_args)
-
-            # Basic auth check for non-test environments
-            if not current_user.is_authenticated:
-                abort(401)
-
-            # TODO: Implement proper role checking
-            # For now, just check if user is authenticated
-            return f(*args, **named_args)
-
-        return decorated_function
 
     return decorator
 
@@ -1072,29 +987,6 @@ class FeatureGate:
         return True, "No limits defined"
 
 
-# Legacy compatibility functions
-def require_permission_with_org_scoping(permission_name, require_org_scoping=True):
-    """Legacy compatibility - use require_permission instead"""
-    return require_permission(permission_name)
-
-
 def require_organization_scoping(f):
-    """Legacy compatibility - organization scoping is handled automatically"""
+    """Compatibility passthrough for legacy org-scoping imports."""
     return f
-
-
-def require_system_admin(f):
-    """Legacy compatibility - use require_permission('dev.system_admin') instead"""
-    return require_permission("dev.system_admin")(f)
-
-
-def require_organization_owner(f):
-    """Legacy compatibility - check in the function itself"""
-
-    @wraps(f)
-    def decorated_function(*args, **named_args):
-        if not is_organization_owner():
-            abort(403)
-        return f(*args, **named_args)
-
-    return decorated_function

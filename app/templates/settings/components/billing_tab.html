@@ -20,7 +20,7 @@
     </div>
 </div>
 
-{% if current_user.user_type == 'developer' and session.get('dev_selected_org_id') %}
+{% if current_user.is_authenticated and has_permission(current_user, 'dev.view_all_billing') and session.get('dev_selected_org_id') %}
     {# Developer viewing as customer - get the selected organization #}
     {% set org = get_organization_by_id(session.get('dev_selected_org_id')) %}
 {% else %}
