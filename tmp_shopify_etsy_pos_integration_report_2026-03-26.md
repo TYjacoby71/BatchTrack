@@ -1,6 +1,6 @@
 # BatchTrack POS/Marketplace Integration Report (Shopify + Etsy)
 
-**Last edited:** 2026-03-26  
+**Last edited:** 2026-03-26 (updated with owner decisions and onboarding flow detail)  
 **Status:** Research + implementation blueprint (execution source of truth)
 
 ## 1) Scope captured from product direction
@@ -16,6 +16,36 @@ This report treats BatchTrack as the **source of truth** for inventory and SKU s
 - When batch completes and SKU is created, publish/attach SKU to connected channels.
 - If SKU is removed/disconnected in BatchTrack, disable sync mapping (never hard-delete BT data).
 - Disconnecting Shopify/Etsy must not delete BatchTrack products/events.
+
+---
+
+## 1.1 Product-owner decisions captured (2026-03-26)
+
+These are now treated as authoritative implementation decisions unless superseded.
+
+1. **Sale/cancel/return trigger policy must be configurable**
+   - Sale application timing is org-configurable (for example, paid/fulfilled style timing).
+   - Cancel/refund/return handling is configurable as automatic or manual.
+2. **Price sync is bidirectional and near real-time**
+   - If user saves price on Shopify/Etsy, update BatchTrack.
+   - If user saves price in BatchTrack, push to Shopify/Etsy.
+   - Current working rule: shared canonical price across BT/Shopify/Etsy (platform-specific promo logic remains external).
+3. **Multi-location is required in V1**
+   - Add organization-level marketplace location storage.
+   - Import/populate locations from Shopify and allow per-SKU location mapping in BatchTrack.
+4. **Etsy V1 scope is inventory + pricing hooks only**
+   - Do not turn BatchTrack into a full POS/listing-media/shipping-profile management suite.
+5. **No blind historical backfill by default**
+   - Initial connect must ask which side seeds baseline quantities (BatchTrack or Shopify/Etsy).
+6. **SKU identity priority**
+   - External SKU code is primary mapping key where available.
+   - If absent/incomplete, guided assignment flow must map products/variants/SKUs explicitly.
+7. **Reservation model direction**
+   - Evaluate handing reservations to marketplace/POS platforms where possible.
+   - Inbound events can be represented in BT as direct deductions/restocks, while preserving lot-correct return behavior.
+8. **Onboarding must be resumable**
+   - Persist per-organization onboarding stage and progress.
+   - User can leave and re-enter wizard at saved stage.
 
 ---
 
@@ -173,6 +203,9 @@ References:
    - idempotency keys + external event ids
 5. **IntegrationWebhookInbox**
    - raw inbound payload, signature validation status, dedupe key, processing state
+6. **IntegrationOnboardingState**
+   - `organization_id`, provider, stage key, stage payload, completion status, updated timestamp
+   - supports resume-at-stage behavior and operator handoff
 
 ## 5.2 Service boundaries
 
@@ -181,6 +214,7 @@ References:
 - `app/services/integrations/sync_orchestrator.py`
 - `app/services/integrations/webhook_verifier.py`
 - `app/services/integrations/mapping_service.py`
+- `app/services/integrations/onboarding_state_service.py`
 
 All channel logic should remain out of route handlers.
 
@@ -207,6 +241,8 @@ All channel logic should remain out of route handlers.
    - Push sale/retail price to mapped variant/listing.
 4. **SKU de-selected from sync checklist**
    - Disable mapping sync flag; do not delete BT SKU/events.
+5. **Location-aware sync**
+   - Push to selected external location per SKU mapping (V1 multi-location support).
 
 ## 6.2 Inbound Shopify/Etsy -> BT
 
@@ -214,9 +250,12 @@ All channel logic should remain out of route handlers.
    - Resolve mapped SKU(s), decrement inventory via canonical service.
    - Persist `order_id` and provider source in `UnifiedInventoryHistory`.
 2. **Cancel/refund/return events**
-   - Apply reverse inventory event with reason code.
+   - Apply reverse inventory event with reason code (auto or manual per org policy).
 3. **Out-of-order events**
    - Store in inbox + replay using idempotent processor.
+4. **External quantity/price save events**
+   - Apply updates to BatchTrack as near real-time as provider events/API allow.
+   - If webhook topic unavailable for specific field updates, use short-interval reconciliation poll.
 
 ## 6.3 Required event payload guarantees
 
@@ -255,9 +294,35 @@ Step flow:
 6. Sync policy:
    - quantity sync on/off
    - price sync on/off
+   - sale trigger timing mode
+   - cancel/refund/return mode (auto/manual)
    - pull sales events on/off
 7. Dry-run test
 8. Enable
+9. Persist stage checkpoint after every step (resume capable)
+
+## 7.2.1 Shopify -> BatchTrack assignment flow (guided, in-context)
+
+When importing existing Shopify catalog into BatchTrack:
+
+1. Show external product/listing candidate.
+2. Ask user to:
+   - map to existing BT product, or quick-create BT product.
+3. Ask user to:
+   - map to existing variant, create variant, or use Base.
+4. Ask whether item is contained vs portioned.
+5. If contained:
+   - collect container attributes (capacity, unit, material, style/shape, optional color).
+6. Assign/confirm SKU identity:
+   - prefer Shopify SKU code as primary identity when present.
+7. Import selected fields:
+   - quantity baseline (per chosen initial-seed direction),
+   - price,
+   - location,
+   - external identifiers.
+8. Save mapping and continue item-by-item with progress state.
+
+This should use drawer/modal-assisted contextual resolution rather than forcing users to leave onboarding.
 
 ## 7.3 Inventory page sync checklist
 
@@ -293,8 +358,17 @@ On SKU/inventory surfaces:
 - SKU code collisions across variants/channels.
 - External edits done directly in channel UI causing drift.
 - Partial failures: price pushed but quantity failed (or vice versa).
+- Cross-system update collisions when both sides edit near-simultaneously.
 
 Mitigation: split event records per operation and require clear retry state machine.
+
+## 8.4 Conflict and cycle strategy (decision-aligned)
+
+- Use event-driven push + webhook-driven pull as primary sync loop.
+- Add periodic reconciliation as safety net for missed events.
+- Use deterministic conflict policy:
+  - default `last_write_wins` based on trusted event timestamp + provider event id ordering,
+  - with audit visibility in sync event logs.
 
 ---
 
@@ -342,6 +416,7 @@ Mitigation: split event records per operation and require clear retry state mach
 - Add `POS & Marketplaces` tab to organization dashboard.
 - Add configure button and wizard shell.
 - Add org-level connection status endpoints.
+- Add onboarding state persistence + resume UX.
 
 **Exit criteria:** Customer can complete connection flow in UI and see connected status.
 
@@ -350,6 +425,7 @@ Mitigation: split event records per operation and require clear retry state mach
 - Add inventory/SKU sync checklist.
 - Persist per-SKU provider mapping and sync flags.
 - Add bulk enable/disable operations.
+- Add per-SKU location selector and organization location management.
 
 **Exit criteria:** Customer can select exactly which SKUs sync.
 
@@ -363,6 +439,8 @@ Mitigation: split event records per operation and require clear retry state mach
   - parse order line items
   - map SKU
   - apply inventory event with order number
+- Implement configurable sale/cancel/return policy behavior.
+- Implement initial-seed decision screen (BT->Shopify or Shopify->BT baseline).
 
 **Exit criteria:** Shopify sale updates BT inventory events with order id; BT recount pushes back.
 
@@ -370,6 +448,7 @@ Mitigation: split event records per operation and require clear retry state mach
 
 - Implement Etsy listing inventory sync with full-payload update safety.
 - Implement Etsy order webhook ingestion.
+- Mirror configurable policy behavior (sale/cancel/return and baseline seeding).
 
 **Exit criteria:** Etsy order/sync loop works with same inventory event guarantees.
 
@@ -386,11 +465,16 @@ Mitigation: split event records per operation and require clear retry state mach
 ## 11) Immediate first build tickets (next execution steps)
 
 1. Add `IntegrationConnection` + `IntegrationSkuMap` + `IntegrationWebhookInbox` models/migration.
-2. Add organization dashboard `POS & Marketplaces` tab + status endpoint.
-3. Add Shopify OAuth callback skeleton + encrypted token persistence.
-4. Add SKU sync checklist fields/API on product SKU surfaces.
-5. Add webhook ingestion endpoint with signature verification + idempotency store.
-6. Wire inventory event enrichment to always include provider + order id on external sales.
+2. Add `IntegrationOnboardingState` model + resume service.
+3. Add organization dashboard `POS & Marketplaces` tab + status endpoint.
+4. Add Shopify OAuth callback skeleton + encrypted token persistence.
+5. Add SKU sync checklist fields/API on product SKU surfaces (including location map).
+6. Add webhook ingestion endpoint with signature verification + idempotency store.
+7. Add org sync-policy settings:
+   - sale trigger timing
+   - auto/manual cancel-refund-return handling
+   - initial baseline seed direction
+8. Wire inventory event enrichment to always include provider + order id on external sales.
 
 ---
 
